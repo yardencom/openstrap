@@ -1,0 +1,30 @@
+import type { FactInput } from "../ValueObjects/FactInput.js";
+import type { FactsDefinitionId } from "../ValueObjects/FactsDefinitionId.js";
+import type { FactsDefinitionVersion } from "../ValueObjects/FactsDefinitionVersion.js";
+import type { ArtifactFact } from "./ArtifactFact.js";
+import type { CommandFact } from "./CommandFact.js";
+import type { EnvFact } from "./EnvFact.js";
+import type { FileFact } from "./FileFact.js";
+import type { GroupFact } from "./GroupFact.js";
+import type { PackageFact } from "./PackageFact.js";
+import type { ProcessFact } from "./ProcessFact.js";
+import type { ServiceFact } from "./ServiceFact.js";
+import type { SessionFact } from "./SessionFact.js";
+import type { UserFact } from "./UserFact.js";
+
+export type FactsDefinition = {
+  id: FactsDefinitionId;
+  version: FactsDefinitionVersion;
+  description: string;
+  inputs?: Record<string, FactInput>;
+  commands?: CommandFact[];
+  env?: EnvFact[];
+  files?: FileFact[];
+  processes?: ProcessFact[];
+  packages?: PackageFact[];
+  users?: UserFact[];
+  groups?: GroupFact[];
+  services?: ServiceFact[];
+  sessions?: SessionFact[];
+  artifacts?: ArtifactFact[];
+};

@@ -1,0 +1,1586 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openstrap.dev/schemas/facts-definition.schema.json",
+  "title": "OpenStrap facts definition",
+  "description": "Reusable desired facts definition. It describes what to collect, not target, transport, workflow, storage, or export settings.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9._-]*$"
+    },
+    "version": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "default": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "path"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "default": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "number"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "default": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "boolean"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "default": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "enum"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              },
+              "default": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "values"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "array"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "default": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "id",
+          "names"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "require": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exists",
+                "absent",
+                "file",
+                "directory",
+                "readable",
+                "writable",
+                "executable"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pidFile": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "manager": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "names"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[a-z][a-z0-9._-]*$"
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "optional",
+                  "evidence"
+                ],
+                "default": "required"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linux",
+                    "macos",
+                    "windows",
+                    "freebsd",
+                    "openbsd",
+                    "netbsd",
+                    "unix",
+                    "posix"
+                  ]
+                },
+                "minItems": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxOutputBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "redaction": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "mask",
+                          "hash",
+                          "omit"
+                        ]
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "patterns": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "required": [
+                      "strategy"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[a-z][a-z0-9._-]*$"
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "optional",
+                  "evidence"
+                ],
+                "default": "required"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linux",
+                    "macos",
+                    "windows",
+                    "freebsd",
+                    "openbsd",
+                    "netbsd",
+                    "unix",
+                    "posix"
+                  ]
+                },
+                "minItems": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxOutputBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "redaction": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "mask",
+                          "hash",
+                          "omit"
+                        ]
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "patterns": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "required": [
+                      "strategy"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "uid": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "uid"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[a-z][a-z0-9._-]*$"
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "optional",
+                  "evidence"
+                ],
+                "default": "required"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linux",
+                    "macos",
+                    "windows",
+                    "freebsd",
+                    "openbsd",
+                    "netbsd",
+                    "unix",
+                    "posix"
+                  ]
+                },
+                "minItems": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxOutputBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "redaction": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "mask",
+                          "hash",
+                          "omit"
+                        ]
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "patterns": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "required": [
+                      "strategy"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[a-z][a-z0-9._-]*$"
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "optional",
+                  "evidence"
+                ],
+                "default": "required"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linux",
+                    "macos",
+                    "windows",
+                    "freebsd",
+                    "openbsd",
+                    "netbsd",
+                    "unix",
+                    "posix"
+                  ]
+                },
+                "minItems": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxOutputBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "redaction": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "mask",
+                          "hash",
+                          "omit"
+                        ]
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "patterns": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "required": [
+                      "strategy"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "gid": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "gid"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "manager": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "interactive",
+              "login",
+              "ssh",
+              "terminal"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ],
+            "default": "required"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "minItems": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capture": {
+            "type": "string",
+            "enum": [
+              "metadata",
+              "hash",
+              "content"
+            ],
+            "default": "metadata"
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "description"
+  ],
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "commands"
+      ],
+      "properties": {
+        "commands": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "env"
+      ],
+      "properties": {
+        "env": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "files"
+      ],
+      "properties": {
+        "files": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "processes"
+      ],
+      "properties": {
+        "processes": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "packages"
+      ],
+      "properties": {
+        "packages": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "users"
+      ],
+      "properties": {
+        "users": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "groups"
+      ],
+      "properties": {
+        "groups": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "services"
+      ],
+      "properties": {
+        "services": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "sessions"
+      ],
+      "properties": {
+        "sessions": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "artifacts"
+      ],
+      "properties": {
+        "artifacts": {
+          "minItems": 1
+        }
+      }
+    }
+  ]
+}
