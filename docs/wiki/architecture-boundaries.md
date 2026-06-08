@@ -25,13 +25,29 @@ Consumer
 
 Будущие product modules, например `WorkflowConfig` и `StorageConfig`, должны повторять эту форму: свой domain, своя schema, свой facade, общий `ConfigCore`.
 
+## ConfigCore As Platform
+
+`ConfigCore` является config platform, а не strict ports-only core.
+
+Это значит:
+
+- `ConfigCore` может предоставлять default infrastructure внутри своего public API;
+- `ConfigCore/Application` может собирать default parser/validator/emitter, если это не протекает в product modules;
+- Zod является backend engine внутри `ConfigCore`, а не API для product modules;
+- custom validator или JSON Schema emitter не должны дублировать возможности Zod без отдельной причины;
+- product modules описывают schemas через `ConfigCore` contract, а не через прямой import Zod;
+- concrete libraries, кроме явно принятой platform dependency, остаются деталями `ConfigCore` или его adapters;
+- product modules используют `ConfigCore` как capability и не импортируют deps/libraries напрямую.
+
+Например, default YAML parser внутри `ConfigLoader` допустим, если `FactsConfig` не знает про YAML library и не импортирует `ConfigCore/Adapters`.
+
 ## Boundary Types
 
 | Граница | Владеет | Общается через | Не владеет |
 |----------|------|----------------------|--------------|
 | **Public Facade** | Внешний API модуля и перевод ошибок наружу | Методы класса, публичный domain result или DTO | Внутренние schema classes, adapters, широкие helper APIs |
 | **Product Domain** | Предметные entities, value objects, errors и инварианты модуля | Domain types | YAML, Zod, JSON Schema, IO, runtime execution |
-| **Product Schema** | Правила записи domain concepts в config file | ConfigCore schema DSL | Workflow execution, collection, transport, storage |
+| **Product Schema** | Правила записи domain concepts в config file | ConfigCore schema contract | Workflow execution, collection, transport, storage |
 | **Product Application** | Use cases модуля и orchestration | Facade methods, application services | Чистые schema declarations без use case |
 | **ConfigCore Domain** | Generic config DTO, schema nodes, metadata, issues, errors | ConfigCore DTO | Facts/workflow/storage concepts |
 | **ConfigCore Application** | Generic config use cases: load, validate, emit schema | Ports and ConfigCore DTO | Product-specific rules |
@@ -61,7 +77,7 @@ Product module использует `ConfigCore` как platform capability:
 - проверить config;
 - получить JSON Schema artifact.
 
-Product module не импортирует external deps/libraries напрямую, если они являются инфраструктурной реализацией. Zod, YAML parser и JSON Schema engine являются деталями `ConfigCore`.
+Product module не импортирует external deps/libraries напрямую, если они являются инфраструктурной реализацией. YAML parser, JSON Schema engine и Zod являются backend-деталями `ConfigCore`.
 
 ### Product Schema To Product Domain
 
@@ -81,8 +97,8 @@ configSchema.enum(FactImportance)
 
 ```text
 ConfigDocumentParser -> YamlConfigDocumentParser
-ConfigValidator -> ConfigSchemaValidator / ZodConfigValidator
-JsonSchemaEmitter -> ConfigSchemaJsonSchemaEmitter
+ConfigValidator -> ZodConfigValidator
+JsonSchemaEmitter -> ZodJsonSchemaEmitter
 ```
 
 Port описывает capability. Adapter реализует capability конкретной технологией.

@@ -23,7 +23,7 @@
 
 Good:
 
-- "Проверить config по ConfigCore schema DSL."
+- "Проверить config через ConfigCore schema contract."
 - "Экспортировать facts definition schema в JSON Schema."
 - "Собрать facts на target через transport."
 
@@ -41,7 +41,7 @@ Bad:
 
 | Изменение | Граница-владелец |
 |--------|-----------------|
-| Общий schema DSL rule | `ConfigCore` |
+| Общее config validation/schema поведение | `ConfigCore` |
 | Конкретная библиотека parsing/validation/emitting | `ConfigCore Adapter` |
 | Facts term, entity, value object, invariant | `FactsConfig Domain` |
 | YAML/JSON форма facts config | `FactsConfig Schema` |
@@ -59,7 +59,7 @@ Bad:
 | Переход через границу | Контракт |
 |-------------------|----------|
 | Consumer -> Product Module | Метод public facade |
-| Product Module -> ConfigCore | Public API ConfigCore / schema DSL |
+| Product Module -> ConfigCore | Public API ConfigCore / schema contract |
 | ConfigCore -> Concrete Library | Port + adapter |
 | Schema -> Domain | Domain values and types |
 | Application -> Consumer | Domain result или DTO |
