@@ -12,7 +12,7 @@ describe("FactsConfig boundaries", () => {
     );
     const offenders = factsConfigSourcePaths.filter((filePath) => {
       const source = readFileSync(filePath, "utf8");
-      return /\bZod\b|\bzod\b|ConfigCore\/Adapters|\/Composition\//.test(source);
+      return /\bZod\b|\bzod\b|ConfigCore\/Adapters|ConfigCore\/Platform|DefaultConfigCore|\/Composition\//.test(source);
     });
 
     expect(offenders).toEqual([]);
@@ -47,7 +47,6 @@ describe("FactsConfig boundaries", () => {
     expect(readdirSync(factsConfigPath)).toContain("Schema");
     expect(schemaFiles).toEqual(
       expect.arrayContaining([
-        "FactsConfigMetadata.ts",
         "FactsConfigPrimitives.ts",
         "FactSettingsSchema.ts",
         "FactInputSchema.ts",
@@ -59,7 +58,7 @@ describe("FactsConfig boundaries", () => {
 
     if (existsSync(applicationPath)) {
       expect(readdirSync(applicationPath)).not.toEqual(
-        expect.arrayContaining(["FactsConfigSchema.ts", "FactsConfigMetadata.ts"]),
+        expect.arrayContaining(["FactsConfigSchema.ts"]),
       );
     }
   });

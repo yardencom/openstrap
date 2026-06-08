@@ -92,21 +92,20 @@ commands:
     ).toThrow(/Invalid facts definition/);
   });
 
-  it("rejects enum input defaults outside declared values", () => {
+  it("rejects typed input declarations", () => {
     expect(() =>
       parseYaml(`
-id: invalid-enum-input-default
+id: invalid-typed-input
 version: 1
-description: Enum input defaults must be one of the declared values
+description: Inputs are dynamic values and do not declare their own type
 inputs:
-  environment:
-    type: enum
-    values: [dev, prod]
-    default: staging
+  workspace:
+    type: path
 commands:
   - id: git
     name: git
 `),
-    ).toThrow(/enum input default must be one of values/);
+    ).toThrow(/Invalid facts definition/);
   });
+
 });

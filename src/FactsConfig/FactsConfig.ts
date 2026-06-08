@@ -1,26 +1,23 @@
 import {
-  ConfigLoader,
+  ConfigCore,
   ConfigParseError,
   ConfigValidationError,
-  ConfigSchemaJsonSchemaEmitter,
-  ConfigSchemaValidator,
-  type JsonSchemaDocumentDto,
+  type JsonSchema,
 } from "../ConfigCore/index.js";
 import type { FactsDefinition } from "./Domain/Entities/FactsDefinition.js";
 import { FactsDefinitionValidationError } from "./Domain/FactsDefinitionErrors.js";
 import { FactsConfigSchema } from "./Schema/FactsConfigSchema.js";
 
-export class FactsConfig {
-  private static readonly schemaDefinition = FactsConfigSchema.build();
-  private static readonly loader = new ConfigLoader(new ConfigSchemaValidator(FactsConfig.schemaDefinition));
-  private static readonly jsonSchemaEmitter = new ConfigSchemaJsonSchemaEmitter<FactsDefinition>();
+const configCore = new ConfigCore();
+const schemaDefinition = FactsConfigSchema.build(configCore.schema);
 
+export class FactsConfig {
   parseYaml(yamlText: string): Readonly<FactsDefinition> {
     try {
-      return FactsConfig.loader.load({
-        format: "yaml",
+      return configCore.load(schemaDefinition, {
+        mode: "inline",
         content: yamlText,
-      }).config;
+      });
     } catch (error) {
       if (error instanceof ConfigValidationError || error instanceof ConfigParseError) {
         throw new FactsDefinitionValidationError(error.issues);
@@ -30,7 +27,7 @@ export class FactsConfig {
     }
   }
 
-  getJsonSchema(): Readonly<JsonSchemaDocumentDto> {
-    return FactsConfig.jsonSchemaEmitter.emit(FactsConfig.schemaDefinition);
+  getJsonSchema(): Readonly<JsonSchema> {
+    return configCore.emitJsonSchema(schemaDefinition);
   }
 }

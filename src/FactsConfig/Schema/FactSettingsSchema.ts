@@ -1,30 +1,47 @@
-import { configSchema } from "../../ConfigCore/index.js";
+import type { ConfigSchema, ConfigSchemaNode } from "../../ConfigCore/index.js";
+import type { FactId } from "../Domain/ValueObjects/FactId.js";
+import type { FactSettings } from "../Domain/ValueObjects/FactSettings.js";
 import { FactImportance } from "../Domain/ValueObjects/FactImportance.js";
 import { FactPlatform } from "../Domain/ValueObjects/FactPlatform.js";
+import type { Redaction } from "../Domain/ValueObjects/Redaction.js";
 import { RedactionStrategy } from "../Domain/ValueObjects/RedactionStrategy.js";
 import { FactsConfigPrimitives } from "./FactsConfigPrimitives.js";
 
+type FactCommonSettings = {
+  id: FactId;
+} & FactSettings;
+
+type FactSettingsProperties = {
+  [TKey in keyof FactCommonSettings]-?: ConfigSchemaNode<FactCommonSettings[TKey]>;
+};
+
 export class FactSettingsSchema {
-  static properties() {
+  private readonly primitives: FactsConfigPrimitives;
+
+  constructor(private readonly schema: ConfigSchema) {
+    this.primitives = new FactsConfigPrimitives(schema);
+  }
+
+  properties(): FactSettingsProperties {
     return {
-      id: FactsConfigPrimitives.factId(),
-      importance: configSchema.defaulted(configSchema.enum(FactImportance), FactImportance.Required),
-      platforms: configSchema.optional(configSchema.array(configSchema.enum(FactPlatform), { nonempty: true })),
-      timeoutMs: configSchema.optional(FactsConfigPrimitives.positiveInteger()),
-      maxOutputBytes: configSchema.optional(FactsConfigPrimitives.positiveInteger()),
-      redaction: configSchema.optional(this.redaction()),
+      id: this.primitives.factId(),
+      importance: this.schema.defaulted(this.schema.enum(FactImportance), FactImportance.Required),
+      platforms: this.schema.optional(this.schema.array(this.schema.enum(FactPlatform), { nonempty: true })),
+      timeoutMs: this.schema.optional(this.primitives.positiveInteger()),
+      maxOutputBytes: this.schema.optional(this.primitives.positiveInteger()),
+      redaction: this.schema.optional(this.redaction()),
     };
   }
 
-  private static redaction() {
-    const strategy = configSchema.enum(RedactionStrategy);
+  private redaction(): ConfigSchemaNode<Redaction> {
+    const strategy = this.schema.enum(RedactionStrategy);
 
-    return configSchema.union([
+    return this.schema.union<Redaction>([
       strategy,
-      configSchema.strictObject({
+      this.schema.strictObject({
         strategy,
-        fields: configSchema.optional(configSchema.array(FactsConfigPrimitives.nonEmptyString())),
-        patterns: configSchema.optional(configSchema.array(FactsConfigPrimitives.nonEmptyString())),
+        fields: this.schema.optional(this.schema.array(this.primitives.nonEmptyString())),
+        patterns: this.schema.optional(this.schema.array(this.primitives.nonEmptyString())),
       }),
     ]);
   }

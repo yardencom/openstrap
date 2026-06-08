@@ -1,29 +1,31 @@
-import { configSchema } from "../../ConfigCore/index.js";
+import type { ConfigSchema } from "../../ConfigCore/index.js";
 
 export class FactsConfigPrimitives {
-  static factId() {
-    return configSchema.string({
+  constructor(private readonly schema: ConfigSchema) {}
+
+  factId() {
+    return this.schema.string({
       minLength: 1,
       pattern: "^[a-z][a-z0-9._-]*$",
       patternMessage: "must start with a lowercase letter and use lowercase letters, numbers, '.', '_', or '-'",
     });
   }
 
-  static nonEmptyString() {
-    return configSchema.string({
+  nonEmptyString() {
+    return this.schema.string({
       minLength: 1,
     });
   }
 
-  static positiveInteger() {
-    return configSchema.number({
+  positiveInteger() {
+    return this.schema.number({
       int: true,
       positive: true,
     });
   }
 
-  static nonnegativeInteger() {
-    return configSchema.number({
+  nonnegativeInteger() {
+    return this.schema.number({
       int: true,
       nonnegative: true,
     });

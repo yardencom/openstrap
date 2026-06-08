@@ -1,4 +1,14 @@
-import { configSchema } from "../../ConfigCore/index.js";
+import type { ConfigSchema, ConfigSchemaNode } from "../../ConfigCore/index.js";
+import type { ArtifactFact } from "../Domain/Entities/ArtifactFact.js";
+import type { CommandFact } from "../Domain/Entities/CommandFact.js";
+import type { EnvFact } from "../Domain/Entities/EnvFact.js";
+import type { FileFact } from "../Domain/Entities/FileFact.js";
+import type { GroupFact } from "../Domain/Entities/GroupFact.js";
+import type { PackageFact } from "../Domain/Entities/PackageFact.js";
+import type { ProcessFact } from "../Domain/Entities/ProcessFact.js";
+import type { ServiceFact } from "../Domain/Entities/ServiceFact.js";
+import type { SessionFact } from "../Domain/Entities/SessionFact.js";
+import type { UserFact } from "../Domain/Entities/UserFact.js";
 import { ArtifactCapture } from "../Domain/ValueObjects/ArtifactCapture.js";
 import { FileRequirement } from "../Domain/ValueObjects/FileRequirement.js";
 import { SessionKind } from "../Domain/ValueObjects/SessionKind.js";
@@ -6,102 +16,110 @@ import { FactSettingsSchema } from "./FactSettingsSchema.js";
 import { FactsConfigPrimitives } from "./FactsConfigPrimitives.js";
 
 export class FactSectionSchemas {
-  static command() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      name: FactsConfigPrimitives.nonEmptyString(),
-      args: configSchema.optional(configSchema.array(configSchema.string())),
+  private readonly settings: FactSettingsSchema;
+  private readonly primitives: FactsConfigPrimitives;
+
+  constructor(private readonly schema: ConfigSchema) {
+    this.settings = new FactSettingsSchema(schema);
+    this.primitives = new FactsConfigPrimitives(schema);
+  }
+
+  command(): ConfigSchemaNode<CommandFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      name: this.primitives.nonEmptyString(),
+      args: this.schema.optional(this.schema.array(this.schema.string())),
     });
   }
 
-  static env() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      names: configSchema.array(FactsConfigPrimitives.nonEmptyString(), { nonempty: true }),
+  env(): ConfigSchemaNode<EnvFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      names: this.schema.array(this.primitives.nonEmptyString(), { nonempty: true }),
     });
   }
 
-  static file() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      path: FactsConfigPrimitives.nonEmptyString(),
-      require: configSchema.optional(
-        configSchema.array(configSchema.enum(FileRequirement), { nonempty: true }),
+  file(): ConfigSchemaNode<FileFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      path: this.primitives.nonEmptyString(),
+      require: this.schema.optional(
+        this.schema.array(this.schema.enum(FileRequirement), { nonempty: true }),
       ),
     });
   }
 
-  static process() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      name: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
-      command: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
-      pidFile: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
+  process(): ConfigSchemaNode<ProcessFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      name: this.schema.optional(this.primitives.nonEmptyString()),
+      command: this.schema.optional(this.primitives.nonEmptyString()),
+      pidFile: this.schema.optional(this.primitives.nonEmptyString()),
     });
   }
 
-  static package() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      names: configSchema.array(FactsConfigPrimitives.nonEmptyString(), { nonempty: true }),
-      manager: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
+  package(): ConfigSchemaNode<PackageFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      names: this.schema.array(this.primitives.nonEmptyString(), { nonempty: true }),
+      manager: this.schema.optional(this.primitives.nonEmptyString()),
     });
   }
 
-  static user() {
-    return configSchema.union([
-      configSchema.strictObject({
-        ...FactSettingsSchema.properties(),
-        name: FactsConfigPrimitives.nonEmptyString(),
-      }),
-      configSchema.strictObject({
-        ...FactSettingsSchema.properties(),
-        uid: configSchema.union([
-          FactsConfigPrimitives.nonnegativeInteger(),
-          FactsConfigPrimitives.nonEmptyString(),
-        ]),
-      }),
-    ]);
+  user(): ConfigSchemaNode<UserFact> {
+    return this.schema.strictObject(
+      {
+        ...this.settings.properties(),
+        name: this.schema.optional(this.primitives.nonEmptyString()),
+        uid: this.schema.optional(this.schema.union<number | string>([
+          this.primitives.nonnegativeInteger(),
+          this.primitives.nonEmptyString(),
+        ])),
+      },
+      {
+        requireAtLeastOneField: ["name", "uid"],
+      },
+    );
   }
 
-  static group() {
-    return configSchema.union([
-      configSchema.strictObject({
-        ...FactSettingsSchema.properties(),
-        name: FactsConfigPrimitives.nonEmptyString(),
-      }),
-      configSchema.strictObject({
-        ...FactSettingsSchema.properties(),
-        gid: configSchema.union([
-          FactsConfigPrimitives.nonnegativeInteger(),
-          FactsConfigPrimitives.nonEmptyString(),
-        ]),
-      }),
-    ]);
+  group(): ConfigSchemaNode<GroupFact> {
+    return this.schema.strictObject(
+      {
+        ...this.settings.properties(),
+        name: this.schema.optional(this.primitives.nonEmptyString()),
+        gid: this.schema.optional(this.schema.union<number | string>([
+          this.primitives.nonnegativeInteger(),
+          this.primitives.nonEmptyString(),
+        ])),
+      },
+      {
+        requireAtLeastOneField: ["name", "gid"],
+      },
+    );
   }
 
-  static service() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      name: FactsConfigPrimitives.nonEmptyString(),
-      manager: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
+  service(): ConfigSchemaNode<ServiceFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      name: this.primitives.nonEmptyString(),
+      manager: this.schema.optional(this.primitives.nonEmptyString()),
     });
   }
 
-  static session() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      kind: configSchema.optional(configSchema.enum(SessionKind)),
-      owner: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
+  session(): ConfigSchemaNode<SessionFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      kind: this.schema.optional(this.schema.enum(SessionKind)),
+      owner: this.schema.optional(this.primitives.nonEmptyString()),
     });
   }
 
-  static artifact() {
-    return configSchema.strictObject({
-      ...FactSettingsSchema.properties(),
-      path: FactsConfigPrimitives.nonEmptyString(),
-      kind: configSchema.optional(FactsConfigPrimitives.nonEmptyString()),
-      capture: configSchema.defaulted(configSchema.enum(ArtifactCapture), ArtifactCapture.Metadata),
+  artifact(): ConfigSchemaNode<ArtifactFact> {
+    return this.schema.strictObject({
+      ...this.settings.properties(),
+      path: this.primitives.nonEmptyString(),
+      kind: this.schema.optional(this.primitives.nonEmptyString()),
+      capture: this.schema.defaulted(this.schema.enum(ArtifactCapture), ArtifactCapture.Metadata),
     });
   }
 }

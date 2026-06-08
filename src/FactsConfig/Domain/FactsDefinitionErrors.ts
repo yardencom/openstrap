@@ -1,10 +1,10 @@
-import type { ConfigIssueDto } from "../../ConfigCore/index.js";
+import type { ConfigIssue } from "../../ConfigCore/index.js";
 
 export class FactsDefinitionValidationError extends Error {
   readonly issues: string[];
-  readonly details: ConfigIssueDto[];
+  readonly details: ConfigIssue[];
 
-  constructor(details: ConfigIssueDto[]) {
+  constructor(details: ConfigIssue[]) {
     const issues = details.map((issue) => {
       const location = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
       return `${location}${issue.message}`;

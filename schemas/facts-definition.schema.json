@@ -12,7 +12,8 @@
     },
     "version": {
       "type": "integer",
-      "exclusiveMinimum": 0
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
     },
     "description": {
       "type": "string",
@@ -26,126 +27,14 @@
         "pattern": "^[a-z][a-z0-9._-]*$"
       },
       "additionalProperties": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "string"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "default": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "additionalProperties": false
+        "type": "object",
+        "properties": {
+          "required": {
+            "type": "boolean"
           },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "path"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "default": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "number"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "default": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "boolean"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "default": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "enum"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "values": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "minItems": 1
-              },
-              "default": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "type",
-              "values"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "const": "array"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "default": {
-                "type": "array",
-                "items": {}
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "additionalProperties": false
-          }
-        ]
+          "default": {}
+        },
+        "additionalProperties": false
       }
     },
     "commands": {
@@ -159,15 +48,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -182,15 +72,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -220,14 +112,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -245,7 +139,8 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "uniqueItems": true
           }
         },
         "required": [
@@ -269,15 +164,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -292,15 +188,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -330,14 +228,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -348,12 +248,13 @@
             ]
           },
           "names": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
             },
-            "minItems": 1
+            "uniqueItems": true
           }
         },
         "required": [
@@ -377,15 +278,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -400,15 +302,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -438,14 +342,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -460,6 +366,7 @@
             "minLength": 1
           },
           "require": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -473,7 +380,7 @@
                 "executable"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           }
         },
         "required": [
@@ -497,15 +404,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -520,15 +428,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -558,14 +468,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -608,15 +520,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -631,15 +544,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -669,14 +584,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -687,12 +604,13 @@
             ]
           },
           "names": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "manager": {
             "type": "string",
@@ -712,434 +630,6 @@
     "users": {
       "type": "array",
       "items": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "pattern": "^[a-z][a-z0-9._-]*$"
-              },
-              "importance": {
-                "type": "string",
-                "enum": [
-                  "required",
-                  "optional",
-                  "evidence"
-                ],
-                "default": "required"
-              },
-              "platforms": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "linux",
-                    "macos",
-                    "windows",
-                    "freebsd",
-                    "openbsd",
-                    "netbsd",
-                    "unix",
-                    "posix"
-                  ]
-                },
-                "minItems": 1
-              },
-              "timeoutMs": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "maxOutputBytes": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "redaction": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "none",
-                      "mask",
-                      "hash",
-                      "omit"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "strategy": {
-                        "type": "string",
-                        "enum": [
-                          "none",
-                          "mask",
-                          "hash",
-                          "omit"
-                        ]
-                      },
-                      "fields": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "patterns": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
-                    },
-                    "required": [
-                      "strategy"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "required": [
-              "id",
-              "name"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "pattern": "^[a-z][a-z0-9._-]*$"
-              },
-              "importance": {
-                "type": "string",
-                "enum": [
-                  "required",
-                  "optional",
-                  "evidence"
-                ],
-                "default": "required"
-              },
-              "platforms": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "linux",
-                    "macos",
-                    "windows",
-                    "freebsd",
-                    "openbsd",
-                    "netbsd",
-                    "unix",
-                    "posix"
-                  ]
-                },
-                "minItems": 1
-              },
-              "timeoutMs": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "maxOutputBytes": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "redaction": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "none",
-                      "mask",
-                      "hash",
-                      "omit"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "strategy": {
-                        "type": "string",
-                        "enum": [
-                          "none",
-                          "mask",
-                          "hash",
-                          "omit"
-                        ]
-                      },
-                      "fields": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "patterns": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
-                    },
-                    "required": [
-                      "strategy"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              },
-              "uid": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                ]
-              }
-            },
-            "required": [
-              "id",
-              "uid"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
-      "x-uniqueFields": [
-        "id"
-      ]
-    },
-    "groups": {
-      "type": "array",
-      "items": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "pattern": "^[a-z][a-z0-9._-]*$"
-              },
-              "importance": {
-                "type": "string",
-                "enum": [
-                  "required",
-                  "optional",
-                  "evidence"
-                ],
-                "default": "required"
-              },
-              "platforms": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "linux",
-                    "macos",
-                    "windows",
-                    "freebsd",
-                    "openbsd",
-                    "netbsd",
-                    "unix",
-                    "posix"
-                  ]
-                },
-                "minItems": 1
-              },
-              "timeoutMs": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "maxOutputBytes": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "redaction": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "none",
-                      "mask",
-                      "hash",
-                      "omit"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "strategy": {
-                        "type": "string",
-                        "enum": [
-                          "none",
-                          "mask",
-                          "hash",
-                          "omit"
-                        ]
-                      },
-                      "fields": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "patterns": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
-                    },
-                    "required": [
-                      "strategy"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "required": [
-              "id",
-              "name"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "pattern": "^[a-z][a-z0-9._-]*$"
-              },
-              "importance": {
-                "type": "string",
-                "enum": [
-                  "required",
-                  "optional",
-                  "evidence"
-                ],
-                "default": "required"
-              },
-              "platforms": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "linux",
-                    "macos",
-                    "windows",
-                    "freebsd",
-                    "openbsd",
-                    "netbsd",
-                    "unix",
-                    "posix"
-                  ]
-                },
-                "minItems": 1
-              },
-              "timeoutMs": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "maxOutputBytes": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "redaction": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "none",
-                      "mask",
-                      "hash",
-                      "omit"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "strategy": {
-                        "type": "string",
-                        "enum": [
-                          "none",
-                          "mask",
-                          "hash",
-                          "omit"
-                        ]
-                      },
-                      "fields": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "patterns": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
-                    },
-                    "required": [
-                      "strategy"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              },
-              "gid": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                ]
-              }
-            },
-            "required": [
-              "id",
-              "gid"
-            ],
-            "additionalProperties": false
-          }
-        ]
-      },
-      "x-uniqueFields": [
-        "id"
-      ]
-    },
-    "services": {
-      "type": "array",
-      "items": {
         "type": "object",
         "properties": {
           "id": {
@@ -1148,15 +638,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -1171,15 +662,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -1209,14 +702,282 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uid": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "uid"
+            ]
+          }
+        ]
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "default": "required",
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ]
+          },
+          "platforms": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "strategy"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "gid": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "gid"
+            ]
+          }
+        ]
+      },
+      "x-uniqueFields": [
+        "id"
+      ]
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]*$"
+          },
+          "importance": {
+            "default": "required",
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "evidence"
+            ]
+          },
+          "platforms": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "linux",
+                "macos",
+                "windows",
+                "freebsd",
+                "openbsd",
+                "netbsd",
+                "unix",
+                "posix"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "maxOutputBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mask",
+                  "hash",
+                  "omit"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "mask",
+                      "hash",
+                      "omit"
+                    ]
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -1256,15 +1017,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -1279,15 +1041,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -1317,14 +1081,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -1368,15 +1134,16 @@
             "pattern": "^[a-z][a-z0-9._-]*$"
           },
           "importance": {
+            "default": "required",
             "type": "string",
             "enum": [
               "required",
               "optional",
               "evidence"
-            ],
-            "default": "required"
+            ]
           },
           "platforms": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -1391,15 +1158,17 @@
                 "posix"
               ]
             },
-            "minItems": 1
+            "uniqueItems": true
           },
           "timeoutMs": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "maxOutputBytes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "redaction": {
             "anyOf": [
@@ -1429,14 +1198,16 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   },
                   "patterns": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "uniqueItems": true
                   }
                 },
                 "required": [
@@ -1455,13 +1226,13 @@
             "minLength": 1
           },
           "capture": {
+            "default": "metadata",
             "type": "string",
             "enum": [
               "metadata",
               "hash",
               "content"
-            ],
-            "default": "metadata"
+            ]
           }
         },
         "required": [
@@ -1485,102 +1256,52 @@
     {
       "required": [
         "commands"
-      ],
-      "properties": {
-        "commands": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "env"
-      ],
-      "properties": {
-        "env": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "files"
-      ],
-      "properties": {
-        "files": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "processes"
-      ],
-      "properties": {
-        "processes": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "packages"
-      ],
-      "properties": {
-        "packages": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "users"
-      ],
-      "properties": {
-        "users": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "groups"
-      ],
-      "properties": {
-        "groups": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "services"
-      ],
-      "properties": {
-        "services": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "sessions"
-      ],
-      "properties": {
-        "sessions": {
-          "minItems": 1
-        }
-      }
+      ]
     },
     {
       "required": [
         "artifacts"
-      ],
-      "properties": {
-        "artifacts": {
-          "minItems": 1
-        }
-      }
+      ]
     }
   ]
 }

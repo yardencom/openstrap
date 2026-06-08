@@ -1,19 +1,14 @@
-import type { ParsedConfigDocumentDto, RawConfigDocumentDto, ValidatedConfigDocumentDto } from "../Domain/ConfigDtos.js";
-import { YamlConfigDocumentParser } from "../Adapters/YamlConfigDocumentParser.js";
-import type { ConfigDocumentParser } from "../Ports/ConfigDocumentParser.js";
-import type { ConfigValidator } from "../Ports/ConfigValidator.js";
+import { LilconfigConfigLoader } from "../Adapters/LilconfigConfigLoader.js";
+import type { ConfigLoaderBackend, ConfigLoaderBackendRequest, LoadedConfig } from "../Ports/ConfigLoaderBackend.js";
 
-export class ConfigLoader<TConfig> {
-  constructor(
-    private readonly validator: ConfigValidator<TConfig>,
-    private readonly parser: ConfigDocumentParser = new YamlConfigDocumentParser(),
-  ) {}
+export class ConfigLoader {
+  private readonly backend: ConfigLoaderBackend;
 
-  load(document: RawConfigDocumentDto): ValidatedConfigDocumentDto<TConfig> {
-    return this.validator.validate(this.parser.parse(document));
+  constructor() {
+    this.backend = new LilconfigConfigLoader();
   }
 
-  validateParsed(document: ParsedConfigDocumentDto): ValidatedConfigDocumentDto<TConfig> {
-    return this.validator.validate(document);
+  load(request: ConfigLoaderBackendRequest): LoadedConfig | undefined {
+    return this.backend.load(request);
   }
 }

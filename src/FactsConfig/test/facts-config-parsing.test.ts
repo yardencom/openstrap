@@ -25,17 +25,20 @@ env:
     expect(definition.env?.[0]?.redaction).toBe("none");
   });
 
-  it("supports minimal typed inputs for declaration templates", () => {
+  it("supports minimal inputs for declaration templates", () => {
     const definition = parseYaml(`
 id: workspace-baseline
 version: 1
 description: Workspace facts that can be bound by a workflow later
 
 inputs:
-  workspace:
-    type: path
-    required: false
-    default: "."
+  workspace: {}
+  target:
+    required: true
+    default:
+      services:
+        name: docker
+        path: {}
 
 files:
   - id: workspace
@@ -44,7 +47,14 @@ files:
     importance: optional
 `);
 
-    expect(definition.inputs?.workspace?.type).toBe("path");
+    expect(definition.inputs?.workspace).toEqual({});
+    expect(definition.inputs?.target?.required).toBe(true);
+    expect(definition.inputs?.target?.default).toEqual({
+      services: {
+        name: "docker",
+        path: {},
+      },
+    });
     expect(definition.files?.[0]?.path).toBe("{{ inputs.workspace }}");
   });
 

@@ -6,10 +6,9 @@ description: Cross-platform facts for controller-selected execution contexts
 inputs:
   # A workflow can bind this to a repo/project directory later.
   # The facts definition only names the input; it does not choose a target.
-  workspace:
-    type: path
-    required: false
-    default: "."
+  workspace: {}
+  target:
+    required: true
 
 commands:
   # Commands describe executable entrypoints and runtime capabilities:

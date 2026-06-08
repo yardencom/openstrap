@@ -3,10 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "openstrap": "./dist/Cli/openstrap.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/FactsConfig/index.d.ts",
       "import": "./dist/FactsConfig/index.js"
+    },
+    "./BlueprintConfig": {
+      "types": "./dist/BlueprintConfig/index.d.ts",
+      "import": "./dist/BlueprintConfig/index.js"
+    },
+    "./Blueprint": {
+      "types": "./dist/Blueprint/index.d.ts",
+      "import": "./dist/Blueprint/index.js"
     },
     "./ConfigCore": {
       "types": "./dist/ConfigCore/index.d.ts",
@@ -15,20 +26,36 @@
     "./FactsConfig": {
       "types": "./dist/FactsConfig/index.d.ts",
       "import": "./dist/FactsConfig/index.js"
+    },
+    "./FactsRuntime": {
+      "types": "./dist/FactsRuntime/index.d.ts",
+      "import": "./dist/FactsRuntime/index.js"
+    },
+    "./Requirements": {
+      "types": "./dist/Requirements/index.d.ts",
+      "import": "./dist/Requirements/index.js"
+    },
+    "./OpenStrapRun": {
+      "types": "./dist/OpenStrapRun/index.d.ts",
+      "import": "./dist/OpenStrapRun/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "schema:generate": "npm run build && node scripts/generate-facts-definition-schema.mjs",
+    "schema:generate": "npm run build && node scripts/generate-facts-definition-schema.mjs && node scripts/generate-openstrap-blueprint-schema.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "env-paths": "^4.0.0",
+    "lilconfig": "^3.1.3",
+    "semver": "^7.8.2",
     "yaml": "^2.8.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@types/semver": "^7.7.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   }
