@@ -15,6 +15,10 @@
       "types": "./dist/Blueprint/index.d.ts",
       "import": "./dist/Blueprint/index.js"
     },
+    "./Blueprint/Schema": {
+      "types": "./dist/Blueprint/Schema/index.d.ts",
+      "import": "./dist/Blueprint/Schema/index.js"
+    },
     "./ConfigCore": {
       "types": "./dist/ConfigCore/index.d.ts",
       "import": "./dist/ConfigCore/index.js"
@@ -54,7 +58,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "schema:generate": "npm run build && node scripts/generate-facts-definition-schema.mjs && node scripts/generate-openstrap-blueprint-schema.mjs",
+    "schema:generate": "npm run build && node scripts/generate-facts-definition-schema.mjs && node dist/Blueprint/Schema/index.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

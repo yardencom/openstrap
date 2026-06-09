@@ -3,7 +3,6 @@ import {
   ConfigParseError,
   ConfigValidationError,
   type ConfigLoadRequest,
-  type JsonSchema,
 } from "../../ConfigCore/index.js";
 import type { BlueprintDocument } from "../Domain/BlueprintDocument.js";
 import { BlueprintDocumentReadError } from "../Domain/BlueprintIssues.js";
@@ -35,9 +34,5 @@ export class BlueprintDocumentReader {
       mode: "inline",
       content: yamlText,
     });
-  }
-
-  getJsonSchema(): Readonly<JsonSchema> {
-    return this.configCore.emitJsonSchema(this.schemaDefinition);
   }
 }

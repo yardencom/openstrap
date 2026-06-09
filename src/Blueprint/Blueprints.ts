@@ -1,4 +1,4 @@
-import type { ConfigLoadRequest, JsonSchema } from "../ConfigCore/index.js";
+import type { ConfigLoadRequest } from "../ConfigCore/index.js";
 import type { OpenStrapBlueprint } from "./Domain/Blueprint.js";
 import { BlueprintDocumentReader } from "./Application/BlueprintDocumentReader.js";
 import { BlueprintTransformer } from "./Application/BlueprintTransformer.js";
@@ -24,9 +24,5 @@ export class Blueprints {
     this.validator.assertValid(blueprint);
 
     return blueprint;
-  }
-
-  getJsonSchema(): Readonly<JsonSchema> {
-    return this.reader.getJsonSchema();
   }
 }
