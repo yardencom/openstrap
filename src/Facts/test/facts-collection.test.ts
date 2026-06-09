@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   createFactCollection,
-  FactCollectionPlanner,
   FactCollectionValidationError,
   LocalProcessFactCollector,
   type FactCollectionItem,
@@ -44,43 +43,41 @@ describe("Facts", () => {
   });
 
   it("collects separate host and guest snapshots using local process transport", () => {
-    const collection = new LocalProcessFactCollector().collect(new FactCollectionPlanner().plan({
+    const collection = new LocalProcessFactCollector().collect({
       targets: [
         {
-          name: "host",
-          scope: "host",
-          type: "machine",
-          transport: "local",
-        },
-        {
-          name: "guest",
-          scope: "guest",
-          type: "vm",
-          transport: "local",
-        },
-      ],
-      requirements: [
-        {
-          id: "host-runtime",
-          target: "host",
-          runtimes: {
-            node: {
-              ready: true,
+          target: {
+            name: "host",
+            scope: "host",
+            type: "machine",
+            transport: "local",
+          },
+          selectors: {
+            runtimes: {
+              node: {
+                ready: true,
+              },
             },
           },
         },
         {
-          id: "guest-runtime",
-          target: "guest",
-          runtimes: {
-            node: {
-              ready: true,
+          target: {
+            name: "guest",
+            scope: "guest",
+            type: "vm",
+            transport: "local",
+          },
+          selectors: {
+            runtimes: {
+              node: {
+                ready: true,
+              },
             },
           },
         },
       ],
       now: new Date("2026-06-08T10:00:00.000Z"),
-    }));
+    });
 
     expect(collection).toHaveLength(2);
     expect(collection[0]!.snapshot.scope).toBe("host");
@@ -92,29 +89,27 @@ describe("Facts", () => {
     expect(collection[0]!.snapshot).not.toHaveProperty("purpose");
   });
 
-  it("builds collection requests from requirements and represents requested unsupported selectors", () => {
-    const collection = new LocalProcessFactCollector().collect(new FactCollectionPlanner().plan({
+  it("represents explicitly requested unsupported selectors", () => {
+    const collection = new LocalProcessFactCollector().collect({
       targets: [
         {
-          name: "host",
-          scope: "host",
-          type: "machine",
-          transport: "local",
-        },
-      ],
-      requirements: [
-        {
-          id: "ssh-service",
-          target: "host",
-          services: {
-            ssh: {
-              running: true,
+          target: {
+            name: "host",
+            scope: "host",
+            type: "machine",
+            transport: "local",
+          },
+          selectors: {
+            services: {
+              ssh: {
+                running: true,
+              },
             },
           },
         },
       ],
       now: new Date("2026-06-08T10:00:00.000Z"),
-    }));
+    });
 
     expect((collection[0]!.snapshot.data as any).services.ssh).toEqual({
       status: "unsupported",

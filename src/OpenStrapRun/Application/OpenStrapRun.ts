@@ -1,7 +1,6 @@
 import { Blueprints, type OpenStrapBlueprint } from "../../Blueprint/index.js";
 import {
   createFactCollection,
-  FactCollectionPlanner,
   type FactCollection,
 } from "../../Facts/index.js";
 import { SystemInformationFactCollector } from "../../Facts/Adapters/SystemInformationFactCollector.js";
@@ -10,6 +9,7 @@ import {
   type RequirementRun,
 } from "../../Requirements/index.js";
 import type { FactsBackend } from "../../Plugin/index.js";
+import { RequirementFactCollectionRequestBuilder } from "./RequirementFactCollectionRequestBuilder.js";
 
 export type OpenStrapRunRequest = {
   configPath?: string;
@@ -26,7 +26,7 @@ export type OpenStrapRunResult = {
 export class OpenStrapRun {
   constructor(
     private readonly blueprints = new Blueprints(),
-    private readonly factPlanner = new FactCollectionPlanner(),
+    private readonly factRequestBuilder = new RequirementFactCollectionRequestBuilder(),
     private readonly factsBackend: FactsBackend = {
       id: "openstrap:systeminformation",
       capabilities: {
@@ -84,7 +84,7 @@ export class OpenStrapRun {
     blueprint: OpenStrapBlueprint,
     request: OpenStrapRunRequest,
   ): Promise<FactCollection> {
-    const factRequest = this.factPlanner.plan({
+    const factRequest = this.factRequestBuilder.build({
       targets: blueprint.targets,
       requirements: blueprint.requirements,
       workspaceRoot: request.workspaceRoot,

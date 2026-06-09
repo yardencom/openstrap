@@ -2,11 +2,11 @@ import { platform } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { FactsDefinitionCollector } from "../index.js";
+import { CollectFactsFromDefinition } from "../index.js";
 
-describe("FactsDefinitionCollector", () => {
+describe("CollectFactsFromDefinition", () => {
   it("stores process and service inventories as normalized facts", async () => {
-    const result = await new FactsDefinitionCollector().collect({
+    const result = await new CollectFactsFromDefinition().collect({
       path: join(process.cwd(), "examples/facts/system-inventory.yaml"),
       workspaceRoot: process.cwd(),
       now: new Date("2026-06-09T00:00:00.000Z"),

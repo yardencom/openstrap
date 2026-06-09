@@ -7,11 +7,11 @@ import {
   BlueprintValidationError,
 } from "../Blueprint/index.js";
 import {
-  FactsDefinitionCollector,
-  FactsResultStore,
   type FactCollection,
-  type StoredFactsDefinitionCollectResult,
 } from "../Facts/index.js";
+import {
+  CollectFactsFromDefinition,
+} from "../FactsDefinitionCollection/index.js";
 import { OpenStrapRun } from "../OpenStrapRun/index.js";
 import {
   createOpenStrapRuntime,
@@ -25,6 +25,10 @@ import {
   type RequirementLeafCheck,
   type RequirementRun,
 } from "../Requirements/index.js";
+import {
+  FactsRunResultStore,
+  type StoredCollectFactsFromDefinitionResult,
+} from "../Storage/index.js";
 
 export type OpenStrapRunOutput = {
   targets: Array<{
@@ -115,12 +119,12 @@ export async function runCli(argv: readonly string[], io: CliIo = {
     const runtime = await createCliRuntime(parsedArgs, io.cwd);
 
     if (parsedArgs.command === "facts.collect") {
-      const output = await new FactsDefinitionCollector(undefined, runtime.factsBackend).collect({
+      const output = await new CollectFactsFromDefinition(undefined, runtime.factsBackend).collect({
         path: parsedArgs.configPath,
         workspaceRoot: io.cwd,
         inputs: parsedArgs.inputs,
       });
-      const storedOutput = new FactsResultStore().storeCollectedFacts({
+      const storedOutput = new FactsRunResultStore().storeCollectedFacts({
         workspaceRoot: io.cwd,
         result: output,
       });
@@ -377,7 +381,7 @@ function renderHumanOutput(output: OpenStrapRunOutput): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderFactsCollectOutput(output: StoredFactsDefinitionCollectResult): string {
+function renderFactsCollectOutput(output: StoredCollectFactsFromDefinitionResult): string {
   const item = output.facts[0]!;
   const data = item.snapshot.data as any;
   const lines: string[] = [];

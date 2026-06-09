@@ -1,12 +1,12 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { Facts } from "../index.js";
+import { FactsDefinitionReader } from "../index.js";
 
-export const facts = new Facts();
+export const factsDefinitionReader = new FactsDefinitionReader();
 
 export function parseYaml(yamlText: string): any {
-  return facts.parseDefinitionYaml(yamlText);
+  return factsDefinitionReader.parseYaml(yamlText);
 }
 
 export function listSourceFiles(directoryPath: string): string[] {

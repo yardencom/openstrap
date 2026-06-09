@@ -4,16 +4,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  FactsResultStore,
-  type FactsDefinitionCollectResult,
+  FactsRunResultStore,
 } from "../index.js";
+import type { CollectFactsFromDefinitionResult } from "../../FactsDefinitionCollection/index.js";
 
-describe("FactsResultStore", () => {
+describe("FactsRunResultStore", () => {
   it("stores collected facts under .openstrap/runs/facts/<factRunId>/result.json", () => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), "openstrap-facts-store-"));
 
     try {
-      const result = new FactsResultStore().storeCollectedFacts({
+      const result = new FactsRunResultStore().storeCollectedFacts({
         workspaceRoot,
         result: factsCollectResult("fact_run_host_20260609T000000000Z"),
       });
@@ -30,7 +30,7 @@ describe("FactsResultStore", () => {
   });
 
   it("rejects an empty collected facts result", () => {
-    expect(() => new FactsResultStore().storeCollectedFacts({
+    expect(() => new FactsRunResultStore().storeCollectedFacts({
       workspaceRoot: "/tmp/openstrap",
       result: {
         ...factsCollectResult("fact_run_host_20260609T000000000Z"),
@@ -40,7 +40,7 @@ describe("FactsResultStore", () => {
   });
 });
 
-function factsCollectResult(runId: string): FactsDefinitionCollectResult {
+function factsCollectResult(runId: string): CollectFactsFromDefinitionResult {
   return {
     definition: {
       id: "system-inventory",

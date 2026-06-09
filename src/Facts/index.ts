@@ -3,26 +3,8 @@ export {
   createFactCollection,
   FactCollectionValidationError,
 } from "./Domain/FactCollectionFactory.js";
-export {
-  FactCollectionPlanner,
-  FactCollectionPlanningError,
-} from "./Application/FactCollectionPlanner.js";
-export {
-  FactsDefinitionCollector,
-} from "./Application/FactsDefinitionCollector.js";
-export {
-  FactsResultStore,
-} from "./Application/FactsResultStore.js";
 export { LocalProcessFactCollector } from "./Adapters/LocalProcessFactCollector.js";
-export type {
-  FactsDefinitionCollectRequest,
-  FactsDefinitionCollectResult,
-} from "./Application/FactsDefinitionCollector.js";
-export type {
-  FactsResultStorage,
-  StoredFactsDefinitionCollectResult,
-  StoreCollectedFactsRequest,
-} from "./Application/FactsResultStore.js";
+export { SystemInformationFactCollector } from "./Adapters/SystemInformationFactCollector.js";
 export type {
   FactCollectionRequest,
   FactSelectorTree,

@@ -10,10 +10,16 @@ import type {
   Process,
   Service,
 } from "../Domain/Facts.js";
-import type { Redaction } from "../Domain/ValueObjects/Redaction.js";
-import { RedactionStrategy } from "../Domain/ValueObjects/RedactionStrategy.js";
 import { LocalHostInventoryCollector, type ProcessInventoryEntry, type ServiceInventoryEntry } from "./LocalHostInventoryCollector.js";
 import { LocalProcessFactCollector } from "./LocalProcessFactCollector.js";
+
+type RedactionStrategyName = "none" | "mask" | "hash" | "omit";
+
+type Redaction = RedactionStrategyName | {
+  strategy: RedactionStrategyName;
+  fields?: string[];
+  patterns?: string[];
+};
 
 export class SystemInformationFactCollector {
   constructor(
@@ -211,17 +217,17 @@ function redactSensitiveProcessArgs(args: string): string {
 }
 
 function applyRedaction(output: string, redaction: Redaction | undefined): string {
-  if (!redaction || redaction === RedactionStrategy.None) {
+  if (!redaction || redaction === "none") {
     return output;
   }
 
   const strategy = typeof redaction === "string" ? redaction : redaction.strategy;
 
-  if (strategy === RedactionStrategy.Omit) {
+  if (strategy === "omit") {
     return "";
   }
 
-  if (strategy === RedactionStrategy.Mask) {
+  if (strategy === "mask") {
     if (typeof redaction === "string" || !redaction.patterns || redaction.patterns.length === 0) {
       return "[masked]";
     }
@@ -229,7 +235,7 @@ function applyRedaction(output: string, redaction: Redaction | undefined): strin
     return redaction.patterns.reduce((current, pattern) => current.replace(new RegExp(pattern, "g"), "[masked]"), output);
   }
 
-  if (strategy === RedactionStrategy.Hash) {
+  if (strategy === "hash") {
     return createHash("sha256").update(output).digest("hex");
   }
 

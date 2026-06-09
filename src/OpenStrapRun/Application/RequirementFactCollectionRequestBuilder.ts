@@ -1,22 +1,22 @@
 import type { Requirement } from "../../Requirements/index.js";
-import type { FactCollectionTarget } from "../Domain/Facts.js";
+import type { FactCollectionTarget } from "../../Facts/index.js";
 import type {
   FactCollectionRequest,
   FactSelectorTree,
   FactTargetCollectionRequest,
-} from "../Domain/FactCollectionRequest.js";
+} from "../../Facts/index.js";
 
 const requirementMetaFields = new Set(["id", "target", "optional"]);
 
-export class FactCollectionPlanningError extends Error {
+export class RequirementFactCollectionRequestError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "FactCollectionPlanningError";
+    this.name = "RequirementFactCollectionRequestError";
   }
 }
 
-export class FactCollectionPlanner {
-  plan(params: {
+export class RequirementFactCollectionRequestBuilder {
+  build(params: {
     targets: readonly FactCollectionTarget[];
     requirements: readonly Requirement[];
     workspaceRoot?: string;
@@ -30,7 +30,7 @@ export class FactCollectionPlanner {
       const target = targetsByName.get(requirement.target);
 
       if (!target) {
-        throw new FactCollectionPlanningError(`Cannot plan facts for unknown target "${requirement.target}"`);
+        throw new RequirementFactCollectionRequestError(`Cannot collect facts for unknown target "${requirement.target}"`);
       }
 
       const request = targetRequests.get(target.name) ?? {
