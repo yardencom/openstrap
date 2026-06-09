@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import { satisfies, valid, validRange } from "semver";
 
-import type { FactCollection, FactCollectionItem, Observed, ObservedStatus } from "../../FactsRuntime/index.js";
+import type { FactCollection, FactCollectionItem, Observed, ObservedStatus } from "../../Facts/index.js";
 import type {
   CheckStatus,
   Requirement,

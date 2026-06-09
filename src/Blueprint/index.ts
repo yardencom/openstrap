@@ -1,4 +1,4 @@
-export { Blueprints, BlueprintConfig } from "./Blueprints.js";
+export { Blueprints } from "./Blueprints.js";
 export { BlueprintDocumentReader } from "./Application/BlueprintDocumentReader.js";
 export { BlueprintTransformer } from "./Application/BlueprintTransformer.js";
 export {

@@ -1,12 +1,15 @@
 import { Blueprints, type OpenStrapBlueprint } from "../../Blueprint/index.js";
 import {
-  LocalProcessFactCollector,
+  createFactCollection,
+  FactCollectionPlanner,
   type FactCollection,
-} from "../../FactsRuntime/index.js";
+} from "../../Facts/index.js";
+import { SystemInformationFactCollector } from "../../Facts/Adapters/SystemInformationFactCollector.js";
 import {
   RequirementEvaluator,
   type RequirementRun,
 } from "../../Requirements/index.js";
+import type { FactsBackend } from "../../Plugin/index.js";
 
 export type OpenStrapRunRequest = {
   configPath?: string;
@@ -23,13 +26,37 @@ export type OpenStrapRunResult = {
 export class OpenStrapRun {
   constructor(
     private readonly blueprints = new Blueprints(),
-    private readonly factCollector = new LocalProcessFactCollector(),
+    private readonly factPlanner = new FactCollectionPlanner(),
+    private readonly factsBackend: FactsBackend = {
+      id: "openstrap:systeminformation",
+      capabilities: {
+        scopes: ["host", "guest", "network"],
+        sections: [
+          "os",
+          "arch",
+          "cpu",
+          "memory",
+          "storage",
+          "network",
+          "users",
+          "packages",
+          "processes",
+          "services",
+          "transports",
+          "privileges",
+          "runtimes",
+          "paths",
+          "tools",
+        ],
+      },
+      collect: (request) => new SystemInformationFactCollector().collect(request),
+    },
     private readonly requirementEvaluator = new RequirementEvaluator(),
   ) {}
 
-  execute(request: OpenStrapRunRequest): OpenStrapRunResult {
+  async execute(request: OpenStrapRunRequest): Promise<OpenStrapRunResult> {
     const blueprint = this.readBlueprint(request);
-    const facts = this.collectFactsForBlueprint(blueprint, request);
+    const facts = await this.collectFactsForBlueprint(blueprint, request);
     const requirementRun = this.evaluateBlueprintRequirements(blueprint, facts, request);
 
     return {
@@ -56,12 +83,15 @@ export class OpenStrapRun {
   private collectFactsForBlueprint(
     blueprint: OpenStrapBlueprint,
     request: OpenStrapRunRequest,
-  ): FactCollection {
-    return this.factCollector.collect({
+  ): Promise<FactCollection> {
+    const factRequest = this.factPlanner.plan({
       targets: blueprint.targets,
+      requirements: blueprint.requirements,
       workspaceRoot: request.workspaceRoot,
       now: request.now,
     });
+
+    return Promise.resolve(this.factsBackend.collect(factRequest)).then(createFactCollection);
   }
 
   private evaluateBlueprintRequirements(

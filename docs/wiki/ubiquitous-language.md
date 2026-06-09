@@ -9,7 +9,7 @@
 | **Config** | Одна пользовательская декларация для продукта; она может быть записана в YAML/JSON, разобрана программой и проверена схемой, но термин остается один - config. | `id`, `version`, `commands` в facts YAML |
 | **Config File** | Файл, в котором записан config; формат файла является свойством файла. | `examples/facts/cross-platform.yaml` |
 | **Config File Pattern** | Правило, по которому config module узнает подходящие config files. | `examples/facts/**/*.{yaml,yml}` |
-| **Config Schema** | Декларативное описание структуры config, правил валидации, file patterns и внешней схемы для редакторов. | `FactsConfigSchema.build()` |
+| **Config Schema** | Декларативное описание структуры config, правил валидации, file patterns и внешней схемы для редакторов. | `FactsSchema.build()` |
 
 ## ConfigCore Technical Terms
 
@@ -18,7 +18,7 @@
 | **Schema Node** | Узел внутреннего DSL схемы: строка, число, объект, массив, enum, union и так далее. | `configSchema.string({ minLength: 1 })` |
 | **Schema Definition** | Технический DTO, который соединяет метаданные, file patterns и корневой schema node для ConfigCore. | `ConfigSchemaDefinitionDto` |
 | **Schema Metadata** | Технические сведения о конкретной схеме: имя, описание, версия и другие аннотации. | `{ name: "Facts Definition" }` |
-| **Config Validation** | Проверка config по config schema. | `FactsConfig.parseYaml(yaml)` |
+| **Config Validation** | Проверка config по config schema. | `Facts.parseYaml(yaml)` |
 | **Config Issue** | Структурированная ошибка парсинга или валидации с путем и сообщением. | `{ path: ["commands", 0, "id"] }` |
 | **JSON Schema** | Внешний формат схемы, который можно отдать редакторам и инструментам. | `schemas/facts-definition.schema.json` |
 | **Config Loader** | Сервис ConfigCore, который проводит config через чтение, парсинг и валидацию. | `loader.load({ format: "yaml", content })` |
@@ -32,14 +32,14 @@
 
 | Термин | Описание | Пример |
 |------|------------|---------|
-| **Config Module** | Продуктовый модуль, который описывает и обслуживает один вид конфигурации через ConfigCore. | `FactsConfig` |
+| **Config Module** | Продуктовый модуль, который описывает и обслуживает один вид конфигурации через ConfigCore. | `Facts` |
 | **ConfigCore** | Общий слой для парсинга, описания схем, валидации, ошибок и генерации внешних схем. | `src/ConfigCore` |
-| **FactsConfig** | Config module, который обслуживает конфигурацию facts definition. | `src/FactsConfig` |
+| **Facts** | Config module, который обслуживает конфигурацию facts definition. | `src/Facts` |
 | **WorkflowConfig** | Будущий config module для конфигурации workflow. | `src/WorkflowConfig` |
 | **StorageConfig** | Будущий config module для конфигурации storage. | `src/StorageConfig` |
-| **Public Facade** | Единственный публичный класс модуля, через который внешний код пользуется модулем. | `new FactsConfig().parseYaml(yaml)` |
-| **Module Barrel** | `index.ts`, который экспортирует только публичный фасад модуля. | `export { FactsConfig } ...` |
-| **Boundary Test** | Тест, который проверяет архитектурные границы: импорты, публичный API, расположение файлов. | `facts-config-boundaries.test.ts` |
+| **Public Facade** | Единственный публичный класс модуля, через который внешний код пользуется модулем. | `new Facts().parseYaml(yaml)` |
+| **Module Barrel** | `index.ts`, который экспортирует только публичный фасад модуля. | `export { Facts } ...` |
+| **Boundary Test** | Тест, который проверяет архитектурные границы: импорты, публичный API, расположение файлов. | `facts-boundaries.test.ts` |
 
 ## Facts Domain
 
@@ -116,12 +116,12 @@
 
 | Термин | Описание | Пример |
 |------|------------|---------|
-| **Domain** | Предметная модель модуля: имена, типы и инварианты, которые не меняются при замене YAML, Zod, storage или transport. Если термин нужен только конкретной библиотеке, он не domain. | `src/FactsConfig/Domain` |
+| **Domain** | Предметная модель модуля: имена, типы и инварианты, которые не меняются при замене YAML, Zod, storage или transport. Если термин нужен только конкретной библиотеке, он не domain. | `src/Facts/Domain` |
 | **Entity** | Доменный объект, который система различает по identity. Поля могут измениться, но объект с тем же id остается тем же объектом. | fact с `id: git` |
 | **Value Object** | Доменное значение без identity и lifecycle. Его не ищут по id и не обновляют как объект; его заменяют целиком, а равенство определяется значением. | `FactImportance.Optional` |
 | **DTO** | Форма данных на границе слоя, порта или внешнего формата. DTO описывает контракт обмена, не решает доменные правила и не получает identity только потому, что в нем есть поле `id`. | `ConfigIssueDto` |
-| **Application Layer** | Слой use cases. Здесь происходит последовательность действий: принять вход, вызвать core/domain services, перевести ошибки, вернуть результат. Если код только описывает поля config, это не application. | `FactsConfig.parseYaml()` |
-| **Schema Layer** | Контракт допустимого config. Здесь находятся поля, типы, required/default/unique rules; здесь не должно быть IO, запуска команд, workflow или transport. | `src/FactsConfig/Schema` |
+| **Application Layer** | Слой use cases. Здесь происходит последовательность действий: принять вход, вызвать core/domain services, перевести ошибки, вернуть результат. Если код только описывает поля config, это не application. | `Facts.parseYaml()` |
+| **Schema Layer** | Контракт допустимого config. Здесь находятся поля, типы, required/default/unique rules; здесь не должно быть IO, запуска команд, workflow или transport. | `src/Facts/Schema` |
 | **Adapter** | Внешняя техническая реализация port. Adapter может импортировать Zod, YAML parser, filesystem или network library; domain и config module не должны зависеть от него. | `ZodConfigValidator` |
 | **Port** | Интерфейс потребности системы, названный по capability, а не по технологии. Port существует, когда потребителю важно "что сделать", а реализацию можно заменить. | `JsonSchemaEmitter` |
 | **Composition Root** | Единственное место, где concrete adapters соединяются с ports для создания готового объекта. Если файл только прячет один `new`, это не composition root. | bootstrap приложения |
@@ -134,7 +134,7 @@
 | **Value Object vs DTO** | Value object принадлежит domain language. DTO принадлежит boundary contract. | `FactPlatform.Linux` vs `{ path, message, code }`. |
 | **DTO vs Entity** | Entity нельзя пересобрать произвольно без риска сломать смысл identity. DTO можно собрать заново как ответ parser/validator/port. | entity facts definition vs DTO ошибки валидации |
 | **Port vs Adapter** | Port находится на стороне потребителя и не знает технологию. Adapter находится на стороне технологии и реализует port. | `ConfigValidator` vs `ZodConfigValidator`. |
-| **Schema Layer vs Application Layer** | Schema отвечает "какой config валиден?". Application отвечает "что сделать с этим config?". | `FactsConfigSchema.build()` vs `FactsConfig.parseYaml()`. |
+| **Schema Layer vs Application Layer** | Schema отвечает "какой config валиден?". Application отвечает "что сделать с этим config?". | `FactsSchema.build()` vs `Facts.parseYaml()`. |
 | **Domain vs Schema Layer** | Domain называет предметные понятия. Schema решает, как эти понятия допустимо записать в config file. | `FactImportance` vs `configSchema.enum(FactImportance)` |
 
 ## Risky Terms
@@ -145,9 +145,9 @@
 | **Selector** | Размытый термин, который не говорит, что именно выбирается и где выполняется выбор. | `selector: current` |
 | **Current User** | Размытый термин, который может означать пользователя ОС, пользователя target или пользователя продукта. | `currentUser` |
 | **Options** | Слишком общий термин для настроек fact; в facts domain используется **Fact Settings**. | `FactDeclarationOptions` |
-| **Provider** | Термин допустим только для класса, который действительно предоставляет внешний ресурс через четкий port. | `FactsConfigProvider` |
+| **Provider** | Термин допустим только для класса, который действительно предоставляет внешний ресурс через четкий port. | `FactsProvider` |
 | **Factory** | Термин допустим только когда создание объекта само является отдельной ответственностью. | `createConfigLoader()` |
-| **Composition** | Термин допустим только для composition root, где реально собираются зависимости. | `FactsConfigComposition` |
+| **Composition** | Термин допустим только для composition root, где реально собираются зависимости. | `FactsComposition` |
 | **Definition Definition** | Повторяющийся термин, который прячет различие между **Config Schema** и **Facts Definition**. | `FactsDefinitionConfigDefinition` |
 
 ## Relationships
@@ -155,9 +155,9 @@
 ### Config Module Chain
 
 - **Config Module** использует **ConfigCore** для чтения, проверки и экспорта config.
-- **FactsConfig** является **Config Module** для **Facts Definition**.
-- **FactsConfig** принимает **Config File** и возвращает **Facts Definition** как доменный результат.
-- **FactsConfig** не возвращает Zod-объект, JSON Schema artifact или результат конкретного adapter.
+- **Facts** является **Config Module** для **Facts Definition**.
+- **Facts** принимает **Config File** и возвращает **Facts Definition** как доменный результат.
+- **Facts** не возвращает Zod-объект, JSON Schema artifact или результат конкретного adapter.
 
 ### ConfigCore Chain
 
@@ -165,7 +165,7 @@
 - **Config Schema** описывается через DSL **ConfigCore**.
 - **Schema Definition** собирает метаданные, file patterns и корневой schema node для этого pipeline.
 - **ConfigCore Adapter** реализует конкретную технологию внутри pipeline.
-- **ConfigCore Adapter** может знать про Zod, YAML parser или другую библиотеку; **FactsConfig** не может.
+- **ConfigCore Adapter** может знать про Zod, YAML parser или другую библиотеку; **Facts** не может.
 
 ### Layer Chain
 
@@ -201,10 +201,10 @@
 
 | Неоднозначность | Конкретный пример | Различие |
 |-----------|------------------|------------|
-| **FactsConfig** vs **Facts Definition** | `new FactsConfig().parseYaml(yaml)` vs `id: core-environment-baseline` в YAML | **FactsConfig** - API модуля; **Facts Definition** - config, который этот API возвращает. |
-| **Config Schema** vs **JSON Schema** vs Zod | `FactsConfigSchema.build()` vs `schemas/facts-definition.schema.json` vs `ZodConfigValidator` | **Config Schema** - внутренний контракт; **JSON Schema** - artifact для редактора; Zod - деталь реализации adapter. |
+| **Facts** vs **Facts Definition** | `new Facts().parseYaml(yaml)` vs `id: core-environment-baseline` в YAML | **Facts** - API модуля; **Facts Definition** - config, который этот API возвращает. |
+| **Config Schema** vs **JSON Schema** vs Zod | `FactsSchema.build()` vs `schemas/facts-definition.schema.json` vs `ZodConfigValidator` | **Config Schema** - внутренний контракт; **JSON Schema** - artifact для редактора; Zod - деталь реализации adapter. |
 | **Package Fact** vs **Command Fact** | `packages: [{ names: [openssl] }]` vs `commands: [{ name: git }]` | **Package Fact** проверяет инвентарь установленного ПО; **Command Fact** проверяет поведение executable или вывод команды. |
 | **File Fact** vs **Workspace** | `files: [{ path: "{{ inputs.workspace }}" }]` vs `inputs.workspace: "."` | **Workspace** задает файловый контекст; **File Fact** проверяет путь внутри этого контекста. |
 | **Artifact Fact** vs **File Fact** | `artifacts: [{ path: "openstrap.log", capture: hash }]` vs `files: [{ path: "openstrap.log", require: [exists] }]` | **Artifact Fact** сохраняет evidence; **File Fact** проверяет состояние файла. |
 | **Execution User** vs **Target User** | Программа запущена как `openstrap`; config проверяет `users: [{ name: root }]` | **Execution User** запускает процесс; **Target User** является объектом описания или проверки. |
-| **Provider** vs **Port** vs **Adapter** vs **Facade** | `FactsConfigProvider` vs `ConfigValidator` vs `ZodConfigValidator` vs `FactsConfig` | **Port** - интерфейс; **Adapter** реализует port; **Facade** - публичный API модуля; **Provider** допустим только для реального внешнего ресурса. |
+| **Provider** vs **Port** vs **Adapter** vs **Facade** | `FactsProvider` vs `ConfigValidator` vs `ZodConfigValidator` vs `Facts` | **Port** - интерфейс; **Adapter** реализует port; **Facade** - публичный API модуля; **Provider** допустим только для реального внешнего ресурса. |

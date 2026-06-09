@@ -21,7 +21,9 @@ Consumer
           -> ConfigCore Adapters
 ```
 
-Текущий реализованный product module - `FactsConfig`.
+Текущий реализованный product module - `Facts`.
+
+`Plugin` является runtime extension module. Он собирает OpenStrap runtime из plugin objects и backend capabilities, но не владеет facts schema, requirements schema или blueprint schema.
 
 Будущие product modules, например `WorkflowConfig` и `StorageConfig`, должны повторять эту форму: свой domain, своя schema, свой facade, общий `ConfigCore`.
 
@@ -39,7 +41,7 @@ Consumer
 - concrete libraries, кроме явно принятой platform dependency, остаются деталями `ConfigCore` или его adapters;
 - product modules используют `ConfigCore` как capability и не импортируют deps/libraries напрямую.
 
-Например, default YAML parser внутри `ConfigLoader` допустим, если `FactsConfig` не знает про YAML library и не импортирует `ConfigCore/Adapters`.
+Например, default YAML parser внутри `ConfigLoader` допустим, если `Facts` не знает про YAML library и не импортирует `ConfigCore/Adapters`.
 
 ## Boundary Types
 
@@ -61,12 +63,12 @@ Consumer
 Внешний код общается с product module через public facade.
 
 ```ts
-const factsConfig = new FactsConfig();
-const factsDefinition = factsConfig.parseYaml(yamlText);
-const jsonSchema = factsConfig.getJsonSchema();
+const facts = new Facts();
+const factsDefinition = facts.parseYaml(yamlText);
+const jsonSchema = facts.getJsonSchema();
 ```
 
-Facade скрывает schema classes, ConfigCore pipeline, adapters и конкретные ошибки core. Если внешний код вынужден импортировать `FactsConfig/Schema` или `FactsConfig/Domain` напрямую, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
+Facade скрывает schema classes, ConfigCore pipeline, adapters и конкретные ошибки core. Если внешний код вынужден импортировать `Facts/Schema` или `Facts/Domain` напрямую, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
 
 ### Product Module To ConfigCore
 
@@ -112,8 +114,8 @@ Domain model не является схемой файла.
 | **Entity** | Есть domain identity, по которой система отличает один объект от другого в рамках lifecycle | `FactsDefinition`, fact с `id` |
 | **Value Object** | Важен сам value, нет identity и lifecycle | `FactImportance`, `FactPlatform` |
 | **DTO** | Данные пересекают границу слоя, порта или внешнего формата | `ConfigIssueDto` |
-| **Schema Class** | Класс строит schema nodes для ConfigCore DSL | `FactsConfigSchema` |
-| **Facade** | Класс выражает публичный use case модуля | `FactsConfig` |
+| **Schema Class** | Класс строит schema nodes для ConfigCore DSL | `FactsSchema` |
+| **Facade** | Класс выражает публичный use case модуля | `Facts` |
 
 ### Identity Is Not Just An `id` Field
 
@@ -182,20 +184,20 @@ Schema layer не должен содержать:
 - persistence;
 - Zod-specific code.
 
-Если правило может пригодиться `WorkflowConfig`, `StorageConfig` или другому product module, оно должно стать возможностью `ConfigCore`, а не частной логикой `FactsConfig`.
+Если правило может пригодиться `WorkflowConfig`, `StorageConfig` или другому product module, оно должно стать возможностью `ConfigCore`, а не частной логикой `Facts`.
 
 ## Product Module Boundary
 
 Product module отвечает за один bounded context.
 
-`FactsConfig` отвечает за facts definition config:
+`Facts` отвечает за facts definition config:
 
 - какие sections доступны;
 - какие facts существуют;
 - как facts записываются в config file;
 - какой domain result получает consumer.
 
-`FactsConfig` не отвечает за:
+`Facts` не отвечает за:
 
 - выполнение commands;
 - discovery флагов команд;
@@ -209,7 +211,7 @@ Product module отвечает за один bounded context.
 
 Public API должен быть маленьким и намеренным.
 
-Для `FactsConfig` текущая public boundary:
+Для `Facts` текущая public boundary:
 
 ```ts
 parseYaml(yamlText: string): Readonly<FactsDefinition>
@@ -219,7 +221,7 @@ getJsonSchema(): Readonly<JsonSchemaDocumentDto>
 Barrel file product module экспортирует public facade, а не внутренние детали.
 
 ```ts
-export { FactsConfig } from "./FactsConfig.js";
+export { Facts } from "./Facts.js";
 ```
 
 Новый public method появляется только если есть внешний use case, который нельзя выразить существующим facade API.
@@ -251,8 +253,11 @@ Product domain and schema do not import adapters. Если concrete library по
 | **Workflow** | Оркестрирует шаги продукта | configs, triggers | результат workflow run |
 | **Storage** | Хранит configs, results, artifacts | records, artifacts | сохраненное состояние |
 | **Reporting** | Превращает результаты во внешний вид | stored или collected data | report/export |
+| **Plugin** | Регистрирует runtime capabilities | plugin objects | runtime registry |
 
-`FactsConfig` может подготовить facts definition для collector, но не должен становиться collector.
+`Facts` может подготовить facts definition для collector, но не должен становиться collector.
+
+`Plugin` может зарегистрировать collector/backend, но зарегистрированный backend обязан вернуть нормализованный `FactCollection`. Plugin не меняет payload shape и не добавляет profile/provenance/metadata внутрь `FactSnapshot`.
 
 ## Boundary Verification
 

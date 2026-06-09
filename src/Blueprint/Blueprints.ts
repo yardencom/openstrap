@@ -30,5 +30,3 @@ export class Blueprints {
     return this.reader.getJsonSchema();
   }
 }
-
-export { Blueprints as BlueprintConfig };

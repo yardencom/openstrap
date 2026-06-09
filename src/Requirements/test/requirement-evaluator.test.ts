@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createFactCollection, type FactCollection } from "../../FactsRuntime/index.js";
+import { createFactCollection, type FactCollection } from "../../Facts/index.js";
 import { RequirementEvaluator, type Requirement, type RequirementLeafCheck } from "../index.js";
 
 describe("RequirementEvaluator", () => {

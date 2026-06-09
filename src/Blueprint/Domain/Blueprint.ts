@@ -1,4 +1,4 @@
-import type { FactScope } from "../../FactsRuntime/index.js";
+import type { FactScope } from "../../Facts/index.js";
 import type { Requirement } from "../../Requirements/index.js";
 
 export type BlueprintTargetType = "machine" | "vm" | "network";

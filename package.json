@@ -8,12 +8,8 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/FactsConfig/index.d.ts",
-      "import": "./dist/FactsConfig/index.js"
-    },
-    "./BlueprintConfig": {
-      "types": "./dist/BlueprintConfig/index.d.ts",
-      "import": "./dist/BlueprintConfig/index.js"
+      "types": "./dist/Facts/index.d.ts",
+      "import": "./dist/Facts/index.js"
     },
     "./Blueprint": {
       "types": "./dist/Blueprint/index.d.ts",
@@ -23,13 +19,9 @@
       "types": "./dist/ConfigCore/index.d.ts",
       "import": "./dist/ConfigCore/index.js"
     },
-    "./FactsConfig": {
-      "types": "./dist/FactsConfig/index.d.ts",
-      "import": "./dist/FactsConfig/index.js"
-    },
-    "./FactsRuntime": {
-      "types": "./dist/FactsRuntime/index.d.ts",
-      "import": "./dist/FactsRuntime/index.js"
+    "./Facts": {
+      "types": "./dist/Facts/index.d.ts",
+      "import": "./dist/Facts/index.js"
     },
     "./Requirements": {
       "types": "./dist/Requirements/index.d.ts",
@@ -38,6 +30,10 @@
     "./OpenStrapRun": {
       "types": "./dist/OpenStrapRun/index.d.ts",
       "import": "./dist/OpenStrapRun/index.js"
+    },
+    "./Plugin": {
+      "types": "./dist/Plugin/index.d.ts",
+      "import": "./dist/Plugin/index.js"
     }
   },
   "scripts": {
@@ -50,6 +46,7 @@
     "env-paths": "^4.0.0",
     "lilconfig": "^3.1.3",
     "semver": "^7.8.2",
+    "systeminformation": "^5.31.7",
     "yaml": "^2.8.1",
     "zod": "^4.1.12"
   },

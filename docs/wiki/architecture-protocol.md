@@ -43,9 +43,9 @@ Bad:
 |--------|-----------------|
 | Общее config validation/schema поведение | `ConfigCore` |
 | Конкретная библиотека parsing/validation/emitting | `ConfigCore Adapter` |
-| Facts term, entity, value object, invariant | `FactsConfig Domain` |
-| YAML/JSON форма facts config | `FactsConfig Schema` |
-| Публичное действие facts config module | `FactsConfig Facade` |
+| Facts term, entity, value object, invariant | `Facts Domain` |
+| YAML/JSON форма facts config | `Facts Schema` |
+| Публичное действие facts config module | `Facts Facade` |
 | Command execution, SSH, local process, target access | Runtime/Collector |
 | Workflow run order | Workflow |
 | Persistence, retention, artifacts history | Storage |
