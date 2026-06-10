@@ -50,20 +50,26 @@ export async function collectAndStoreFactsFromDefinition(request: {
 }): Promise<StoredFactsCollectResult> {
   const definition = readDefinition(request.path);
   const inputs = resolveDefinitionInputs(definition, request.inputs);
-  const baseFacts = new Facts(await Promise.resolve(request.backend.collect({
-    targets: [{
+  const baseFacts = new Facts({
+    blueprint: {
       target: {
         name: "host",
         scope: "host",
         type: "machine",
         displayName: "Host",
         transport: "local",
+        requirements: [{
+          id: readString(definition.id, "facts-definition"),
+          ...selectorsFromDefinition(definition),
+        }],
       },
-      selectors: selectorsFromDefinition(definition),
-    }],
+    },
+    runtime: {
+      factsBackend: request.backend,
+    },
     workspaceRoot: request.workspaceRoot,
     now: request.now,
-  })));
+  });
   const baseItem = baseFacts[0];
 
   if (!baseItem) {

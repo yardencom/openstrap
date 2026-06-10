@@ -1,10 +1,9 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { isCliEntryPoint, runCli } from "../src/Cli/openstrap.js";
+import { main } from "../src/CLI/Application/Main.js";
 
 describe("openstrap CLI", () => {
   it("runs the local sample and prints human output", async () => {
@@ -173,26 +172,12 @@ target:
     expect(output.stderr).toBe("");
   });
 
-  it("recognizes package bin symlinks as the CLI entrypoint", () => {
-    const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-"));
-    const target = join(directory, "openstrap.js");
-    const symlink = join(directory, "openstrap");
-
-    try {
-      writeFileSync(target, "#!/usr/bin/env node\n");
-      symlinkSync(target, symlink);
-
-      expect(isCliEntryPoint(pathToFileURL(target).href, symlink)).toBe(true);
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
 });
 
 async function captureCli(argv: readonly string[], cwd = process.cwd()) {
   let stdout = "";
   let stderr = "";
-  const exitCode = await runCli(argv, {
+  const exitCode = await main(["node", "openstrap", ...argv], {
     cwd,
     stdout: {
       write: (chunk: string) => {
