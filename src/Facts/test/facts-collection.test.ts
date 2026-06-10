@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   createFactCollection,
   FactCollectionValidationError,
-  LocalProcessFactCollector,
-  type FactCollectionItem,
-} from "../index.js";
+} from "../Domain/FactCollectionFactory.js";
+import type { FactCollectionItem } from "../Domain/Facts.js";
+import { SystemSnapshot } from "../Adapters/Local/SystemSnapshot.js";
 
 describe("Facts", () => {
   it("rejects empty FactCollection payloads", () => {
@@ -43,7 +43,7 @@ describe("Facts", () => {
   });
 
   it("collects separate host and guest snapshots using local process transport", () => {
-    const collection = new LocalProcessFactCollector().collect({
+    const collection = new SystemSnapshot().collect({
       targets: [
         {
           target: {
@@ -90,7 +90,7 @@ describe("Facts", () => {
   });
 
   it("represents explicitly requested unsupported selectors", () => {
-    const collection = new LocalProcessFactCollector().collect({
+    const collection = new SystemSnapshot().collect({
       targets: [
         {
           target: {
@@ -113,7 +113,7 @@ describe("Facts", () => {
 
     expect((collection[0]!.snapshot.data as any).services.ssh).toEqual({
       status: "unsupported",
-      reason: "local_process_probe_not_declared",
+      reason: "system_probe_not_declared",
     });
   });
 });

@@ -16,21 +16,64 @@ describe("Facts boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps facts definition contracts outside the runtime facts module", () => {
+  it("keeps facts-specific concepts inside one Facts module", () => {
     const factsPath = join(process.cwd(), "src/Facts");
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
-    const factsSources = listSourceFiles(factsPath)
-      .filter((filePath: string) => !filePath.includes("/test/"))
-      .map((filePath: string) => readFileSync(filePath, "utf8"));
 
-    expect(factsEntries).not.toContain("Schema");
-    expect(publicBarrel).not.toContain("FactsDefinition");
-    expect(publicBarrel).not.toContain("FactsRunResultStore");
-    expect(factsSources.join("\n")).not.toContain("../FactsDefinition/Schema");
+    expect(factsEntries).toEqual(
+      expect.arrayContaining(["Application", "Definition", "Domain", "SchemaArtifacts"]),
+    );
+    expect(publicBarrel).toBe("export {};\n");
+    expect(publicBarrel).not.toContain("CollectFactsFromDefinition");
+    expect(publicBarrel).not.toContain("FactsDefinitionJsonSchema");
+    expect(publicBarrel).not.toContain("FactsDefinitionReader");
   });
 
-  it("keeps orchestration and storage outside the facts module", () => {
+  it("keeps Facts/Facts as the only import path from other modules", () => {
+    const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
+      (filePath: string) => !filePath.includes("/src/Facts/"),
+    );
+    const offenders = nonFactsSourcePaths.filter((filePath: string) => {
+      const source = readFileSync(filePath, "utf8");
+      const imports = [...source.matchAll(/from\s+["']([^"']*Facts\/[^"']+)["']/g)];
+
+      return imports.some((match) => !match[1]!.endsWith("/Facts.js"));
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("allows consumers to import only the Facts class from Facts/Facts", () => {
+    const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
+      (filePath: string) => !filePath.includes("/src/Facts/"),
+    );
+    const offenders = nonFactsSourcePaths.filter((filePath: string) => {
+      const source = readFileSync(filePath, "utf8");
+      const imports = [...source.matchAll(/import\s+\{([^}]+)\}\s+from\s+["'][^"']*Facts\/Facts\.js["']/g)];
+
+      return imports.some((match) => {
+        const names = match[1]!
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean);
+
+        return names.length !== 1 || names[0] !== "Facts";
+      });
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps obsolete facts top-level modules out of the repository", () => {
+    const rootEntries = readdirSync(join(process.cwd(), "src"));
+
+    expect(rootEntries).not.toContain("FactsDefinition");
+    expect(rootEntries).not.toContain("FactsDefinitionCollection");
+    expect(rootEntries).not.toContain("SchemaArtifacts");
+  });
+
+  it("keeps obsolete application names out of the facts module", () => {
     const factsPath = join(process.cwd(), "src/Facts");
     const applicationPath = join(factsPath, "Application");
 
@@ -43,6 +86,35 @@ describe("Facts boundaries", () => {
         ]),
       );
     }
+  });
+
+  it("keeps local facts as one concrete adapter area", () => {
+    const adapterEntries = readdirSync(join(process.cwd(), "src/Facts/Adapters"));
+    const localAdapterEntries = readdirSync(join(process.cwd(), "src/Facts/Adapters/Local"));
+
+    expect(adapterEntries).toContain("Local");
+    expect(adapterEntries).not.toEqual(expect.arrayContaining([
+      "LocalHostFacts.ts",
+      "LocalSystemSnapshot.ts",
+      "LocalProcessServiceInventory.ts",
+    ]));
+    expect(localAdapterEntries).toEqual(expect.arrayContaining([
+      "HostFacts.ts",
+      "SystemSnapshot.ts",
+      "ProcessServiceInventory.ts",
+    ]));
+  });
+
+  it("does not import facts adapters outside the Facts module", () => {
+    const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
+      (filePath: string) => !filePath.includes("/src/Facts/"),
+    );
+    const offenders = nonFactsSourcePaths.filter((filePath: string) => {
+      const source = readFileSync(filePath, "utf8");
+      return /Facts\/Adapters/.test(source);
+    });
+
+    expect(offenders).toEqual([]);
   });
 });
 

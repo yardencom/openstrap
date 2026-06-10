@@ -6,7 +6,7 @@ export type Observed = {
   message?: string;
 };
 
-export type FactScope = "host" | "guest" | "network";
+export type FactScope = string;
 
 export type FactTarget = {
   type: string;
@@ -19,7 +19,7 @@ export type FactCollectionTarget = {
   scope: FactScope;
   type: string;
   displayName?: string;
-  transport: "local";
+  transport: string;
 };
 
 export type FactSnapshot<TData = NormalizedFactData> = {
@@ -44,7 +44,7 @@ export type FactRun = {
 };
 
 export type FactCollectionItem = {
-  snapshot: FactSnapshot;
+  snapshot: FactSnapshot<unknown>;
   run: FactRun;
 };
 

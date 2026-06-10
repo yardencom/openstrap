@@ -2,23 +2,19 @@ import type { ConfigFormat } from "../Domain/ConfigFormat.js";
 
 export type ConfigLoadRequest =
   | {
-      mode: "inline";
       content: string;
       name?: string;
     }
   | {
-      mode: "explicit";
       path: string;
     }
   | {
-      mode: "workspace";
       searchRoot: string;
     }
   | {
-      mode: "user";
+      user: true;
     }
   | {
-      mode: "default";
       explicitPath?: string;
       workspaceRoot: string;
       includeUser?: boolean;

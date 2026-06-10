@@ -8,32 +8,20 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/Facts/index.d.ts",
-      "import": "./dist/Facts/index.js"
+      "types": "./dist/Facts/Facts.d.ts",
+      "import": "./dist/Facts/Facts.js"
     },
     "./Blueprint": {
       "types": "./dist/Blueprint/index.d.ts",
       "import": "./dist/Blueprint/index.js"
     },
-    "./Blueprint/Schema": {
-      "types": "./dist/Blueprint/Schema/index.d.ts",
-      "import": "./dist/Blueprint/Schema/index.js"
-    },
     "./ConfigCore": {
       "types": "./dist/ConfigCore/index.d.ts",
       "import": "./dist/ConfigCore/index.js"
     },
-    "./Facts": {
-      "types": "./dist/Facts/index.d.ts",
-      "import": "./dist/Facts/index.js"
-    },
-    "./FactsDefinition": {
-      "types": "./dist/FactsDefinition/index.d.ts",
-      "import": "./dist/FactsDefinition/index.js"
-    },
-    "./FactsDefinitionCollection": {
-      "types": "./dist/FactsDefinitionCollection/index.d.ts",
-      "import": "./dist/FactsDefinitionCollection/index.js"
+    "./Facts/Facts": {
+      "types": "./dist/Facts/Facts.d.ts",
+      "import": "./dist/Facts/Facts.js"
     },
     "./Requirements": {
       "types": "./dist/Requirements/index.d.ts",
@@ -46,19 +34,11 @@
     "./Plugin": {
       "types": "./dist/Plugin/index.d.ts",
       "import": "./dist/Plugin/index.js"
-    },
-    "./SchemaArtifacts": {
-      "types": "./dist/SchemaArtifacts/index.d.ts",
-      "import": "./dist/SchemaArtifacts/index.js"
-    },
-    "./Storage": {
-      "types": "./dist/Storage/index.d.ts",
-      "import": "./dist/Storage/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "schema:generate": "npm run build && node scripts/generate-facts-definition-schema.mjs && node dist/Blueprint/Schema/index.js",
+    "schema:generate": "tsx src/Blueprint/Schema/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -73,6 +53,7 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/semver": "^7.7.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   }

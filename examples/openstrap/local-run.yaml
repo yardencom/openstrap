@@ -1,5 +1,10 @@
 # yaml-language-server: $schema=../../schemas/openstrap-blueprint.schema.json
-host:
+target:
+  name: local
+  scope: system
+  type: machine
+  displayName: Local machine
+  transport: local
   requirements:
     - id: node-runtime
       runtimes:

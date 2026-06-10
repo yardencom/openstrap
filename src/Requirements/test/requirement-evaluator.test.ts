@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { createFactCollection, type FactCollection } from "../../Facts/index.js";
-import { RequirementEvaluator, type Requirement, type RequirementLeafCheck } from "../index.js";
+import { Facts } from "../../Facts/Facts.js";
+import { RequirementEvaluator, type RequirementLeafCheck, type TargetlessRequirement } from "../index.js";
 
 describe("RequirementEvaluator", () => {
   it("passes when all leaf checks match normalized facts", () => {
     const run = evaluate([
       {
         id: "docker-runtime",
-        target: "guest",
         runtimes: {
           docker: {
             ready: true,
@@ -26,7 +25,6 @@ describe("RequirementEvaluator", () => {
     const run = evaluate([
       {
         id: "docker-runtime",
-        target: "guest",
         runtimes: {
           docker: {
             ready: false,
@@ -46,7 +44,6 @@ describe("RequirementEvaluator", () => {
       requirements: [
         {
           id: "node-runtime",
-          target: "host",
           runtimes: {
             node: {
               ready: true,
@@ -54,7 +51,7 @@ describe("RequirementEvaluator", () => {
           },
         },
       ],
-      targets: [{ name: "host", type: "machine" }],
+      target: { name: "host", type: "machine" },
       factCollection: facts(),
       now: new Date("2026-06-08T10:00:00.000Z"),
     });
@@ -70,7 +67,6 @@ describe("RequirementEvaluator", () => {
     const run = evaluate([
       {
         id: "ssh-service",
-        target: "guest",
         services: {
           ssh: {
             running: true,
@@ -90,7 +86,6 @@ describe("RequirementEvaluator", () => {
       const run = evaluate([
         {
           id: `${status}-service`,
-          target: "guest",
           services: {
             [status]: {
               running: true,
@@ -108,7 +103,6 @@ describe("RequirementEvaluator", () => {
     const run = evaluate([
       {
         id: "optional-docker",
-        target: "guest",
         optional: true,
         runtimes: {
           docker: {
@@ -126,7 +120,6 @@ describe("RequirementEvaluator", () => {
     const run = evaluate([
       {
         id: "bad-version",
-        target: "guest",
         runtimes: {
           badVersion: {
             version: ">=1.0.0",
@@ -140,17 +133,17 @@ describe("RequirementEvaluator", () => {
   });
 });
 
-function evaluate(requirements: Requirement[]) {
+function evaluate(requirements: TargetlessRequirement[]) {
   return new RequirementEvaluator().evaluate({
     requirements,
-    targets: [{ name: "guest", type: "vm" }],
+    target: { name: "guest", type: "vm" },
     factCollection: facts(),
     now: new Date("2026-06-08T10:00:00.000Z"),
   });
 }
 
-function facts(): FactCollection {
-  return createFactCollection([
+function facts(): Facts {
+  return new Facts([
     {
       snapshot: {
         id: "snap_guest",

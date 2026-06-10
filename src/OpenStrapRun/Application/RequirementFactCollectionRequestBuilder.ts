@@ -1,49 +1,47 @@
-import type { Requirement } from "../../Requirements/index.js";
-import type { FactCollectionTarget } from "../../Facts/index.js";
-import type {
-  FactCollectionRequest,
-  FactSelectorTree,
-  FactTargetCollectionRequest,
-} from "../../Facts/index.js";
+import type { TargetlessRequirement } from "../../Requirements/index.js";
 
-const requirementMetaFields = new Set(["id", "target", "optional"]);
+const requirementMetaFields = new Set(["id", "optional"]);
 
-export class RequirementFactCollectionRequestError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RequirementFactCollectionRequestError";
-  }
-}
+export type FactCollectionTarget = {
+  name: string;
+  scope: string;
+  type: string;
+  displayName?: string;
+  transport: string;
+};
+
+export type FactSelectorTree = Record<string, unknown>;
+
+export type FactTargetCollectionRequest = {
+  target: FactCollectionTarget;
+  selectors: FactSelectorTree;
+};
+
+export type FactCollectionRequest = {
+  targets: readonly FactTargetCollectionRequest[];
+  workspaceRoot?: string;
+  now?: Date;
+  attempt?: number;
+};
 
 export class RequirementFactCollectionRequestBuilder {
   build(params: {
-    targets: readonly FactCollectionTarget[];
-    requirements: readonly Requirement[];
+    target: FactCollectionTarget;
+    requirements: readonly TargetlessRequirement[];
     workspaceRoot?: string;
     now?: Date;
     attempt?: number;
   }): FactCollectionRequest {
-    const targetsByName = new Map(params.targets.map((target) => [target.name, target]));
-    const targetRequests = new Map<string, FactTargetCollectionRequest>();
-
-    for (const requirement of params.requirements) {
-      const target = targetsByName.get(requirement.target);
-
-      if (!target) {
-        throw new RequirementFactCollectionRequestError(`Cannot collect facts for unknown target "${requirement.target}"`);
-      }
-
-      const request = targetRequests.get(target.name) ?? {
-        target,
-        selectors: {},
-      };
-
-      request.selectors = mergeSelectorTrees(request.selectors, extractRequestedSelectors(requirement));
-      targetRequests.set(target.name, request);
-    }
+    const selectors = params.requirements.reduce<FactSelectorTree>(
+      (merged, requirement) => mergeSelectorTrees(merged, extractRequestedSelectors(requirement)),
+      {},
+    );
 
     return {
-      targets: [...targetRequests.values()],
+      targets: [{
+        target: params.target,
+        selectors,
+      }],
       workspaceRoot: params.workspaceRoot,
       now: params.now,
       attempt: params.attempt,
@@ -51,7 +49,7 @@ export class RequirementFactCollectionRequestBuilder {
   }
 }
 
-function extractRequestedSelectors(requirement: Requirement): FactSelectorTree {
+function extractRequestedSelectors(requirement: TargetlessRequirement): FactSelectorTree {
   return Object.fromEntries(
     Object.entries(requirement).filter(([key]) => !requirementMetaFields.has(key)),
   );

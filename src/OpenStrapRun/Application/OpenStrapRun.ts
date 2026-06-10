@@ -1,61 +1,33 @@
-import { Blueprints, type OpenStrapBlueprint } from "../../Blueprint/index.js";
-import {
-  createFactCollection,
-  type FactCollection,
-} from "../../Facts/index.js";
-import { SystemInformationFactCollector } from "../../Facts/Adapters/SystemInformationFactCollector.js";
+import type { Blueprint } from "../../Blueprint/index.js";
+import { Facts } from "../../Facts/Facts.js";
+import type { FactsBackend } from "../../Plugin/index.js";
 import {
   RequirementEvaluator,
   type RequirementRun,
 } from "../../Requirements/index.js";
-import type { FactsBackend } from "../../Plugin/index.js";
 import { RequirementFactCollectionRequestBuilder } from "./RequirementFactCollectionRequestBuilder.js";
 
 export type OpenStrapRunRequest = {
-  configPath?: string;
+  blueprint: Blueprint;
   workspaceRoot: string;
   now?: Date;
 };
 
 export type OpenStrapRunResult = {
-  blueprint: OpenStrapBlueprint;
-  facts: FactCollection;
+  blueprint: Blueprint;
+  facts: Facts;
   requirementRun: RequirementRun;
 };
 
 export class OpenStrapRun {
   constructor(
-    private readonly blueprints = new Blueprints(),
+    private readonly factsBackend: FactsBackend,
     private readonly factRequestBuilder = new RequirementFactCollectionRequestBuilder(),
-    private readonly factsBackend: FactsBackend = {
-      id: "openstrap:systeminformation",
-      capabilities: {
-        scopes: ["host", "guest", "network"],
-        sections: [
-          "os",
-          "arch",
-          "cpu",
-          "memory",
-          "storage",
-          "network",
-          "users",
-          "packages",
-          "processes",
-          "services",
-          "transports",
-          "privileges",
-          "runtimes",
-          "paths",
-          "tools",
-        ],
-      },
-      collect: (request) => new SystemInformationFactCollector().collect(request),
-    },
     private readonly requirementEvaluator = new RequirementEvaluator(),
   ) {}
 
   async execute(request: OpenStrapRunRequest): Promise<OpenStrapRunResult> {
-    const blueprint = this.readBlueprint(request);
+    const blueprint = request.blueprint;
     const facts = await this.collectFactsForBlueprint(blueprint, request);
     const requirementRun = this.evaluateBlueprintRequirements(blueprint, facts, request);
 
@@ -66,42 +38,28 @@ export class OpenStrapRun {
     };
   }
 
-  private readBlueprint(request: OpenStrapRunRequest): OpenStrapBlueprint {
-    if (request.configPath) {
-      return this.blueprints.load({
-        mode: "explicit",
-        path: request.configPath,
-      });
-    }
-
-    return this.blueprints.load({
-      mode: "default",
-      workspaceRoot: request.workspaceRoot,
-    });
-  }
-
   private collectFactsForBlueprint(
-    blueprint: OpenStrapBlueprint,
+    blueprint: Blueprint,
     request: OpenStrapRunRequest,
-  ): Promise<FactCollection> {
+  ): Promise<Facts> {
     const factRequest = this.factRequestBuilder.build({
-      targets: blueprint.targets,
-      requirements: blueprint.requirements,
+      target: blueprint.target,
+      requirements: blueprint.target.requirements,
       workspaceRoot: request.workspaceRoot,
       now: request.now,
     });
 
-    return Promise.resolve(this.factsBackend.collect(factRequest)).then(createFactCollection);
+    return Promise.resolve(this.factsBackend.collect(factRequest)).then((items) => new Facts(items));
   }
 
   private evaluateBlueprintRequirements(
-    blueprint: OpenStrapBlueprint,
-    facts: FactCollection,
+    blueprint: Blueprint,
+    facts: Facts,
     request: OpenStrapRunRequest,
   ): RequirementRun {
     return this.requirementEvaluator.evaluate({
-      requirements: blueprint.requirements,
-      targets: blueprint.targets,
+      target: blueprint.target,
+      requirements: blueprint.target.requirements,
       factCollection: facts,
       now: request.now,
       trigger: "manual",

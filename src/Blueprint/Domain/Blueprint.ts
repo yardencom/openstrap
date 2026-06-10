@@ -1,21 +1,15 @@
-import type { FactScope } from "../../Facts/index.js";
-import type { Requirement } from "../../Requirements/index.js";
+import type { TargetlessRequirement } from "../../Requirements/index.js";
 
-export type BlueprintTargetType = "machine" | "vm" | "network";
-
-export type BlueprintTarget = {
+type BlueprintTarget = {
   name: string;
-  scope: FactScope;
-  type: BlueprintTargetType;
+  scope: string;
+  type: string;
   displayName?: string;
-  transport: "local";
+  transport: string;
 };
 
-export type OpenStrapBlueprint = {
-  targets: BlueprintTarget[];
-  requirements: Requirement[];
+export type Blueprint = {
+  target: BlueprintTarget & {
+    requirements: TargetlessRequirement[];
+  };
 };
-
-export function targetNames(blueprint: OpenStrapBlueprint): Set<string> {
-  return new Set(blueprint.targets.map((target) => target.name));
-}

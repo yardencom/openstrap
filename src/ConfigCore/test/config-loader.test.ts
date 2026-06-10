@@ -18,7 +18,6 @@ describe("ConfigCore loading", () => {
 
   it("loads inline YAML through the configured backend and schema backend", () => {
     const config = exampleConfigCore.load(exampleDefinition, {
-      mode: "inline",
       content: `
 id: sample
 `,
@@ -47,7 +46,6 @@ mode: loose
       );
 
       const config = exampleConfigCore.load(exampleDefinition, {
-        mode: "workspace",
         searchRoot: directory,
       });
 
@@ -57,7 +55,7 @@ mode: loose
     }
   });
 
-  it("prioritizes explicit config before workspace discovery in default mode", () => {
+  it("prioritizes explicit config before workspace discovery", () => {
     const directory = mkdtempSync(join(tmpdir(), "openstrap-config-core-"));
 
     try {
@@ -75,7 +73,6 @@ id: workspace
       );
 
       const config = exampleConfigCore.load(exampleDefinition, {
-        mode: "default",
         explicitPath: join(directory, "explicit.yaml"),
         workspaceRoot: directory,
       });
@@ -86,12 +83,33 @@ id: workspace
     }
   });
 
+  it("does not fall back to workspace discovery when explicit path is missing", () => {
+    const directory = mkdtempSync(join(tmpdir(), "openstrap-config-core-"));
+
+    try {
+      writeFileSync(
+        join(directory, "openstrap.example.yaml"),
+        `
+id: workspace
+`,
+      );
+
+      expect(() =>
+        exampleConfigCore.load(exampleDefinition, {
+          explicitPath: join(directory, "missing.yaml"),
+          workspaceRoot: directory,
+        }),
+      ).toThrow(ConfigNotFoundError);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("throws when config cannot be found", () => {
     const directory = mkdtempSync(join(tmpdir(), "openstrap-config-core-"));
 
     try {
       const request: ConfigLoadRequest = {
-        mode: "workspace",
         searchRoot: directory,
       };
 

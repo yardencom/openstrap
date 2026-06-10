@@ -1,31 +1,16 @@
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { BlueprintJsonSchema } from "./BlueprintJsonSchema.js";
+import { ConfigCore } from "../../ConfigCore/index.js";
+import { BlueprintSchema } from "./BlueprintSchema.js";
 
-export { BlueprintJsonSchema } from "./BlueprintJsonSchema.js";
+export default function generateBlueprintSchema(): void {
+  const outputPath = resolve("schemas/openstrap-blueprint.schema.json");
+  const configCore = new ConfigCore();
+  const schema = configCore.emitJsonSchema(new BlueprintSchema(configCore.schema));
 
-export function writeBlueprintJsonSchema(outputPath = "schemas/openstrap-blueprint.schema.json"): void {
-  const resolvedOutputPath = resolve(outputPath);
-  const schema = new BlueprintJsonSchema().emit();
-
-  mkdirSync(dirname(resolvedOutputPath), { recursive: true });
-  writeFileSync(resolvedOutputPath, `${JSON.stringify(schema, null, 2)}\n`);
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(schema, null, 2)}\n`);
 }
 
-function isCliEntryPoint(importMetaUrl: string, argvPath: string | undefined): boolean {
-  if (!argvPath) {
-    return false;
-  }
-
-  try {
-    return realpathSync(fileURLToPath(importMetaUrl)) === realpathSync(argvPath);
-  } catch {
-    return importMetaUrl === pathToFileURL(argvPath).href;
-  }
-}
-
-if (isCliEntryPoint(import.meta.url, process.argv[1])) {
-  writeBlueprintJsonSchema(process.argv[2]);
-}
+generateBlueprintSchema();

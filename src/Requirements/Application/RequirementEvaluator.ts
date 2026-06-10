@@ -2,18 +2,40 @@ import { isDeepStrictEqual } from "node:util";
 
 import { satisfies, valid, validRange } from "semver";
 
-import type { FactCollection, FactCollectionItem, Observed, ObservedStatus } from "../../Facts/index.js";
 import type {
   CheckStatus,
-  Requirement,
   RequirementCheckNode,
   RequirementLeafCheck,
   RequirementResult,
   RequirementRun,
   RequirementTarget,
+  TargetlessRequirement,
 } from "../Domain/Requirements.js";
 
-const requirementMetaFields = new Set(["id", "target", "optional"]);
+type ObservedStatus = "present" | "absent" | "unknown" | "unsupported" | "error";
+
+type Observed = {
+  status: ObservedStatus;
+  reason?: string;
+  message?: string;
+};
+
+type FactCollectionItem = {
+  snapshot: {
+    id: string;
+    target: {
+      id: string;
+    };
+    data: unknown;
+  };
+  run: {
+    id: string;
+  };
+};
+
+type FactCollection = readonly FactCollectionItem[];
+
+const requirementMetaFields = new Set(["id", "optional"]);
 const assertionKeys = new Set([
   "const",
   "enum",
@@ -30,8 +52,8 @@ const terminalObservedStatuses = new Set<ObservedStatus>(["unknown", "unsupporte
 
 export class RequirementEvaluator {
   evaluate(params: {
-    requirements: readonly Requirement[];
-    targets: readonly RequirementTarget[];
+    target: RequirementTarget;
+    requirements: readonly TargetlessRequirement[];
     factCollection: FactCollection;
     now?: Date;
     attempt?: number;
@@ -43,7 +65,7 @@ export class RequirementEvaluator {
     const finishedAt = new Date(startedAt.getTime());
     const snapshotsByTarget = indexFactsByTarget(params.factCollection);
     const results = params.requirements.map((requirement) =>
-      this.evaluateRequirement(requirement, snapshotsByTarget.get(requirement.target)),
+      this.evaluateRequirement(requirement, params.target.name, snapshotsByTarget.get(params.target.name)),
     );
     const status = aggregateStatuses(results.map((result) => result.status));
 
@@ -57,7 +79,9 @@ export class RequirementEvaluator {
       trigger: params.trigger ?? "manual",
       profile: params.profile ?? "local-vm-preflight",
       purpose: params.purpose ?? "preflight",
-      targets: Object.fromEntries(params.targets.map((target) => [target.name, target.name])),
+      targets: {
+        [params.target.name]: params.target.name,
+      },
       results,
       details: status === "passed" ? undefined : {
         message: summarizeResults(results),
@@ -66,7 +90,8 @@ export class RequirementEvaluator {
   }
 
   private evaluateRequirement(
-    requirement: Requirement,
+    requirement: TargetlessRequirement,
+    targetName: string,
     factItem: FactCollectionItem | undefined,
   ): RequirementResult {
     const checkBlocks = extractCheckBlocks(requirement);
@@ -76,7 +101,7 @@ export class RequirementEvaluator {
 
       return {
         requirementId: requirement.id,
-        target: requirement.target,
+        target: targetName,
         facts: {
           snapshotId: null,
           factRunId: null,
@@ -95,7 +120,7 @@ export class RequirementEvaluator {
 
     return {
       requirementId: requirement.id,
-      target: requirement.target,
+      target: targetName,
       facts: {
         snapshotId: factItem.snapshot.id,
         factRunId: factItem.run.id,
@@ -333,7 +358,7 @@ function aggregateStatuses(statuses: readonly CheckStatus[]): CheckStatus {
   return "passed";
 }
 
-function extractCheckBlocks(requirement: Requirement): Record<string, unknown> {
+function extractCheckBlocks(requirement: TargetlessRequirement): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(requirement).filter(([key]) => !requirementMetaFields.has(key)),
   );

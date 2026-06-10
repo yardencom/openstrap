@@ -100,6 +100,7 @@ describe("OpenStrap plugin system", () => {
             id: "external:facts",
             capabilities: {
               scopes: ["host"],
+              transports: ["local"],
               sections: ["os"]
             },
             collect() {
@@ -141,6 +142,7 @@ function createNoopBackend(id: string): FactsBackend {
     id,
     capabilities: {
       scopes: ["host"],
+      transports: ["local"],
       sections: ["os"],
     },
     collect: () => [],

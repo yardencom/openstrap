@@ -1,28 +1,23 @@
-import type { ConfigLoadRequest } from "../ConfigCore/index.js";
-import type { OpenStrapBlueprint } from "./Domain/Blueprint.js";
-import { BlueprintDocumentReader } from "./Application/BlueprintDocumentReader.js";
-import { BlueprintTransformer } from "./Application/BlueprintTransformer.js";
-import { BlueprintValidator } from "./Application/BlueprintValidator.js";
+import {
+  ConfigCore,
+  type ConfigLoadRequest,
+} from "../ConfigCore/index.js";
+import type { Blueprint } from "./Domain/Blueprint.js";
+import { BlueprintReadError } from "./Application/BlueprintErrors.js";
+import { BlueprintSchema } from "./Schema/BlueprintSchema.js";
 
 export class Blueprints {
-  constructor(
-    private readonly reader = new BlueprintDocumentReader(),
-    private readonly transformer = new BlueprintTransformer(),
-    private readonly validator = new BlueprintValidator(),
-  ) {}
+  private readonly schemaDefinition;
 
-  parseYaml(yamlText: string): Readonly<OpenStrapBlueprint> {
-    return this.load({
-      mode: "inline",
-      content: yamlText,
-    });
+  constructor(private readonly configCore = new ConfigCore()) {
+    this.schemaDefinition = new BlueprintSchema(configCore.schema);
   }
 
-  load(request: ConfigLoadRequest): Readonly<OpenStrapBlueprint> {
-    const document = this.reader.read(request);
-    const blueprint = this.transformer.transform(document);
-    this.validator.assertValid(blueprint);
-
-    return blueprint;
+  load(request: ConfigLoadRequest): Readonly<Blueprint> {
+    try {
+      return this.configCore.load(this.schemaDefinition, request);
+    } catch (error) {
+      throw new BlueprintReadError(error);
+    }
   }
 }

@@ -2,21 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   RequirementFactCollectionRequestBuilder,
-  RequirementFactCollectionRequestError,
 } from "../Application/RequirementFactCollectionRequestBuilder.js";
 
 describe("RequirementFactCollectionRequestBuilder", () => {
   it("builds fact collection requests from requirement-shaped fact selectors", () => {
     const request = new RequirementFactCollectionRequestBuilder().build({
-      targets: [{
+      target: {
         name: "host",
         scope: "host",
         type: "machine",
         transport: "local",
-      }],
+      },
       requirements: [{
         id: "ssh-service",
-        target: "host",
         services: {
           ssh: {
             running: true,
@@ -41,20 +39,5 @@ describe("RequirementFactCollectionRequestBuilder", () => {
         },
       },
     }]);
-  });
-
-  it("rejects requirements that reference unknown targets", () => {
-    expect(() => new RequirementFactCollectionRequestBuilder().build({
-      targets: [],
-      requirements: [{
-        id: "unknown-target",
-        target: "host",
-        runtimes: {
-          node: {
-            ready: true,
-          },
-        },
-      }],
-    })).toThrow(RequirementFactCollectionRequestError);
   });
 });

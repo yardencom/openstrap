@@ -55,6 +55,10 @@ function validateFactsBackend(backend: FactsBackend, pluginName: string): void {
     throw new OpenStrapPluginError(`Facts backend "${backend.id}" must declare at least one scope capability`);
   }
 
+  if (!backend.capabilities.transports || backend.capabilities.transports.length === 0) {
+    throw new OpenStrapPluginError(`Facts backend "${backend.id}" must declare at least one transport capability`);
+  }
+
   if (backend.capabilities.sections.length === 0) {
     throw new OpenStrapPluginError(`Facts backend "${backend.id}" must declare at least one section capability`);
   }

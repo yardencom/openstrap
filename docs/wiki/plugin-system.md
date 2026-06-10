@@ -16,6 +16,7 @@ const backend: FactsBackend = {
   displayName: "Company osquery backend",
   capabilities: {
     scopes: ["host"],
+    transports: ["ssh"],
     sections: ["os", "cpu", "memory", "processes", "services", "paths"],
   },
   async collect(request) {
@@ -32,6 +33,16 @@ export default defineOpenStrapPlugin({
 ```
 
 The backend returns OpenStrap normalized facts. It does not change facts YAML, requirements YAML, or the `FactSnapshot` shape.
+
+## Built-In Backend
+
+OpenStrap registers `openstrap:core` by default. That plugin provides the default facts backend:
+
+```text
+openstrap:systeminformation
+```
+
+If runtime config and CLI flags do not select another backend, OpenStrap uses this backend.
 
 ## Runtime Config
 
@@ -51,47 +62,19 @@ export default defineOpenStrapConfig({
 });
 ```
 
-CLI commands load `openstrap.config.mjs` automatically when it exists in the current workspace root.
+## CLI Runtime
 
-An explicit runtime config can be passed with:
+Both `openstrap run` and `openstrap facts collect` create an OpenStrap runtime before facts are collected.
 
-```bash
-openstrap run examples/openstrap/local-run.yaml --runtime-config openstrap.config.mjs
-```
-
-## Direct Plugin Loading
-
-A plugin can also be loaded directly from CLI:
-
-```bash
-openstrap run examples/openstrap/local-run.yaml \
-  --plugin ./plugins/osquery.mjs \
-  --facts-backend company:osquery
-```
-
-The same flags work for host facts collection:
-
-```bash
-openstrap facts collect host examples/facts/system-inventory.yaml \
-  --plugin ./plugins/osquery.mjs \
-  --facts-backend company:osquery
-```
-
-## Built-in Core Plugin
-
-OpenStrap always applies the core plugin first:
+Supported runtime options:
 
 ```text
-openstrap:core
+--runtime-config path
+--plugin specifier
+--facts-backend id
 ```
 
-It registers the current built-in facts backend:
-
-```text
-openstrap:systeminformation
-```
-
-This is the default backend when runtime config does not select another one.
+Plugins register facts backends. CLI selects the backend from `--facts-backend`, then `openstrap.config.mjs`, then the built-in `openstrap:systeminformation` backend.
 
 ## Plugin Order
 
@@ -103,7 +86,7 @@ plugins without enforce
 plugins with enforce: "post"
 ```
 
-The core plugin is inserted first and uses `enforce: "pre"`, so it is applied before user plugins. Inside each bucket, order is the order provided by runtime config and then CLI.
+Inside each bucket, order is the order provided by runtime config.
 
 ## Boundary Rules
 

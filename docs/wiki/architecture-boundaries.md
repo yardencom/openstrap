@@ -23,7 +23,7 @@ Consumer
 
 Текущий реализованный product module - `Facts`.
 
-`Plugin` является runtime extension module. Он собирает OpenStrap runtime из plugin objects и backend capabilities, но не владеет facts schema, requirements schema или blueprint schema.
+`Plugin` является отдельным runtime extension module. CLI использует его как composition/runtime layer для выбора facts backend, но `Plugin` не является публичным API модуля `Facts` и не владеет facts schema, requirements schema или blueprint schema.
 
 Будущие product modules, например `WorkflowConfig` и `StorageConfig`, должны повторять эту форму: свой domain, своя schema, свой facade, общий `ConfigCore`.
 
@@ -63,12 +63,11 @@ Consumer
 Внешний код общается с product module через public facade.
 
 ```ts
-const facts = new Facts();
-const factsDefinition = facts.parseYaml(yamlText);
-const jsonSchema = facts.getJsonSchema();
+const facts = new Facts(collectedFactItems);
+const jsonSchema = new FactsDefinitionJsonSchema().emit();
 ```
 
-Facade скрывает schema classes, ConfigCore pipeline, adapters и конкретные ошибки core. Если внешний код вынужден импортировать `Facts/Schema` или `Facts/Domain` напрямую, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
+Facade скрывает implementation details своего bounded context. Если внешний код вынужден импортировать `Facts/Definition` или `Facts/Adapters`, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
 
 ### Product Module To ConfigCore
 
@@ -114,7 +113,7 @@ Domain model не является схемой файла.
 | **Entity** | Есть domain identity, по которой система отличает один объект от другого в рамках lifecycle | `FactsDefinition`, fact с `id` |
 | **Value Object** | Важен сам value, нет identity и lifecycle | `FactImportance`, `FactPlatform` |
 | **DTO** | Данные пересекают границу слоя, порта или внешнего формата | `ConfigIssueDto` |
-| **Schema Class** | Класс строит schema nodes для ConfigCore DSL | `FactsSchema` |
+| **Schema Class** | Класс строит schema nodes для ConfigCore DSL | `FactsDefinitionSchema` |
 | **Facade** | Класс выражает публичный use case модуля | `Facts` |
 
 ### Identity Is Not Just An `id` Field
@@ -190,22 +189,22 @@ Schema layer не должен содержать:
 
 Product module отвечает за один bounded context.
 
-`Facts` отвечает за facts definition config:
+`Facts` - один product module. Внутри него есть разные области, но это не отдельные top-level bounded contexts.
 
-- какие sections доступны;
-- какие facts существуют;
-- как facts записываются в config file;
-- какой domain result получает consumer.
+| Область внутри `src/Facts` | Ответственность |
+|--------|-----------------|
+| `Domain` | normalized observed facts, `FactCollection`, `FactRun`, target/request/result contracts |
+| `Definition` | reusable facts definition YAML contract: sections, value objects, validation, schema classes |
+| `Application` | facts-specific use cases: collect from definition, evidence collection, facts result persistence |
+| `Adapters` | concrete fact sources such as local host facts, local system snapshot, process/service inventory |
+| `SchemaArtifacts` | facts-specific external artifacts such as facts definition JSON Schema |
 
 `Facts` не отвечает за:
 
-- выполнение commands;
-- discovery флагов команд;
-- SSH/local/container execution;
-- storage результатов;
-- scheduling workflows.
+- CLI rendering;
+- building collection requests from requirements.
 
-Эти ответственности принадлежат будущим runtime, collector, workflow и storage layers.
+Если code path одновременно читает definition YAML, собирает facts, исполняет evidence commands и пишет result-файл, это application orchestration, а не `Facts` domain.
 
 ## Public API Boundary
 
@@ -214,15 +213,10 @@ Public API должен быть маленьким и намеренным.
 Для `Facts` текущая public boundary:
 
 ```ts
-parseYaml(yamlText: string): Readonly<FactsDefinition>
-getJsonSchema(): Readonly<JsonSchemaDocumentDto>
+new Facts(items: readonly FactCollectionItem[])
 ```
 
-Barrel file product module экспортирует public facade, а не внутренние детали.
-
-```ts
-export { Facts } from "./Facts.js";
-```
+`Facts` instance is the collected facts result. Collection use cases stay internal to the module or to CLI orchestration.
 
 Новый public method появляется только если есть внешний use case, который нельзя выразить существующим facade API.
 
@@ -249,15 +243,13 @@ Product domain and schema do not import adapters. Если concrete library по
 | Слой | Ответственность | Вход | Выход |
 |-------|----------------|-------|--------|
 | **Runtime** | Описывает среду выполнения | process, environment, target | execution context |
-| **Collector** | Собирает facts на target | facts definition, runtime context | collected facts |
+| **Collector** | Собирает normalized facts на target | fact collection request, runtime context | `FactCollection` |
 | **Workflow** | Оркестрирует шаги продукта | configs, triggers | результат workflow run |
 | **Storage** | Хранит configs, results, artifacts | records, artifacts | сохраненное состояние |
 | **Reporting** | Превращает результаты во внешний вид | stored или collected data | report/export |
-| **Plugin** | Регистрирует runtime capabilities | plugin objects | runtime registry |
+| **Plugin** | Отдельный extension mechanism, не обычный facts collection path | plugin objects | runtime registry |
 
-`Facts` может подготовить facts definition для collector, но не должен становиться collector.
-
-`Plugin` может зарегистрировать collector/backend, но зарегистрированный backend обязан вернуть нормализованный `FactCollection`. Plugin не меняет payload shape и не добавляет profile/provenance/metadata внутрь `FactSnapshot`.
+`Facts/Application` может подготовить request для collector на основе facts definition. `OpenStrapRun` может подготовить request для collector на основе requirements. В обоих случаях внешний top-level module не должен появляться только ради частного facts use case.
 
 ## Boundary Verification
 

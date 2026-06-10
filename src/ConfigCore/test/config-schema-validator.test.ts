@@ -10,7 +10,6 @@ describe("ConfigCore schema validation", () => {
   it("throws schema-aware validation errors", () => {
     expect(() =>
       exampleConfigCore.load(exampleDefinition, {
-        mode: "inline",
         content: `
 mode: strict
 `,
@@ -39,7 +38,6 @@ mode: strict
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps: []
 tasks: []
@@ -49,7 +47,6 @@ tasks: []
 
     expect(
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps:
   - id: build
@@ -82,7 +79,6 @@ steps:
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps:
   - id: build
@@ -155,7 +151,6 @@ steps:
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps:
   - id: build
@@ -190,7 +185,6 @@ steps:
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps:
   - name: Build
@@ -224,7 +218,6 @@ steps:
 
     expect(
       configCore.load(definition, {
-        mode: "inline",
         content: `
 steps:
   - id: 1
@@ -251,7 +244,6 @@ steps:
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 platforms:
   - linux
@@ -318,7 +310,6 @@ platforms:
 
     expect(
       configCore.load(definition, {
-        mode: "inline",
         content: `
 kind: command
 name: git
@@ -331,7 +322,6 @@ name: git
 
     expect(() =>
       configCore.load(definition, {
-        mode: "inline",
         content: `
 kind: file
 name: git

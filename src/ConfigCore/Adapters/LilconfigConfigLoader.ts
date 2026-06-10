@@ -26,27 +26,28 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
   }
 
   load(request: ConfigLoaderBackendRequest): LoadedConfig | undefined {
-    switch (request.mode) {
-      case "inline":
-        return parseInlineYaml(request);
-      case "explicit":
-        return this.loadFile(request.path, "explicit", request.filePatterns);
-      case "workspace":
-        return this.searchDirectory(request.searchRoot, "workspace", request.filePatterns);
-      case "user":
-        return this.searchDirectory(this.userConfigRoot, "user", request.filePatterns);
-      case "default":
-        return this.loadDefault(request);
+    if ("content" in request) {
+      return parseInlineYaml(request);
     }
+
+    if ("path" in request) {
+      return this.loadFile(request.path, "explicit", request.filePatterns);
+    }
+
+    if ("searchRoot" in request) {
+      return this.searchDirectory(request.searchRoot, "workspace", request.filePatterns);
+    }
+
+    if ("user" in request) {
+      return this.searchDirectory(this.userConfigRoot, "user", request.filePatterns);
+    }
+
+    return this.resolveConfig(request);
   }
 
-  private loadDefault(request: Extract<ConfigLoaderBackendRequest, { mode: "default" }>): LoadedConfig | undefined {
+  private resolveConfig(request: Extract<ConfigLoaderBackendRequest, { workspaceRoot: string }>): LoadedConfig | undefined {
     if (request.explicitPath) {
-      const explicitConfig = this.loadFile(request.explicitPath, "explicit", request.filePatterns);
-
-      if (explicitConfig) {
-        return explicitConfig;
-      }
+      return this.loadFile(request.explicitPath, "explicit", request.filePatterns);
     }
 
     const workspaceConfig = this.searchDirectory(request.workspaceRoot, "workspace", request.filePatterns);
@@ -147,7 +148,7 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
   }
 }
 
-function parseInlineYaml(request: Extract<ConfigLoadRequest, { mode: "inline" }>): LoadedConfig {
+function parseInlineYaml(request: Extract<ConfigLoadRequest, { content: string }>): LoadedConfig {
   return {
     format: "yaml",
     source: {

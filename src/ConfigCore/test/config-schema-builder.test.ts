@@ -21,7 +21,7 @@ describe("ConfigSchema", () => {
       }),
     });
 
-    expect(configCore.load(definition, { mode: "inline", content: "value: one" })).toEqual({
+    expect(configCore.load(definition, { content: "value: one" })).toEqual({
       value: "one",
     });
   });

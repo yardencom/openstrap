@@ -1,5 +1,4 @@
 export { RequirementEvaluator } from "./Application/RequirementEvaluator.js";
-export { bindRequirementsToTarget } from "./Application/RequirementNormalizer.js";
 export type {
   CheckStatus,
   Requirement,

@@ -12,7 +12,7 @@ describe("openstrap CLI", () => {
 
     expect(output.exitCode).toBe(0);
     expect(output.stdout).toContain("OpenStrap run: passed");
-    expect(output.stdout).toContain("node-runtime [host]: passed");
+    expect(output.stdout).toContain("node-runtime [local]: passed");
     expect(output.stderr).toBe("");
   });
 
@@ -29,84 +29,120 @@ describe("openstrap CLI", () => {
     const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-plugin-"));
     const pluginPath = join(directory, "plugin.mjs");
 
-    writeFileSync(pluginPath, `
-      export default {
-        name: "test-cli-plugin",
-        setup(api) {
-          api.registerFactsBackend({
-            id: "test:plugin-backend",
-            capabilities: {
-              scopes: ["host"],
-              sections: ["cpu", "memory", "paths", "runtimes", "transports"]
-            },
-            collect(request) {
-              const target = request.targets[0].target;
-              return [{
-                snapshot: {
-                  id: "snap_test_plugin",
-                  schemaVersion: "facts.v1",
-                  scope: target.scope,
-                  target: {
-                    type: target.type,
-                    id: target.name
-                  },
-                  data: {
-                    cpu: { cores: 8 },
-                    memory: { totalBytes: 17179869184 },
-                    paths: {
-                      workspace: {
-                        status: "present",
-                        path: request.workspaceRoot,
-                        exists: true,
-                        type: "directory",
-                        readable: true
-                      }
+    try {
+      writeFileSync(pluginPath, `
+        export default {
+          name: "test-cli-plugin",
+          setup(api) {
+            api.registerFactsBackend({
+              id: "test:plugin-backend",
+              capabilities: {
+                scopes: ["host"],
+                transports: ["local"],
+                sections: ["cpu", "memory", "paths", "runtimes", "transports"]
+              },
+              collect(request) {
+                const target = request.targets[0].target;
+
+                return [{
+                  snapshot: {
+                    id: "snap_test_plugin",
+                    schemaVersion: "facts.v1",
+                    scope: target.scope,
+                    target: {
+                      type: target.type,
+                      id: target.name
                     },
-                    runtimes: {
-                      node: {
-                        status: "present",
-                        type: "node",
-                        version: "99.0.0",
-                        ready: true
-                      }
-                    },
-                    transports: {
-                      local: {
-                        status: "present",
-                        type: "local",
-                        ready: true
+                    data: {
+                      cpu: { cores: 8 },
+                      memory: { totalBytes: 17179869184 },
+                      paths: {
+                        workspace: {
+                          status: "present",
+                          path: request.workspaceRoot,
+                          exists: true,
+                          type: "directory",
+                          readable: true
+                        }
+                      },
+                      runtimes: {
+                        node: {
+                          status: "present",
+                          type: "node",
+                          version: "99.0.0",
+                          ready: true
+                        }
+                      },
+                      transports: {
+                        local: {
+                          status: "present",
+                          type: "local",
+                          ready: true
+                        }
                       }
                     }
+                  },
+                  run: {
+                    id: "fact_run_test_plugin",
+                    snapshotId: "snap_test_plugin",
+                    startedAt: "2026-06-09T00:00:00.000Z",
+                    finishedAt: "2026-06-09T00:00:00.000Z",
+                    status: "success"
                   }
-                },
-                run: {
-                  id: "fact_run_test_plugin",
-                  snapshotId: "snap_test_plugin",
-                  startedAt: "2026-06-09T00:00:00.000Z",
-                  finishedAt: "2026-06-09T00:00:00.000Z",
-                  status: "success"
-                }
-              }];
-            }
-          });
-        }
-      };
-    `);
+                }];
+              }
+            });
+          }
+        };
+      `);
 
-    const output = await captureCli([
-      "run",
-      "examples/openstrap/local-run.yaml",
-      "--plugin",
-      pluginPath,
-      "--facts-backend",
-      "test:plugin-backend",
-      "--json",
-    ]);
-    const json = JSON.parse(output.stdout);
+      const output = await captureCli([
+        "run",
+        "examples/openstrap/local-run.yaml",
+        "--plugin",
+        pluginPath,
+        "--facts-backend",
+        "test:plugin-backend",
+        "--json",
+      ]);
+      const json = JSON.parse(output.stdout);
 
-    expect(output.exitCode).toBe(0);
-    expect(json.requirementRun.status).toBe("passed");
-    expect(json.facts[0].run.id).toBe("fact_run_test_plugin");
+      expect(output.exitCode).toBe(0);
+      expect(json.requirementRun.status).toBe("passed");
+      expect(json.facts[0].run.id).toBe("fact_run_test_plugin");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails when an explicit run config path is missing instead of falling back to workspace config", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-explicit-"));
+
+    try {
+      writeFileSync(
+        join(directory, "openstrap.yaml"),
+        `
+target:
+  name: local
+  scope: system
+  type: machine
+  transport: local
+  requirements:
+    - id: local-transport
+      transports:
+        local:
+          ready: true
+`,
+      );
+
+      const output = await captureCli(["run", join(directory, "missing.yaml")], directory);
+
+      expect(output.exitCode).toBe(2);
+      expect(output.stderr).toContain("Config file was not found");
+      expect(output.stdout).toBe("");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("collects host facts from the default facts definition YAML", async () => {
@@ -153,11 +189,11 @@ describe("openstrap CLI", () => {
   });
 });
 
-async function captureCli(argv: readonly string[]) {
+async function captureCli(argv: readonly string[], cwd = process.cwd()) {
   let stdout = "";
   let stderr = "";
   const exitCode = await runCli(argv, {
-    cwd: process.cwd(),
+    cwd,
     stdout: {
       write: (chunk: string) => {
         stdout += chunk;

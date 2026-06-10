@@ -1,6 +1,6 @@
-import { openstrapCorePlugin, coreFactsBackendId } from "../Core/OpenStrapCorePlugin.js";
 import type { FactsBackend } from "../Domain/FactsBackend.js";
 import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "../Domain/OpenStrapPlugin.js";
+import { coreFactsBackendId, openstrapCorePlugin } from "../Core/OpenStrapCorePlugin.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
 import type { FactsBackendRegistry } from "./FactsBackendRegistry.js";
 

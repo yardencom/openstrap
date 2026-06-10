@@ -3,15 +3,9 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
-  BlueprintDocumentReadError,
-  BlueprintValidationError,
+  Blueprints,
 } from "../Blueprint/index.js";
-import {
-  type FactCollection,
-} from "../Facts/index.js";
-import {
-  CollectFactsFromDefinition,
-} from "../FactsDefinitionCollection/index.js";
+import { Facts } from "../Facts/Facts.js";
 import { OpenStrapRun } from "../OpenStrapRun/index.js";
 import {
   createOpenStrapRuntime,
@@ -26,9 +20,9 @@ import {
   type RequirementRun,
 } from "../Requirements/index.js";
 import {
-  FactsRunResultStore,
-  type StoredCollectFactsFromDefinitionResult,
-} from "../Storage/index.js";
+  collectAndStoreFactsFromDefinition,
+  type StoredFactsCollectResult,
+} from "./Application/FactsCollectCommand.js";
 
 export type OpenStrapRunOutput = {
   targets: Array<{
@@ -37,7 +31,7 @@ export type OpenStrapRunOutput = {
     type: string;
     transport: string;
   }>;
-  facts: FactCollection;
+  facts: Facts;
   requirementRun: RequirementRun;
 };
 
@@ -71,34 +65,29 @@ type ParsedArgs = RunArgs | FactsCollectArgs;
 
 export function runOpenStrapFlow(params: {
   configPath?: string;
+  factsBackend: FactsBackend;
   workspaceRoot: string;
-  factsBackend?: FactsBackend;
   now?: Date;
 }): Promise<OpenStrapRunOutput> {
-  return new OpenStrapRun(undefined, undefined, params.factsBackend).execute(params).then((result) => ({
-    targets: result.blueprint.targets,
+  const blueprint = new Blueprints().load({
+    explicitPath: params.configPath,
+    workspaceRoot: params.workspaceRoot,
+  });
+
+  return new OpenStrapRun(params.factsBackend).execute({
+    blueprint,
+    workspaceRoot: params.workspaceRoot,
+    now: params.now,
+  }).then((result) => ({
+    targets: [{
+      name: result.blueprint.target.name,
+      scope: result.blueprint.target.scope,
+      type: result.blueprint.target.type,
+      transport: result.blueprint.target.transport,
+    }],
     facts: result.facts,
     requirementRun: result.requirementRun,
   }));
-}
-
-async function createCliRuntime(parsedArgs: ParsedArgs, cwd: string) {
-  const config = await loadOpenStrapPluginConfig({
-    cwd,
-    configPath: parsedArgs.runtimeConfigPath,
-  });
-  const plugins = await Promise.all(parsedArgs.pluginSpecifiers.map((specifier) => {
-    return loadOpenStrapPlugin({
-      cwd,
-      specifier,
-    });
-  }));
-
-  return createOpenStrapRuntime({
-    config,
-    plugins,
-    factsBackendId: parsedArgs.factsBackendId,
-  });
 }
 
 export async function runCli(argv: readonly string[], io: CliIo = {
@@ -119,27 +108,24 @@ export async function runCli(argv: readonly string[], io: CliIo = {
     const runtime = await createCliRuntime(parsedArgs, io.cwd);
 
     if (parsedArgs.command === "facts.collect") {
-      const output = await new CollectFactsFromDefinition(undefined, runtime.factsBackend).collect({
+      const output = await collectAndStoreFactsFromDefinition({
+        backend: runtime.factsBackend,
         path: parsedArgs.configPath,
         workspaceRoot: io.cwd,
         inputs: parsedArgs.inputs,
       });
-      const storedOutput = new FactsRunResultStore().storeCollectedFacts({
-        workspaceRoot: io.cwd,
-        result: output,
-      });
 
       io.stdout.write(parsedArgs.json
-        ? `${JSON.stringify(storedOutput, null, 2)}\n`
-        : renderFactsCollectOutput(storedOutput));
+        ? `${JSON.stringify(output, null, 2)}\n`
+        : renderFactsCollectOutput(output));
 
       return output.facts.some((item) => item.run.status === "error") ? 1 : 0;
     }
 
     const output = runOpenStrapFlow({
       configPath: parsedArgs.configPath,
-      workspaceRoot: io.cwd,
       factsBackend: runtime.factsBackend,
+      workspaceRoot: io.cwd,
     });
     const awaitedOutput = await output;
 
@@ -167,19 +153,19 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 
   let json = false;
   let configPath: string | undefined;
-  const runtimeOptions = createRuntimeArgs();
+  const runtimeArgs = createRuntimeArgs();
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index]!;
+    const runtimeOptionIndex = readRuntimeOption(arg, rest, index, runtimeArgs);
 
-    if (arg === "--json") {
-      json = true;
+    if (runtimeOptionIndex !== undefined) {
+      index = runtimeOptionIndex;
       continue;
     }
 
-    const runtimeOptionIndex = readRuntimeOption(rest, index, runtimeOptions);
-    if (runtimeOptionIndex !== undefined) {
-      index = runtimeOptionIndex;
+    if (arg === "--json") {
+      json = true;
       continue;
     }
 
@@ -198,7 +184,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     command,
     configPath,
     json,
-    ...runtimeOptions,
+    ...runtimeArgs,
   };
 }
 
@@ -212,19 +198,19 @@ function parseFactsArgs(argv: readonly string[]): FactsCollectArgs {
   let json = false;
   const positionals: string[] = [];
   const inputs: Record<string, string> = {};
-  const runtimeOptions = createRuntimeArgs();
+  const runtimeArgs = createRuntimeArgs();
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index]!;
+    const runtimeOptionIndex = readRuntimeOption(arg, rest, index, runtimeArgs);
 
-    if (arg === "--json") {
-      json = true;
+    if (runtimeOptionIndex !== undefined) {
+      index = runtimeOptionIndex;
       continue;
     }
 
-    const runtimeOptionIndex = readRuntimeOption(rest, index, runtimeOptions);
-    if (runtimeOptionIndex !== undefined) {
-      index = runtimeOptionIndex;
+    if (arg === "--json") {
+      json = true;
       continue;
     }
 
@@ -266,8 +252,25 @@ function parseFactsArgs(argv: readonly string[]): FactsCollectArgs {
     configPath: positionals[1] ?? "examples/facts/system-inventory.yaml",
     json,
     inputs,
-    ...runtimeOptions,
+    ...runtimeArgs,
   };
+}
+
+async function createCliRuntime(args: RuntimeArgs, cwd: string) {
+  const config = await loadOpenStrapPluginConfig({
+    cwd,
+    configPath: args.runtimeConfigPath,
+  });
+  const plugins = await Promise.all(args.pluginSpecifiers.map((specifier) => loadOpenStrapPlugin({
+    cwd,
+    specifier,
+  })));
+
+  return createOpenStrapRuntime({
+    config,
+    factsBackendId: args.factsBackendId,
+    plugins,
+  });
 }
 
 function createRuntimeArgs(): RuntimeArgs {
@@ -277,61 +280,60 @@ function createRuntimeArgs(): RuntimeArgs {
 }
 
 function readRuntimeOption(
-  argv: readonly string[],
+  arg: string,
+  rest: readonly string[],
   index: number,
-  runtimeOptions: RuntimeArgs,
+  runtimeArgs: RuntimeArgs,
 ): number | undefined {
-  const arg = argv[index]!;
-
   if (arg === "--runtime-config") {
-    const value = argv[index + 1];
-
-    if (!value) {
-      throw new Error("Missing value for --runtime-config");
-    }
-
-    runtimeOptions.runtimeConfigPath = value;
+    runtimeArgs.runtimeConfigPath = readRequiredOptionValue(arg, rest[index + 1]);
     return index + 1;
   }
 
   if (arg.startsWith("--runtime-config=")) {
-    runtimeOptions.runtimeConfigPath = arg.slice("--runtime-config=".length);
+    runtimeArgs.runtimeConfigPath = readInlineOptionValue("--runtime-config", arg);
     return index;
   }
 
   if (arg === "--plugin") {
-    const value = argv[index + 1];
-
-    if (!value) {
-      throw new Error("Missing value for --plugin");
-    }
-
-    runtimeOptions.pluginSpecifiers.push(value);
+    runtimeArgs.pluginSpecifiers.push(readRequiredOptionValue(arg, rest[index + 1]));
     return index + 1;
   }
 
   if (arg.startsWith("--plugin=")) {
-    runtimeOptions.pluginSpecifiers.push(arg.slice("--plugin=".length));
+    runtimeArgs.pluginSpecifiers.push(readInlineOptionValue("--plugin", arg));
     return index;
   }
 
   if (arg === "--facts-backend") {
-    const value = argv[index + 1];
-
-    if (!value) {
-      throw new Error("Missing value for --facts-backend");
-    }
-
-    runtimeOptions.factsBackendId = value;
+    runtimeArgs.factsBackendId = readRequiredOptionValue(arg, rest[index + 1]);
     return index + 1;
   }
 
   if (arg.startsWith("--facts-backend=")) {
-    runtimeOptions.factsBackendId = arg.slice("--facts-backend=".length);
+    runtimeArgs.factsBackendId = readInlineOptionValue("--facts-backend", arg);
     return index;
   }
 
   return undefined;
+}
+
+function readRequiredOptionValue(option: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(`Missing value for ${option}`);
+  }
+
+  return value;
+}
+
+function readInlineOptionValue(option: string, arg: string): string {
+  const value = arg.slice(`${option}=`.length);
+
+  if (!value) {
+    throw new Error(`Missing value for ${option}`);
+  }
+
+  return value;
 }
 
 function readInputOverride(value: string, inputs: Record<string, string>): void {
@@ -381,7 +383,7 @@ function renderHumanOutput(output: OpenStrapRunOutput): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderFactsCollectOutput(output: StoredCollectFactsFromDefinitionResult): string {
+function renderFactsCollectOutput(output: StoredFactsCollectResult): string {
   const item = output.facts[0]!;
   const data = item.snapshot.data as any;
   const lines: string[] = [];
@@ -430,12 +432,12 @@ function renderFactsCollectOutput(output: StoredCollectFactsFromDefinitionResult
 
   lines.push("");
   lines.push("Evidence:");
-  for (const [id, command] of Object.entries(output.evidence.commands)) {
+  for (const [id, command] of Object.entries<any>(output.evidence.commands)) {
     const lineCount = command.stdout ? command.stdout.split("\n").filter(Boolean).length : 0;
     lines.push(`  - command ${id}: ${command.status}${lineCount > 0 ? ` lines=${lineCount}` : ""}`);
   }
 
-  for (const [id, artifact] of Object.entries(output.evidence.artifacts)) {
+  for (const [id, artifact] of Object.entries<any>(output.evidence.artifacts)) {
     lines.push(`  - artifact ${id}: ${artifact.status} ${artifact.path}`);
   }
 
@@ -469,13 +471,6 @@ function isLeafCheck(value: RequirementCheckNode): value is RequirementLeafCheck
 }
 
 function formatError(error: unknown): string {
-  if (error instanceof BlueprintDocumentReadError || error instanceof BlueprintValidationError) {
-    return [
-      error.message,
-      ...error.issues.map((issue) => `  - ${issue}`),
-    ].join("\n");
-  }
-
   if (error instanceof OpenStrapPluginError) {
     return error.message;
   }
