@@ -1,5 +1,5 @@
 import { HostFacts } from "./Adapters/Local/HostFacts.js";
-import { GuestFacts } from "./Adapters/Remote/GuestFacts.js";
+import { TargetFacts } from "./Adapters/Remote/TargetFacts.js";
 import type { Transport } from "../Transport/index.js";
 import type { Blueprint } from "../Blueprint/index.js";
 import { createFactCollection } from "./Domain/FactCollectionFactory.js";
@@ -77,11 +77,12 @@ export class Facts extends Array<FactCollectionItem> {
   /**
    * Collects from a target reached over a transport.
    *
-   * The collector varies by the operating system of the target, not by the
-   * channel, so the same one serves every transport that can run a command.
+   * The host goes through this too, over the local transport. There is no
+   * separate path for it: the host is a target that happens to be reached by
+   * system calls.
    */
   static async collectOverTransport(request: TransportFactsRequest): Promise<Facts> {
-    return new Facts(await new GuestFacts(request.transport).collect({
+    return new Facts(await new TargetFacts(request.transport).collect({
       targets: [{ target: request.target, selectors: {} }],
       now: request.now,
       attempt: request.attempt,
