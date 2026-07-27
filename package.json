@@ -42,6 +42,10 @@
     "./StateStore": {
       "types": "./dist/StateStore/index.d.ts",
       "import": "./dist/StateStore/index.js"
+    },
+    "./Secrets": {
+      "types": "./dist/Secrets/index.d.ts",
+      "import": "./dist/Secrets/index.js"
     }
   },
   "scripts": {
