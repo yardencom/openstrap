@@ -251,6 +251,20 @@ Product domain and schema do not import adapters. Если concrete library по
 
 `Facts/Application` может подготовить request для collector на основе facts definition. `OpenStrapRun` может подготовить request для collector на основе requirements. В обоих случаях внешний top-level module не должен появляться только ради частного facts use case.
 
+## Transport Boundary
+
+**Transport** - канал доступа к target и операции через него: прочитать файл, выполнить команду, сходить по сети. Порты живут в `src/Transport/Domain`, конкретные реализации - в `src/Transport/Adapters/<канал>`.
+
+| Внутри порта | Снаружи порта |
+|---|---|
+| файловые операции на target | печать прогресса в терминал |
+| выполнение команды на target | окружение процесса openstrap: `stateHome`, `PATH`, `home` |
+| сетевой вызов с target | производные данные: определение ОС, дистрибутива, архитектуры |
+
+Определение ОС - работа **Collector**, а не transport: иначе знание про ОС уезжает в adapter и facts-модуль перестает собирать. Единица изменчивости в сборе фактов - операционная система target, а не канал доступа. Host не исключение: это локальный transport, реализованный системными вызовами.
+
+`Transport` не знает про blueprint, target, provider и openstrap. Модуль обязан оставаться публикуемым отдельным пакетом без правок.
+
 ## Boundary Verification
 
 Архитектурные границы должны проверяться тестами там, где нарушение легко внести случайно.
