@@ -26,11 +26,14 @@ describe("Transport public API", () => {
     expect(barrelExports()).toEqual(expectedExports);
   });
 
-  it("exposes types only, so the port cannot carry behaviour", () => {
+  it("exposes the local transport as the only concrete adapter", () => {
     const barrel = readFileSync(barrelPath(), "utf8");
-    const valueExports = [...barrel.matchAll(/^export\s+(?!type\b)/gm)];
+    const valueExports = [...barrel.matchAll(/^export\s+\{([^}]+)\}/gm)]
+      .flatMap((match) => match[1]!.split(","))
+      .map((name) => name.trim())
+      .filter(Boolean);
 
-    expect(valueExports).toEqual([]);
+    expect(valueExports).toEqual(["LocalTransport"]);
   });
 
   it("describes a transport as filesystem, network and process access", () => {

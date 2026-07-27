@@ -19,3 +19,4 @@ export type {
   SystemCommand,
 } from "./Domain/Process.js";
 export type { Transport } from "./Domain/Transport.js";
+export { LocalTransport } from "./Adapters/Local/LocalTransport.js";
