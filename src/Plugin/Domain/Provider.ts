@@ -52,8 +52,10 @@ export type MachineRequest = {
   name: string;
   image: ResolvedImage;
   resources: MachineResources;
-  /** Cloud-init seed built by the provider; never carries a private key. */
-  seedPath: string;
+  /** The managed user the guest is bootstrapped with. */
+  user: string;
+  /** Public half only. How a guest is handed this key is the provider's business. */
+  publicKey: string;
   hostPort: number;
   guestPort: number;
 };

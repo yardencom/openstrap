@@ -18,4 +18,13 @@ export type FactsCollectArgs = {
   inputs: Record<string, string>;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs;
+export type CreateArgs = {
+  command: "create";
+  kind: "vm";
+  target: string;
+  configPath?: string;
+  hostPort?: number;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs;

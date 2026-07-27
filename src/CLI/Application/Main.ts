@@ -18,6 +18,8 @@ import {
   collectAndStoreFactsFromDefinition,
   type StoredFactsCollectResult,
 } from "./FactsCollectCommand.js";
+import { createTarget } from "./CreateCommand.js";
+import type { CreateMachineResult } from "../../Create/index.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
 
@@ -108,6 +110,22 @@ export async function main(argv: readonly string[], io: CliIo = {
       return output.facts.some((item) => item.run.status === "error") ? 1 : 0;
     }
 
+    if (parsedArgs.command === "create") {
+      const created = await createTarget({
+        target: parsedArgs.target,
+        configPath: parsedArgs.configPath,
+        hostPort: parsedArgs.hostPort,
+        runtime,
+        workspaceRoot: io.cwd,
+      });
+
+      io.stdout.write(parsedArgs.json
+        ? `${JSON.stringify(created, null, 2)}\n`
+        : renderCreateOutput(parsedArgs.target, created));
+
+      return 0;
+    }
+
     const output = await runOpenStrapFlow({
       configPath: parsedArgs.configPath,
       runtime,
@@ -140,6 +158,31 @@ async function createCliRuntime(args: RuntimeArgs, cwd: string) {
     factsBackendId: args.factsBackendId,
     plugins,
   });
+}
+
+function renderCreateOutput(name: string, result: CreateMachineResult): string {
+  const lines: string[] = [];
+
+  lines.push(`OpenStrap create: ${result.created ? "created" : "already present"}`);
+  lines.push("");
+  lines.push("Steps:");
+
+  for (const step of result.steps) {
+    lines.push(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
+  }
+
+  lines.push("");
+  lines.push("Image:");
+  lines.push(`  ${result.image.reference} ${result.image.format}/${result.image.boot}`);
+  lines.push(`  ${result.image.url}`);
+  lines.push(`  sha256 ${result.image.sha256}`);
+  lines.push("");
+  lines.push(`Machine: ${name} (${result.handle.id})`);
+  lines.push(`Access:  ssh ${result.endpoint.user}@${result.endpoint.host} -p ${result.endpoint.port}`);
+  lines.push(`         openstrap connect ${name}`);
+  lines.push("");
+
+  return lines.join("\n");
 }
 
 function renderHumanOutput(output: OpenStrapRunOutput): string {
