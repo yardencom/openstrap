@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { LocalTransport } from "../../Transport/index.js";
 import { Facts } from "../Facts.js";
 
 describe("Facts public API", () => {
@@ -33,29 +34,15 @@ describe("Facts public API", () => {
     expect(facts[0]!.snapshot.id).toBe("snap_host");
   });
 
-  it("collects through an API that can wait, not through the constructor", async () => {
-    let resolveCollection: (items: readonly unknown[]) => void = () => {};
-    const pending = new Promise<readonly unknown[]>((resolve) => {
-      resolveCollection = resolve;
-    });
-    let started = false;
-
-    const facts = Facts.collect({
-      blueprint: blueprintAskingForOs(),
-      runtime: {
-        factsBackend: {
-          collect: () => {
-            started = true;
-            return pending as Promise<never>;
-          },
-        },
-      },
+  it("reads a machine through an API that can wait, not through a constructor", async () => {
+    const facts = await Facts.read({
+      transport: new LocalTransport(),
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      sections: ["os"],
     });
 
-    expect(started).toBe(true);
-    resolveCollection([minimalItem()]);
-
-    expect([...(await facts)]).toHaveLength(1);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.snapshot.target.id).toBe("host");
   });
 
   it("exports only Facts from Facts/Facts", () => {
@@ -64,25 +51,10 @@ describe("Facts public API", () => {
       .map((match) => match[1]);
 
     expect(source).not.toMatch(/^export\s+\{/m);
-    expect(source).not.toMatch(/^export\s+type\s+\{/m);
     expect(source).not.toContain("Symbol.species");
-    expect(exportedNames).toEqual(["Facts"]);
+    expect(exportedNames).toEqual(["FactTarget", "FactCollectionOrder", "Facts"]);
   });
 });
-
-function blueprintAskingForOs() {
-  return {
-    targets: {
-      host: {
-        name: "host",
-        scope: "host" as const,
-        type: "host" as const,
-        transport: "local",
-        requirements: [{ id: "os-known", os: { family: { status: "present" } } }],
-      },
-    },
-  };
-}
 
 function minimalItem() {
   return {

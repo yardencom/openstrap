@@ -22,7 +22,7 @@ describe("Facts boundaries", () => {
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
     expect(factsEntries).toEqual(
-      expect.arrayContaining(["Application", "Definition", "Domain", "SchemaArtifacts"]),
+      expect.arrayContaining(["Application", "Collectors", "Definition", "Domain", "SchemaArtifacts"]),
     );
     expect(publicBarrel).toBe("export {};\n");
     expect(publicBarrel).not.toContain("CollectFactsFromDefinition");
@@ -86,23 +86,6 @@ describe("Facts boundaries", () => {
         ]),
       );
     }
-  });
-
-  it("keeps local facts as one concrete adapter area", () => {
-    const adapterEntries = readdirSync(join(process.cwd(), "src/Facts/Adapters"));
-    const localAdapterEntries = readdirSync(join(process.cwd(), "src/Facts/Adapters/Local"));
-
-    expect(adapterEntries).toContain("Local");
-    expect(adapterEntries).not.toEqual(expect.arrayContaining([
-      "LocalHostFacts.ts",
-      "LocalSystemSnapshot.ts",
-      "LocalProcessServiceInventory.ts",
-    ]));
-    expect(localAdapterEntries).toEqual(expect.arrayContaining([
-      "HostFacts.ts",
-      "SystemSnapshot.ts",
-      "ProcessServiceInventory.ts",
-    ]));
   });
 
   it("does not import facts adapters outside the Facts module", () => {

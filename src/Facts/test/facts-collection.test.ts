@@ -5,7 +5,8 @@ import {
   FactCollectionValidationError,
 } from "../Domain/FactCollectionFactory.js";
 import type { FactCollectionItem } from "../Domain/Facts.js";
-import { SystemSnapshot } from "../Adapters/Local/SystemSnapshot.js";
+import { LocalTransport } from "../../Transport/index.js";
+import { Facts } from "../Facts.js";
 
 describe("Facts", () => {
   it("rejects empty FactCollection payloads", () => {
@@ -42,80 +43,29 @@ describe("Facts", () => {
     }
   });
 
-  it("collects separate host and guest snapshots using local process transport", () => {
-    const collection = new SystemSnapshot().collect({
-      targets: [
-        {
-          target: {
-            name: "host",
-            scope: "host",
-            type: "machine",
-            transport: "local",
-          },
-          selectors: {
-            runtimes: {
-              node: {
-                ready: true,
-              },
-            },
-          },
-        },
-        {
-          target: {
-            name: "guest",
-            scope: "guest",
-            type: "vm",
-            transport: "local",
-          },
-          selectors: {
-            runtimes: {
-              node: {
-                ready: true,
-              },
-            },
-          },
-        },
-      ],
-      now: new Date("2026-06-08T10:00:00.000Z"),
+  it("reads a machine over a transport and stamps the target it read", async () => {
+    const facts = await Facts.read({
+      transport: new LocalTransport(),
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      sections: ["os", "arch"],
     });
 
-    expect(collection).toHaveLength(2);
-    expect(collection[0]!.snapshot.scope).toBe("host");
-    expect(collection[1]!.snapshot.scope).toBe("guest");
-    expect(collection[0]!.snapshot.data).toHaveProperty("providers");
-    expect(collection[1]!.snapshot.data).not.toHaveProperty("providers");
-    expect((collection[0]!.snapshot.data as any).transports.local.ready).toBe(true);
-    expect(collection[0]!.snapshot).not.toHaveProperty("profile");
-    expect(collection[0]!.snapshot).not.toHaveProperty("purpose");
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.snapshot.scope).toBe("host");
+    expect(facts[0]!.snapshot.target).toMatchObject({ id: "host", type: "host" });
+    expect(facts[0]!.run.status).toBe("success");
   });
 
-  it("represents explicitly requested unsupported selectors", () => {
-    const collection = new SystemSnapshot().collect({
-      targets: [
-        {
-          target: {
-            name: "host",
-            scope: "host",
-            type: "machine",
-            transport: "local",
-          },
-          selectors: {
-            services: {
-              ssh: {
-                running: true,
-              },
-            },
-          },
-        },
-      ],
-      now: new Date("2026-06-08T10:00:00.000Z"),
+  it("pairs every run with the snapshot it produced", async () => {
+    const facts = await Facts.read({
+      transport: new LocalTransport(),
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      sections: ["os"],
     });
 
-    expect((collection[0]!.snapshot.data as any).services.ssh).toEqual({
-      status: "unsupported",
-      reason: "system_probe_not_declared",
-    });
+    expect(facts[0]!.run.snapshotId).toBe(facts[0]!.snapshot.id);
   });
+
 });
 
 function minimalItem(): FactCollectionItem {

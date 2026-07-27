@@ -151,8 +151,8 @@ describe("OpenStrap plugin system", () => {
   it("creates runtime with core backend by default", async () => {
     const runtime = await createOpenStrapRuntime();
 
-    expect(runtime.factsBackendId).toBe("openstrap:systeminformation");
-    expect(runtime.factsBackend.id).toBe("openstrap:systeminformation");
+    expect(runtime.factsBackendId).toBe("openstrap:local");
+    expect(runtime.factsBackend.id).toBe("openstrap:local");
     expect(runtime.pluginNames).toContain("openstrap:core");
   });
 

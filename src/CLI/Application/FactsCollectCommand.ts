@@ -50,28 +50,21 @@ export async function collectAndStoreFactsFromDefinition(request: {
 }): Promise<StoredFactsCollectResult> {
   const definition = readDefinition(request.path);
   const inputs = resolveDefinitionInputs(definition, request.inputs);
-  const baseFacts = await Facts.collect({
-    blueprint: {
-      targets: {
-        host: {
-          name: "host",
-          scope: "host",
-          type: "host",
-          displayName: "Host",
-          transport: "local",
-          requirements: [{
-            id: readString(definition.id, "facts-definition"),
-            ...selectorsFromDefinition(definition),
-          }],
-        },
+  const selectors = selectorsFromDefinition(definition);
+  const baseFacts = new Facts(await request.backend.collect({
+    targets: [{
+      target: {
+        name: "host",
+        scope: "host",
+        type: "host",
+        displayName: "Host",
+        transport: "local",
       },
-    },
-    runtime: {
-      factsBackend: request.backend,
-    },
+      selectors,
+    }],
     workspaceRoot: request.workspaceRoot,
     now: request.now,
-  });
+  }));
   const baseItem = baseFacts[0];
 
   if (!baseItem) {
@@ -79,7 +72,9 @@ export async function collectAndStoreFactsFromDefinition(request: {
   }
 
   const item = structuredClone(baseItem);
-  const data = item.snapshot.data as Record<string, unknown>;
+  const data = Facts.answerDeclarations(item.snapshot.data as Record<string, any>, selectors);
+
+  (item.snapshot as { data: unknown }).data = data;
   const evidence = {
     commands: collectCommandEvidence(definition.commands ?? [], inputs, request.workspaceRoot),
     artifacts: collectArtifactEvidence(definition.artifacts ?? [], inputs, request.workspaceRoot),

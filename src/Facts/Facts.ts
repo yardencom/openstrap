@@ -1,43 +1,45 @@
-import { HostFacts } from "./Adapters/Local/HostFacts.js";
-import { TargetFacts } from "./Adapters/Remote/TargetFacts.js";
 import type { Transport } from "../Transport/index.js";
-import type { Blueprint } from "../Blueprint/index.js";
+import { DeclaredEntities } from "./Collectors/DeclaredEntities.js";
+import { SystemInventory } from "./Collectors/SystemInventory.js";
 import { createFactCollection } from "./Domain/FactCollectionFactory.js";
-import type {
-  FactCollectionRequest,
-  FactSelectorTree,
-} from "./Domain/FactCollectionRequest.js";
 import type { FactCollectionItem } from "./Domain/Facts.js";
 
-type FactsSource = {
-  collect(request: FactCollectionRequest): Promise<readonly FactCollectionItem[]>;
+/**
+ * What the facts module needs to know about a machine.
+ *
+ * Deliberately a plain shape of its own rather than a blueprint target. This
+ * module does not know that blueprints exist — it reads a machine and says
+ * what it found, which is a thing worth having with or without openstrap.
+ */
+export type FactTarget = {
+  name: string;
+  scope: string;
+  type: string;
+  displayName?: string;
+  transport: string;
 };
 
-type FactsRuntime = {
-  factsBackend: FactsSource;
-};
-
-type TransportFactsRequest = {
+export type FactCollectionOrder = {
   transport: Transport;
-  target: {
-    name: string;
-    scope: string;
-    type: string;
-    displayName?: string;
-    transport: string;
-  };
+  target: FactTarget;
+  /** Sections to read; everything cheap is read when omitted. */
+  sections?: readonly string[];
+  tools?: readonly string[];
+  paths?: Record<string, string>;
   now?: Date;
   attempt?: number;
 };
 
-type FactsRequest = {
-  blueprint: Blueprint;
-  runtime?: FactsRuntime;
-  workspaceRoot?: string;
-  now?: Date;
-  attempt?: number;
-};
-
+/**
+ * Facts about machines: both the reading of them and the result.
+ *
+ * One module does both. Splitting "the collector" from "the collection" would
+ * give two things that are useless apart, and the reading is what makes the
+ * result trustworthy.
+ *
+ * Reading is done through an API rather than a constructor, because reaching a
+ * machine can mean waiting on a network and a constructor cannot wait.
+ */
 export class Facts extends Array<FactCollectionItem> {
   constructor(items: readonly FactCollectionItem[] = []) {
     super();
@@ -48,71 +50,78 @@ export class Facts extends Array<FactCollectionItem> {
   }
 
   /**
-   * Collects the facts a blueprint asks about.
+   * Answers, by name, the entities a caller declared.
    *
-   * Collection is not done in the constructor: reaching a guest can mean
-   * waiting on a network, and a constructor cannot wait.
+   * The inventory is keyed by identity — a pid, a unit name. A caller asks
+   * "is node running". Both are facts about the same machine, so both belong
+   * in the same snapshot, and the matching lives here rather than in every
+   * caller that needs it.
    */
-  static async collect(request: FactsRequest): Promise<Facts> {
-    const source = request.runtime?.factsBackend ?? new HostFacts();
-    const items = await source.collect({
-      targets: Object.values(request.blueprint.targets).map((target) => ({
-        target: {
-          name: target.name,
-          scope: target.scope,
-          type: target.type,
-          displayName: target.displayName,
-          transport: target.transport,
-        },
-        selectors: selectorsFromRequirements(target.requirements),
-      })),
-      workspaceRoot: request.workspaceRoot,
-      now: request.now,
-      attempt: request.attempt,
-    });
+  static answerDeclarations(
+    data: Record<string, any>,
+    selectors: Readonly<Record<string, unknown>>,
+  ): Record<string, any> {
+    const declared = new DeclaredEntities();
+    const answered = { ...data };
 
-    return new Facts(items);
+    if (selectors.processes) {
+      answered.processes = { ...data.processes, ...declared.processes(selectors.processes as never, data.processes ?? {}) };
+    }
+
+    if (selectors.services) {
+      answered.services = { ...data.services, ...declared.services(selectors.services as never, data.services ?? {}) };
+    }
+
+    return answered;
   }
 
   /**
-   * Collects from a target reached over a transport.
+   * Reads a machine over a transport.
    *
-   * The host goes through this too, over the local transport. There is no
-   * separate path for it: the host is a target that happens to be reached by
-   * system calls.
+   * The host is not a special case. It is a machine reached by the local
+   * transport, and it goes through exactly this method.
    */
-  static async collectOverTransport(request: TransportFactsRequest): Promise<Facts> {
-    return new Facts(await new TargetFacts(request.transport).collect({
-      targets: [{ target: request.target, selectors: {} }],
-      now: request.now,
-      attempt: request.attempt,
-    }));
+  static async read(order: FactCollectionOrder): Promise<Facts> {
+    const startedAt = (order.now ?? new Date()).toISOString();
+    const stamp = startedAt.replace(/[-:.]/g, "");
+    const data = await SystemInventory.from(order.transport).read({
+      sections: order.sections,
+      tools: order.tools,
+      paths: order.paths,
+    });
+    const snapshotId = `snap_${order.target.name}_${stamp}`;
+
+    // Which channel reached this machine is known by the caller, not by the
+    // commands that ran over it — so it is recorded here rather than guessed.
+    data.transports = {
+      [order.target.transport]: {
+        status: "present",
+        type: order.target.transport,
+        ready: true,
+        authMethods: order.target.transport === "ssh" ? ["publickey"] : undefined,
+      },
+    };
+
+    return new Facts([{
+      snapshot: {
+        id: snapshotId,
+        schemaVersion: "facts.v1",
+        scope: order.target.scope,
+        target: {
+          type: order.target.type,
+          id: order.target.name,
+          displayName: order.target.displayName,
+        },
+        data,
+      },
+      run: {
+        id: `fact_run_${order.target.name}_${stamp}`,
+        snapshotId,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "success",
+        attempt: order.attempt ?? 1,
+      },
+    }]);
   }
-}
-
-function selectorsFromRequirements(requirements: readonly Record<string, unknown>[]): FactSelectorTree {
-  return requirements.reduce<FactSelectorTree>((merged, requirement) => {
-    return mergeSelectorTrees(merged, Object.fromEntries(
-      Object.entries(requirement).filter(([key]) => key !== "id" && key !== "optional"),
-    ));
-  }, {});
-}
-
-function mergeSelectorTrees(left: FactSelectorTree, right: FactSelectorTree): FactSelectorTree {
-  const merged: FactSelectorTree = {
-    ...left,
-  };
-
-  for (const [key, value] of Object.entries(right)) {
-    const current = merged[key];
-    merged[key] = isRecord(current) && isRecord(value)
-      ? mergeSelectorTrees(current, value)
-      : value;
-  }
-
-  return merged;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }

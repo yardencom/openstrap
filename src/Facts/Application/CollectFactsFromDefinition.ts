@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { HostFacts } from "../Adapters/Local/HostFacts.js";
+import { LocalTransport } from "../../Transport/index.js";
 import type { FactCollectionRequest } from "../Domain/FactCollectionRequest.js";
 import type {
   FactCollectionItem,
@@ -41,13 +41,13 @@ export type CollectFactsFromDefinitionRequest = {
   now?: Date;
 };
 
-type FactCollectionCollector = {
+type UnusedCollector = {
   collect(request: FactCollectionRequest): Promise<readonly FactCollectionItem[]>;
 };
 
 export class CollectFactsFromDefinition {
   constructor(
-    private readonly collector: FactCollectionCollector = new HostFacts(),
+    private readonly transport = new LocalTransport(),
     private readonly definitionReader = new FactsDefinitionReader(),
   ) {}
 
@@ -87,30 +87,38 @@ export class CollectFactsFromDefinition {
     };
   }
 
+  private answerDeclarations(item: FactCollectionItem, definition: FactsDefinition): FactCollectionItem {
+    (item.snapshot as { data: unknown }).data = Facts.answerDeclarations(
+      item.snapshot.data as Record<string, unknown>,
+      selectorsFromDefinition(definition),
+    );
+
+    return item;
+  }
+
   private async collectBaseItem(
     definition: FactsDefinition,
     request: CollectFactsFromDefinitionRequest,
   ): Promise<FactCollectionItem> {
-    const facts = new Facts(await this.collector.collect({
-      targets: [{
-        target: {
-          name: "host",
-          scope: "host",
-          type: "machine",
-          displayName: "Local host",
-          transport: "local",
-        } satisfies FactCollectionTarget,
-        selectors: selectorsFromDefinition(definition),
-      }],
-      workspaceRoot: request.workspaceRoot,
+    const facts = await Facts.read({
+      transport: this.transport,
+      target: {
+        name: "host",
+        scope: "host",
+        type: "host",
+        displayName: "Local host",
+        transport: "local",
+      } satisfies FactCollectionTarget,
+      sections: Object.keys(selectorsFromDefinition(definition)),
+      paths: { workspace: request.workspaceRoot ?? ".", home: "$HOME" },
       now: request.now,
-    }));
+    });
     const item = facts[0];
 
     if (!item) {
       throw new Error("Facts collector returned an empty collection");
     }
 
-    return structuredClone(item);
+    return this.answerDeclarations(structuredClone(item), definition);
   }
 }

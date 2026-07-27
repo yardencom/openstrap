@@ -52,12 +52,20 @@ export async function runOpenStrapFlow(params: {
     workspaceRoot: params.workspaceRoot,
   });
 
-  const facts = await Facts.collect({
-    blueprint,
-    runtime: params.runtime,
+  const facts = new Facts(await params.runtime.factsBackend.collect({
+    targets: Object.values(blueprint.targets).map((target) => ({
+      target: {
+        name: target.name,
+        scope: target.scope,
+        type: target.type,
+        displayName: target.displayName,
+        transport: target.transport,
+      },
+      selectors: selectorsOf(target.requirements),
+    })),
     workspaceRoot: params.workspaceRoot,
     now: params.now,
-  });
+  }));
   const result = await new OpenStrapRun().execute({
     blueprint,
     facts,
@@ -156,6 +164,27 @@ export async function main(argv: readonly string[], io: CliIo = {
     io.stderr.write(`${errors.format(error)}\n`);
     return 2;
   }
+}
+
+/**
+ * Which fact sections the requirements of a target ask about.
+ *
+ * Mapping a blueprint onto a collection request belongs here rather than in
+ * the facts module: that module reads machines and has no idea what a
+ * blueprint is.
+ */
+function selectorsOf(requirements: readonly Record<string, unknown>[]): Record<string, unknown> {
+  const merged: Record<string, unknown> = {};
+
+  for (const requirement of requirements) {
+    for (const [section, value] of Object.entries(requirement)) {
+      if (section !== "id" && section !== "optional") {
+        merged[section] = value;
+      }
+    }
+  }
+
+  return merged;
 }
 
 async function createCliRuntime(args: RuntimeArgs, cwd: string) {

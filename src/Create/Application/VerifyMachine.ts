@@ -48,7 +48,7 @@ export class VerifyMachine {
     });
 
     try {
-      const facts = await Facts.collectOverTransport({
+      const facts = await Facts.read({
         transport: connection,
         target: {
           name: request.target.name,
