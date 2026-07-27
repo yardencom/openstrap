@@ -1,4 +1,6 @@
 import { HostFacts } from "./Adapters/Local/HostFacts.js";
+import { GuestFacts } from "./Adapters/Remote/GuestFacts.js";
+import type { Transport } from "../Transport/index.js";
 import type { Blueprint } from "../Blueprint/index.js";
 import { createFactCollection } from "./Domain/FactCollectionFactory.js";
 import type {
@@ -13,6 +15,19 @@ type FactsSource = {
 
 type FactsRuntime = {
   factsBackend: FactsSource;
+};
+
+type TransportFactsRequest = {
+  transport: Transport;
+  target: {
+    name: string;
+    scope: string;
+    type: string;
+    displayName?: string;
+    transport: string;
+  };
+  now?: Date;
+  attempt?: number;
 };
 
 type FactsRequest = {
@@ -57,6 +72,20 @@ export class Facts extends Array<FactCollectionItem> {
     });
 
     return new Facts(items);
+  }
+
+  /**
+   * Collects from a target reached over a transport.
+   *
+   * The collector varies by the operating system of the target, not by the
+   * channel, so the same one serves every transport that can run a command.
+   */
+  static async collectOverTransport(request: TransportFactsRequest): Promise<Facts> {
+    return new Facts(await new GuestFacts(request.transport).collect({
+      targets: [{ target: request.target, selectors: {} }],
+      now: request.now,
+      attempt: request.attempt,
+    }));
   }
 }
 

@@ -20,7 +20,7 @@ import {
 } from "./FactsCollectCommand.js";
 import { connectToTarget } from "./ConnectCommand.js";
 import { createTarget } from "./CreateCommand.js";
-import type { CreateMachineResult } from "../../Create/index.js";
+import type { CreatedTarget } from "./CreateCommand.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
 
@@ -124,7 +124,9 @@ export async function main(argv: readonly string[], io: CliIo = {
         ? `${JSON.stringify(created, null, 2)}\n`
         : renderCreateOutput(parsedArgs.target, created));
 
-      return 0;
+      const status = created.requirementRun?.status;
+
+      return status === undefined || status === "passed" || status === "skipped" ? 0 : 1;
     }
 
     if (parsedArgs.command === "connect") {
@@ -173,7 +175,7 @@ async function createCliRuntime(args: RuntimeArgs, cwd: string) {
   });
 }
 
-function renderCreateOutput(name: string, result: CreateMachineResult): string {
+function renderCreateOutput(name: string, result: CreatedTarget): string {
   const lines: string[] = [];
 
   lines.push(`OpenStrap create: ${result.created ? "created" : "already present"}`);
@@ -191,6 +193,16 @@ function renderCreateOutput(name: string, result: CreateMachineResult): string {
   lines.push(`  sha256 ${result.image.sha256}`);
   lines.push("");
   lines.push(`Machine: ${name} (${result.handle.id})`);
+  if (result.requirementRun) {
+    lines.push("");
+    lines.push(`Requirements: ${result.requirementRun.status}`);
+
+    for (const requirement of result.requirementRun.results) {
+      lines.push(`  - ${requirement.requirementId}: ${requirement.status}`);
+    }
+  }
+
+  lines.push("");
   lines.push(`Access:  ssh ${result.endpoint.user}@${result.endpoint.host} -p ${result.endpoint.port}`);
   lines.push(`         openstrap connect ${name}`);
   lines.push("");

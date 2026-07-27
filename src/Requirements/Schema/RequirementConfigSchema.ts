@@ -139,8 +139,9 @@ export class RequirementConfigSchema {
           endpoint: schema.optional(stringCondition(schema)),
           ready: schema.optional(booleanCondition(schema)),
           version: schema.optional(stringCondition(schema)),
+          authMethods: schema.optional(stringListCondition(schema)),
         },
-        { requireAtLeastOneField: ["status", "type", "endpoint", "ready", "version"] },
+        { requireAtLeastOneField: ["status", "type", "endpoint", "ready", "version", "authMethods"] },
       ))),
       privileges: schema.optional(schema.strictObject(
         {
@@ -213,9 +214,31 @@ function observedRequirement(schema: ConfigSchema): ConfigSchemaNode<unknown> {
       status: schema.optional(observedStatus(schema)),
       reason: schema.optional(stringCondition(schema)),
       message: schema.optional(stringCondition(schema)),
+      passwordless: schema.optional(booleanCondition(schema)),
     },
-    { requireAtLeastOneField: ["status", "reason", "message"] },
+    { requireAtLeastOneField: ["status", "reason", "message", "passwordless"] },
   );
+}
+
+/**
+ * A list of strings, checked as a whole.
+ *
+ * `authMethods: { const: ["publickey"] }` is the way to say that a target
+ * accepts nothing besides a key — the point is what is absent from the list,
+ * which no per-item check can express.
+ */
+function stringListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
+  return schema.union<unknown>([
+    schema.array(schema.string()),
+    schema.strictObject(
+      {
+        const: schema.optional(schema.array(schema.string())),
+        enum: schema.optional(schema.array(schema.string(), { nonempty: true })),
+        contains: schema.optional(schema.string()),
+      },
+      { requireAtLeastOneField: ["const", "enum", "contains"] },
+    ),
+  ]);
 }
 
 function observedStatus(schema: ConfigSchema): ConfigSchemaNode<unknown> {
