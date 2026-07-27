@@ -34,6 +34,14 @@
     "./Plugin": {
       "types": "./dist/Plugin/index.d.ts",
       "import": "./dist/Plugin/index.js"
+    },
+    "./Transport": {
+      "types": "./dist/Transport/index.d.ts",
+      "import": "./dist/Transport/index.js"
+    },
+    "./StateStore": {
+      "types": "./dist/StateStore/index.d.ts",
+      "import": "./dist/StateStore/index.js"
     }
   },
   "scripts": {
