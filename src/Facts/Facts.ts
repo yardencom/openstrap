@@ -40,9 +40,8 @@ export class Facts extends Array<FactCollectionItem> {
    */
   static async collect(request: FactsRequest): Promise<Facts> {
     const source = request.runtime?.factsBackend ?? new HostFacts();
-    const target = request.blueprint.target;
     const items = await source.collect({
-      targets: [{
+      targets: Object.values(request.blueprint.targets).map((target) => ({
         target: {
           name: target.name,
           scope: target.scope,
@@ -51,7 +50,7 @@ export class Facts extends Array<FactCollectionItem> {
           transport: target.transport,
         },
         selectors: selectorsFromRequirements(target.requirements),
-      }],
+      })),
       workspaceRoot: request.workspaceRoot,
       now: request.now,
       attempt: request.attempt,

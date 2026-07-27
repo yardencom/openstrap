@@ -52,16 +52,18 @@ export async function collectAndStoreFactsFromDefinition(request: {
   const inputs = resolveDefinitionInputs(definition, request.inputs);
   const baseFacts = await Facts.collect({
     blueprint: {
-      target: {
-        name: "host",
-        scope: "host",
-        type: "machine",
-        displayName: "Host",
-        transport: "local",
-        requirements: [{
-          id: readString(definition.id, "facts-definition"),
-          ...selectorsFromDefinition(definition),
-        }],
+      targets: {
+        host: {
+          name: "host",
+          scope: "host",
+          type: "host",
+          displayName: "Host",
+          transport: "local",
+          requirements: [{
+            id: readString(definition.id, "facts-definition"),
+            ...selectorsFromDefinition(definition),
+          }],
+        },
       },
     },
     runtime: {

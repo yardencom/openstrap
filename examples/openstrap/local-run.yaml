@@ -1,36 +1,41 @@
 # yaml-language-server: $schema=../../schemas/openstrap-blueprint.schema.json
-target:
-  name: local
-  scope: system
-  type: machine
-  displayName: Local machine
-  transport: local
-  requirements:
-    - id: node-runtime
-      runtimes:
-        node:
-          status: present
-          ready: true
-          version: ">=18.0.0"
+#
+# scope, type and transport are not written here. A target with no provider is
+# the machine openstrap runs on: scope host, type host, transport local.
+targets:
+  local:
+    displayName: Local machine
 
-    - id: local-transport
-      transports:
-        local:
-          status: present
-          ready: true
+requirements:
+  - id: node-runtime
+    target: local
+    runtimes:
+      node:
+        status: present
+        ready: true
+        version: ">=18.0.0"
 
-    - id: resources
-      cpu:
-        cores:
-          minimum: 1
-      memory:
-        totalBytes:
-          minimum: 1
+  - id: local-transport
+    target: local
+    transports:
+      local:
+        status: present
+        ready: true
 
-    - id: workspace-ready
-      paths:
-        workspace:
-          status: present
-          exists: true
-          type: directory
-          readable: true
+  - id: resources
+    target: local
+    cpu:
+      cores:
+        minimum: 1
+    memory:
+      totalBytes:
+        minimum: 1
+
+  - id: workspace-ready
+    target: local
+    paths:
+      workspace:
+        status: present
+        exists: true
+        type: directory
+        readable: true

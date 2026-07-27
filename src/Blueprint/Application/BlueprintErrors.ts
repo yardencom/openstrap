@@ -25,6 +25,20 @@ abstract class BlueprintError<TIssue extends ConfigIssue> extends Error {
   }
 }
 
+export class BlueprintTargetError extends Error {
+  readonly issues: string[];
+
+  constructor(unknownTargets: readonly string[], declaredTargets: readonly string[]) {
+    const issues = unknownTargets.map(
+      (target) => `requirement target "${target}" is not declared. Declared targets: ${declaredTargets.join(", ")}`,
+    );
+
+    super(`Invalid OpenStrap blueprint: ${issues.join("; ")}`);
+    this.name = "BlueprintTargetError";
+    this.issues = issues;
+  }
+}
+
 export class BlueprintReadError extends BlueprintError<ConfigIssue> {
   constructor(error: unknown) {
     if (!(error instanceof ConfigValidationError || error instanceof ConfigParseError)) {

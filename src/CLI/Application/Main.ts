@@ -63,12 +63,12 @@ export async function runOpenStrapFlow(params: {
   });
 
   return {
-    targets: [{
-      name: blueprint.target.name,
-      scope: blueprint.target.scope,
-      type: blueprint.target.type,
-      transport: blueprint.target.transport,
-    }],
+    targets: Object.values(blueprint.targets).map((target) => ({
+      name: target.name,
+      scope: target.scope,
+      type: target.type,
+      transport: target.transport,
+    })),
     facts,
     requirementRun: result.requirementRun,
   };

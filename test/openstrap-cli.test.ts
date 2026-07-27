@@ -121,16 +121,15 @@ describe("openstrap CLI", () => {
       writeFileSync(
         join(directory, "openstrap.yaml"),
         `
-target:
-  name: local
-  scope: system
-  type: machine
-  transport: local
-  requirements:
-    - id: local-transport
-      transports:
-        local:
-          ready: true
+targets:
+  local: {}
+
+requirements:
+  - id: local-transport
+    target: local
+    transports:
+      local:
+        ready: true
 `,
       );
 

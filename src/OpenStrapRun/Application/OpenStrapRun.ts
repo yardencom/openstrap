@@ -4,6 +4,7 @@ import {
   RequirementEvaluator,
   type RequirementRun,
 } from "../../Requirements/index.js";
+import { mergeRequirementRuns } from "./MergeRequirementRuns.js";
 
 export type OpenStrapRunRequest = {
   blueprint: Blueprint;
@@ -38,14 +39,16 @@ export class OpenStrapRun {
     facts: Facts,
     request: OpenStrapRunRequest,
   ): RequirementRun {
-    return this.requirementEvaluator.evaluate({
-      target: blueprint.target,
-      requirements: blueprint.target.requirements,
-      factCollection: facts,
-      now: request.now,
-      trigger: "manual",
-      profile: "local-run",
-      purpose: "preflight",
-    });
+    return mergeRequirementRuns(
+      Object.values(blueprint.targets).map((target) => this.requirementEvaluator.evaluate({
+        target,
+        requirements: target.requirements,
+        factCollection: facts,
+        now: request.now,
+        trigger: "manual",
+        profile: "local-run",
+        purpose: "preflight",
+      })),
+    );
   }
 }

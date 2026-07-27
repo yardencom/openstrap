@@ -72,12 +72,14 @@ describe("Facts public API", () => {
 
 function blueprintAskingForOs() {
   return {
-    target: {
-      name: "host",
-      scope: "host",
-      type: "host",
-      transport: "local",
-      requirements: [{ id: "os-known", os: { family: { status: "present" } } }],
+    targets: {
+      host: {
+        name: "host",
+        scope: "host" as const,
+        type: "host" as const,
+        transport: "local",
+        requirements: [{ id: "os-known", os: { family: { status: "present" } } }],
+      },
     },
   };
 }

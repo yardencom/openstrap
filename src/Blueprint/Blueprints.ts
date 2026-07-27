@@ -3,7 +3,8 @@ import {
   type ConfigLoadRequest,
 } from "../ConfigCore/index.js";
 import type { Blueprint } from "./Domain/Blueprint.js";
-import { BlueprintReadError } from "./Application/BlueprintErrors.js";
+import { BlueprintReadError, BlueprintTargetError } from "./Application/BlueprintErrors.js";
+import { declaredTargets, unknownRequirementTargets } from "./Application/DeclaredTargets.js";
 import { BlueprintSchema } from "./Schema/BlueprintSchema.js";
 
 export class Blueprints {
@@ -14,10 +15,20 @@ export class Blueprints {
   }
 
   load(request: ConfigLoadRequest): Readonly<Blueprint> {
+    let config;
+
     try {
-      return this.configCore.load(this.schemaDefinition, request);
+      config = this.configCore.load(this.schemaDefinition, request);
     } catch (error) {
       throw new BlueprintReadError(error);
     }
+
+    const unknown = unknownRequirementTargets(config);
+
+    if (unknown.length > 0) {
+      throw new BlueprintTargetError(unknown, Object.keys(config.targets));
+    }
+
+    return declaredTargets(config);
   }
 }

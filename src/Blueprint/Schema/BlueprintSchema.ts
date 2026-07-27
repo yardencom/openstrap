@@ -4,7 +4,7 @@ import {
   type ConfigSchemaNode,
 } from "../../ConfigCore/index.js";
 import { RequirementConfigSchema } from "../../Requirements/Schema/RequirementConfigSchema.js";
-import type { Blueprint } from "../Domain/Blueprint.js";
+import type { BlueprintConfig, BlueprintTargetConfig } from "./BlueprintConfig.js";
 
 const metadata = {
   kind: "openstrap.blueprint",
@@ -14,7 +14,7 @@ const metadata = {
   filePatterns: ["openstrap.yaml", ".openstrap/config.yaml"],
 } as const;
 
-export class BlueprintSchema implements ConfigDefinition<Blueprint> {
+export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
   private readonly requirements: RequirementConfigSchema;
 
   readonly kind = metadata.kind;
@@ -27,9 +27,13 @@ export class BlueprintSchema implements ConfigDefinition<Blueprint> {
     this.requirements = new RequirementConfigSchema(schema);
   }
 
-  get rootSchema(): ConfigSchemaNode<Blueprint> {
+  get rootSchema(): ConfigSchemaNode<BlueprintConfig> {
     return this.schema.strictObject({
-      target: this.target,
+      targets: this.schema.record(this.targetName, this.target),
+      requirements: this.schema.array(this.requirements.withTarget(), {
+        nonempty: true,
+        uniqueBy: ["id"],
+      }),
     });
   }
 
@@ -55,17 +59,21 @@ export class BlueprintSchema implements ConfigDefinition<Blueprint> {
     });
   }
 
-  private get target(): ConfigSchemaNode<Blueprint["target"]> {
+  private get target(): ConfigSchemaNode<BlueprintTargetConfig> {
     return this.schema.strictObject({
-      name: this.targetName,
-      scope: this.name,
-      type: this.name,
       displayName: this.schema.optional(this.name),
-      transport: this.transportId,
-      requirements: this.schema.array(this.requirements.withoutTarget(), {
-        nonempty: true,
-        uniqueBy: ["id"],
-      }),
+      transport: this.schema.optional(this.transportId),
+      provider: this.schema.optional(this.identifier),
+      image: this.schema.optional(this.name),
+      size: this.schema.optional(this.name),
+    });
+  }
+
+  private get identifier(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[a-z][a-z0-9._:-]*$",
+      patternMessage: "must start with a lowercase letter and use lowercase letters, numbers, '.', '_', ':' or '-'",
     });
   }
 }
