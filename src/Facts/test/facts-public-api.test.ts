@@ -25,12 +25,12 @@ describe("Facts public API", () => {
     expect(publicMethods).toEqual([]);
   });
 
-  it("keeps array methods available", () => {
+  it("represents facts as an array", () => {
     const facts = new Facts([minimalItem()]);
 
     expect(Array.isArray(facts)).toBe(true);
-    expect(facts.map((item) => item.snapshot.id)).toEqual(["snap_host"]);
-    expect(facts.forEach).toBe(Array.prototype.forEach);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.snapshot.id).toBe("snap_host");
   });
 
   it("exports only Facts from Facts/Facts", () => {

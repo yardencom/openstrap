@@ -74,5 +74,5 @@ export type FactsBackend = {
   id: string;
   displayName?: string;
   capabilities: FactsBackendCapabilities;
-  collect(request: FactsBackendCollectionRequest): FactsBackendCollection | Promise<FactsBackendCollection>;
+  collect(request: FactsBackendCollectionRequest): FactsBackendCollection;
 };

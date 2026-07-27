@@ -1,10 +1,8 @@
 import { readFileSync } from "node:fs";
 
 import { HostFacts } from "../Adapters/Local/HostFacts.js";
-import { createFactCollection } from "../Domain/FactCollectionFactory.js";
 import type { FactCollectionRequest } from "../Domain/FactCollectionRequest.js";
 import type {
-  FactCollection,
   FactCollectionItem,
   FactCollectionTarget,
   HostSystem,
@@ -44,7 +42,7 @@ export type CollectFactsFromDefinitionRequest = {
 };
 
 type FactCollectionCollector = {
-  collect(request: FactCollectionRequest): FactCollection | Promise<FactCollection>;
+  collect(request: FactCollectionRequest): readonly FactCollectionItem[];
 };
 
 export class CollectFactsFromDefinition {
@@ -92,8 +90,8 @@ export class CollectFactsFromDefinition {
   private collectBaseItem(
     definition: FactsDefinition,
     request: CollectFactsFromDefinitionRequest,
-  ): Promise<FactCollectionItem> {
-    return Promise.resolve(this.collector.collect({
+  ): FactCollectionItem {
+    const facts = new Facts(this.collector.collect({
       targets: [{
         target: {
           name: "host",
@@ -106,10 +104,13 @@ export class CollectFactsFromDefinition {
       }],
       workspaceRoot: request.workspaceRoot,
       now: request.now,
-    })).then((collection) => {
-      const factCollection = createFactCollection(collection);
-      const item = structuredClone(factCollection[0]!);
-      return item;
-    });
+    }));
+    const item = facts[0];
+
+    if (!item) {
+      throw new Error("Facts collector returned an empty collection");
+    }
+
+    return structuredClone(item);
   }
 }

@@ -24,21 +24,21 @@ export class HostFacts {
     private readonly processServiceInventory = new ProcessServiceInventory(),
   ) {}
 
-  async collect(params: FactCollectionRequest): Promise<FactCollection> {
+  collect(params: FactCollectionRequest): FactCollection {
     const snapshots = this.systemSnapshot.collect(params);
-    const inventory = await this.readRequestedInventory(params);
+    const inventory = this.readRequestedInventory(params);
 
     return createFactCollection(
       snapshots.map((snapshot) => this.addRequestedProcessServiceFacts(snapshot, params, inventory)),
     );
   }
 
-  private async readRequestedInventory(params: FactCollectionRequest): Promise<CollectedProcessServiceInventory> {
+  private readRequestedInventory(params: FactCollectionRequest): CollectedProcessServiceInventory {
     const processes = requestsFactSection(params, "processes")
-      ? await this.processServiceInventory.readProcesses()
+      ? this.processServiceInventory.readProcesses()
       : [];
     const services = requestsFactSection(params, "services")
-      ? await this.processServiceInventory.readServices()
+      ? this.processServiceInventory.readServices()
       : [];
 
     return {

@@ -3,8 +3,6 @@ import { accessSync, constants, statSync } from "node:fs";
 import { cpus, freemem, homedir, loadavg, platform, release, tmpdir, totalmem, userInfo } from "node:os";
 import { basename, resolve } from "node:path";
 
-import si from "systeminformation";
-
 import type {
   FactsBackend,
   FactsBackendCollection,
@@ -64,12 +62,12 @@ export function createSystemInformationFactsBackend(id: string): FactsBackend {
   };
 }
 
-async function collectSystemInformationFacts(request: FactsBackendCollectionRequest): Promise<FactsBackendCollection> {
+function collectSystemInformationFacts(request: FactsBackendCollectionRequest): FactsBackendCollection {
   const now = request.now ?? new Date();
   const timestamp = now.toISOString();
   const workspaceRoot = resolve(request.workspaceRoot ?? process.cwd());
-  const processes = requestsSection(request, "processes") ? await readProcesses() : [];
-  const services = requestsSection(request, "services") ? await readServices() : [];
+  const processes = requestsSection(request, "processes") ? readProcesses() : [];
+  const services = requestsSection(request, "services") ? readServices() : [];
 
   return request.targets.map((targetRequest): FactsBackendCollectionItem => {
     const target = targetRequest.target;
@@ -209,46 +207,80 @@ function collectSystemFacts(
   };
 }
 
-async function readProcesses(): Promise<ProcessInventoryEntry[]> {
-  const result = await si.processes();
+function readProcesses(): ProcessInventoryEntry[] {
+  if (platform() === "win32") {
+    return readWindowsProcesses();
+  }
 
-  return result.list.map((entry) => ({
-    pid: entry.pid,
-    ppid: entry.parentPid,
-    user: entry.user,
-    state: entry.state,
-    name: stripExecutableExtension(entry.name),
-    command: entry.command || entry.name || String(entry.pid),
-    args: [entry.command, entry.params].filter(Boolean).join(" "),
-    startedAt: entry.started,
-  }));
+  return readPosixProcesses();
 }
 
-async function readServices(): Promise<ServiceInventoryEntry[]> {
+function readServices(): ServiceInventoryEntry[] {
   if (platform() === "darwin") {
     return readLaunchdServices();
   }
 
-  const services = await si.services("*");
+  if (platform() === "win32") {
+    return readWindowsServices();
+  }
 
-  return services.map((service) => ({
-    name: service.name,
-    manager: platform() === "win32" ? "windows-service-control-manager" : "service-manager",
-    running: service.running,
-    enabled: normalizeServiceEnabled(service.startmode),
-    pids: service.pids,
-    pid: service.pids?.[0],
-    state: service.running ? "running" : "stopped",
-  }));
+  return readSystemdServices();
+}
+
+function readPosixProcesses(): ProcessInventoryEntry[] {
+  return safeExecFile("ps", ["-axo", "pid=,ppid=,user=,state=,comm=,args="])
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .flatMap((line) => {
+      const match = line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s*(.*)$/);
+
+      if (!match) {
+        return [];
+      }
+
+      const [, pid, ppid, user, state, command, args] = match;
+
+      return [{
+        pid: Number(pid),
+        ppid: Number(ppid),
+        user,
+        state,
+        name: stripExecutableExtension(command),
+        command: command!,
+        args: args ? `${command} ${args}` : command!,
+      }];
+    });
+}
+
+function readWindowsProcesses(): ProcessInventoryEntry[] {
+  return safeExecFile("wmic", ["process", "get", "ProcessId,ParentProcessId,Name,CommandLine", "/format:csv"])
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("Node,"))
+    .flatMap((line) => {
+      const parts = line.split(",");
+      const command = parts[1] ?? "";
+      const name = parts[2] ?? "";
+      const ppid = Number(parts[3]);
+      const pid = Number(parts[4]);
+
+      if (!pid) {
+        return [];
+      }
+
+      return [{
+        pid,
+        ppid: Number.isFinite(ppid) ? ppid : undefined,
+        name: stripExecutableExtension(name),
+        command: command || name || String(pid),
+        args: command || name || String(pid),
+      }];
+    });
 }
 
 function readLaunchdServices(): ServiceInventoryEntry[] {
-  return execFileSync("launchctl", ["list"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-    timeout: 5000,
-    maxBuffer: 1024 * 1024,
-  })
+  return safeExecFile("launchctl", ["list"])
     .split("\n")
     .slice(1)
     .map((line) => line.trim().split(/\s+/))
@@ -261,6 +293,63 @@ function readLaunchdServices(): ServiceInventoryEntry[] {
       pids: /^\d+$/.test(pid!) ? [Number(pid)] : [],
       state: status,
     }));
+}
+
+function readSystemdServices(): ServiceInventoryEntry[] {
+  return safeExecFile("systemctl", ["list-units", "--type=service", "--all", "--no-legend", "--no-pager"])
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(/\s+/))
+    .filter((parts) => parts[0]?.endsWith(".service"))
+    .map((parts) => ({
+      name: parts[0]!,
+      manager: "systemd",
+      running: parts[3] === "running",
+      state: parts[3],
+    }));
+}
+
+function readWindowsServices(): ServiceInventoryEntry[] {
+  const lines = safeExecFile("sc", ["query", "state=", "all"]).split("\n");
+  const services: ServiceInventoryEntry[] = [];
+  let currentName: string | undefined;
+
+  for (const line of lines) {
+    const serviceName = line.match(/SERVICE_NAME:\s*(.+)$/);
+
+    if (serviceName) {
+      currentName = serviceName[1]?.trim();
+      continue;
+    }
+
+    const state = line.match(/STATE\s+:\s+\d+\s+(\S+)/);
+
+    if (state && currentName) {
+      services.push({
+        name: currentName,
+        manager: "windows-service-control-manager",
+        running: state[1] === "RUNNING",
+        state: state[1]?.toLowerCase(),
+      });
+      currentName = undefined;
+    }
+  }
+
+  return services;
+}
+
+function safeExecFile(command: string, args: readonly string[]): string {
+  try {
+    return execFileSync(command, args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch {
+    return "";
+  }
 }
 
 function collectProcessFacts(
@@ -529,14 +618,6 @@ function normalizeArch(value: string): string {
   };
 
   return architectures[value] ?? value;
-}
-
-function normalizeServiceEnabled(startmode: string | undefined): boolean | undefined {
-  if (!startmode) {
-    return undefined;
-  }
-
-  return !["disabled", "manual"].includes(startmode.toLowerCase());
 }
 
 function redactSensitiveProcessArgs(args: string): string {
