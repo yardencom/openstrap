@@ -42,7 +42,7 @@ export type CollectFactsFromDefinitionRequest = {
 };
 
 type FactCollectionCollector = {
-  collect(request: FactCollectionRequest): readonly FactCollectionItem[];
+  collect(request: FactCollectionRequest): Promise<readonly FactCollectionItem[]>;
 };
 
 export class CollectFactsFromDefinition {
@@ -87,11 +87,11 @@ export class CollectFactsFromDefinition {
     };
   }
 
-  private collectBaseItem(
+  private async collectBaseItem(
     definition: FactsDefinition,
     request: CollectFactsFromDefinitionRequest,
-  ): FactCollectionItem {
-    const facts = new Facts(this.collector.collect({
+  ): Promise<FactCollectionItem> {
+    const facts = new Facts(await this.collector.collect({
       targets: [{
         target: {
           name: "host",

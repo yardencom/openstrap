@@ -61,7 +61,7 @@ export function createSystemInformationFactsBackend(id: string): FactsBackend {
   };
 }
 
-function collectSystemInformationFacts(request: FactsBackendCollectionRequest): FactsBackendCollection {
+async function collectSystemInformationFacts(request: FactsBackendCollectionRequest): Promise<FactsBackendCollection> {
   const now = request.now ?? new Date();
   const timestamp = now.toISOString();
   const workspaceRoot = resolve(request.workspaceRoot ?? process.cwd());

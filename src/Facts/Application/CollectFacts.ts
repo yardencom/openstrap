@@ -4,13 +4,13 @@ import type { FactCollectionItem } from "../Domain/Facts.js";
 import { Facts } from "../Facts.js";
 
 type FactCollectionCollector = {
-  collect(request: FactCollectionRequest): readonly FactCollectionItem[];
+  collect(request: FactCollectionRequest): Promise<readonly FactCollectionItem[]>;
 };
 
 export class CollectFacts {
   constructor(private readonly collector: FactCollectionCollector = new HostFacts()) {}
 
   async collect(request: FactCollectionRequest): Promise<Facts> {
-    return new Facts(this.collector.collect(request));
+    return new Facts(await this.collector.collect(request));
   }
 }

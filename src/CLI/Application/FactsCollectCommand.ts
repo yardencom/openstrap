@@ -50,7 +50,7 @@ export async function collectAndStoreFactsFromDefinition(request: {
 }): Promise<StoredFactsCollectResult> {
   const definition = readDefinition(request.path);
   const inputs = resolveDefinitionInputs(definition, request.inputs);
-  const baseFacts = new Facts({
+  const baseFacts = await Facts.collect({
     blueprint: {
       target: {
         name: "host",

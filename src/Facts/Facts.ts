@@ -8,7 +8,7 @@ import type {
 import type { FactCollectionItem } from "./Domain/Facts.js";
 
 type FactsSource = {
-  collect(request: FactCollectionRequest): readonly FactCollectionItem[];
+  collect(request: FactCollectionRequest): Promise<readonly FactCollectionItem[]>;
 };
 
 type FactsRuntime = {
@@ -24,17 +24,24 @@ type FactsRequest = {
 };
 
 export class Facts extends Array<FactCollectionItem> {
-  constructor(input: FactsRequest | readonly FactCollectionItem[]) {
+  constructor(items: readonly FactCollectionItem[] = []) {
     super();
 
-    if (isFactItems(input)) {
-      this.push(...createFactCollection(input));
-      return;
+    if (Array.isArray(items)) {
+      this.push(...createFactCollection(items));
     }
+  }
 
-    const source = input.runtime?.factsBackend ?? new HostFacts();
-    const target = input.blueprint.target;
-    const items = source.collect({
+  /**
+   * Collects the facts a blueprint asks about.
+   *
+   * Collection is not done in the constructor: reaching a guest can mean
+   * waiting on a network, and a constructor cannot wait.
+   */
+  static async collect(request: FactsRequest): Promise<Facts> {
+    const source = request.runtime?.factsBackend ?? new HostFacts();
+    const target = request.blueprint.target;
+    const items = await source.collect({
       targets: [{
         target: {
           name: target.name,
@@ -45,17 +52,13 @@ export class Facts extends Array<FactCollectionItem> {
         },
         selectors: selectorsFromRequirements(target.requirements),
       }],
-      workspaceRoot: input.workspaceRoot,
-      now: input.now,
-      attempt: input.attempt,
+      workspaceRoot: request.workspaceRoot,
+      now: request.now,
+      attempt: request.attempt,
     });
 
-    this.push(...createFactCollection(items));
+    return new Facts(items);
   }
-}
-
-function isFactItems(input: FactsRequest | readonly FactCollectionItem[]): input is readonly FactCollectionItem[] {
-  return Array.isArray(input);
 }
 
 function selectorsFromRequirements(requirements: readonly Record<string, unknown>[]): FactSelectorTree {

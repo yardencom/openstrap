@@ -49,7 +49,7 @@ export async function runOpenStrapFlow(params: {
     workspaceRoot: params.workspaceRoot,
   });
 
-  const facts = new Facts({
+  const facts = await Facts.collect({
     blueprint,
     runtime: params.runtime,
     workspaceRoot: params.workspaceRoot,

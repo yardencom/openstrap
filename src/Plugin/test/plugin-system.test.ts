@@ -258,6 +258,6 @@ function createNoopBackend(id: string): FactsBackend {
       scopes: ["host"],
       sections: ["os"],
     },
-    collect: () => [],
+    collect: async () => [],
   };
 }

@@ -24,7 +24,7 @@ export class HostFacts {
     private readonly processServiceInventory = new ProcessServiceInventory(),
   ) {}
 
-  collect(params: FactCollectionRequest): FactCollection {
+  async collect(params: FactCollectionRequest): Promise<FactCollection> {
     const snapshots = this.systemSnapshot.collect(params);
     const inventory = this.readRequestedInventory(params);
 

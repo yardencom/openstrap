@@ -33,6 +33,31 @@ describe("Facts public API", () => {
     expect(facts[0]!.snapshot.id).toBe("snap_host");
   });
 
+  it("collects through an API that can wait, not through the constructor", async () => {
+    let resolveCollection: (items: readonly unknown[]) => void = () => {};
+    const pending = new Promise<readonly unknown[]>((resolve) => {
+      resolveCollection = resolve;
+    });
+    let started = false;
+
+    const facts = Facts.collect({
+      blueprint: blueprintAskingForOs(),
+      runtime: {
+        factsBackend: {
+          collect: () => {
+            started = true;
+            return pending as Promise<never>;
+          },
+        },
+      },
+    });
+
+    expect(started).toBe(true);
+    resolveCollection([minimalItem()]);
+
+    expect([...(await facts)]).toHaveLength(1);
+  });
+
   it("exports only Facts from Facts/Facts", () => {
     const source = readFileSync(join(process.cwd(), "src/Facts/Facts.ts"), "utf8");
     const exportedNames = [...source.matchAll(/^export\s+(?:class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
@@ -44,6 +69,18 @@ describe("Facts public API", () => {
     expect(exportedNames).toEqual(["Facts"]);
   });
 });
+
+function blueprintAskingForOs() {
+  return {
+    target: {
+      name: "host",
+      scope: "host",
+      type: "host",
+      transport: "local",
+      requirements: [{ id: "os-known", os: { family: { status: "present" } } }],
+    },
+  };
+}
 
 function minimalItem() {
   return {
