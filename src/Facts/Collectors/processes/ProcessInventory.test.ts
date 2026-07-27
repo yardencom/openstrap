@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { LocalTransport } from "../../../Transport/index.js";
@@ -75,11 +76,21 @@ describe("ProcessInventory", () => {
 
   it("reads the process table on every call rather than once at construction", async () => {
     const inventory = new ProcessInventory();
-    const first = await inventory.collect(shell, operatingSystem);
-    const second = await inventory.collect(shell, operatingSystem);
+    const before = await inventory.collect(shell, operatingSystem);
 
-    expect(second).not.toBe(first);
-    expect(first[`pid-${process.pid}`]).toBeDefined();
-    expect(second[`pid-${process.pid}`]).toBeDefined();
+    // A process that did not exist for the first reading has to show up in
+    // the second, which nothing cached at construction could manage.
+    const started = spawn("sleep", ["30"], { stdio: "ignore" });
+
+    try {
+      await new Promise((resolve) => started.once("spawn", resolve));
+
+      const after = await inventory.collect(shell, operatingSystem);
+
+      expect(before[`pid-${started.pid}`]).toBeUndefined();
+      expect(after[`pid-${started.pid}`]).toMatchObject({ status: "present", pid: started.pid });
+    } finally {
+      started.kill("SIGKILL");
+    }
   });
 });

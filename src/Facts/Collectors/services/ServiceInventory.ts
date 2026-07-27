@@ -32,7 +32,7 @@ export class ServiceInventory implements Inventory {
         read: (output) => this.readLaunchdServices(output),
       },
       linux: {
-        command: "systemctl list-units --type=service --all --no-legend --no-pager",
+        command: "systemctl list-units --type=service --all --no-legend --no-pager --plain",
         read: (output) => this.readSystemdServices(output),
       },
       windows: {

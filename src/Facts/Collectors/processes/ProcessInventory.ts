@@ -18,8 +18,8 @@ export class ProcessInventory implements Inventory {
 
   /** How each operating system is asked for its process table. */
   private static readonly listings: Record<OperatingSystemName, string> = {
-    linux: "ps -axo pid=,ppid=,user=,state=,comm=,args=",
-    darwin: "ps -axo pid=,ppid=,user=,state=,comm=,args=",
+    linux: "ps -axo pid=,ppid=,user=,state=,args=",
+    darwin: "ps -axo pid=,ppid=,user=,state=,args=",
     windows: "wmic process get ProcessId,ParentProcessId,Name,CommandLine /format:csv",
   };
 
@@ -43,15 +43,24 @@ export class ProcessInventory implements Inventory {
     return processes;
   }
 
-  /** `ps -axo pid=,ppid=,user=,state=,comm=,args=` — one process per line. */
+  /**
+   * `ps -axo pid=,ppid=,user=,state=,args=` — one process per line.
+   *
+   * `comm=` is deliberately absent. BSD ps truncates it to sixteen characters
+   * unless it is the final column, which silently turns
+   * `/System/Library/CoreServices/…` into `/System/Library/` and makes a
+   * process asked for by name unfindable. The name is taken from argv[0]
+   * instead, which `args=` gives in full.
+   */
   private posixEntry(line: string): ProcessFact | undefined {
-    const match = line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s*(.*)$/);
+    const match = line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.*)$/);
 
     if (!match) {
       return undefined;
     }
 
-    const [, pid, ppid, user, state, command, args] = match;
+    const [, pid, ppid, user, state, args] = match;
+    const command = (args ?? "").split(/\s+/)[0] ?? "";
 
     return {
       status: "present",
@@ -60,8 +69,8 @@ export class ProcessInventory implements Inventory {
       user,
       state,
       name: this.withoutExecutableExtension(command),
-      command: command!,
-      args: args ? `${command} ${args}` : command!,
+      command,
+      args: args ?? command,
     };
   }
 

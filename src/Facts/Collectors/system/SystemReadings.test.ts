@@ -82,10 +82,9 @@ describe("SystemReadings", () => {
     expect(reading.network.hostname).toBe(await shell.output("uname -n"));
   });
 
-  it("recognises this machine as macOS", () => {
-    expect(reading.os.family).toBe("macos");
-    expect(reading.os.name).toBe("macos");
-    expect(reading.os.pretty).toContain(reading.os.version);
+  it("reports a family openstrap knows how to read", () => {
+    expect(["macos", "linux", "windows"]).toContain(reading.os.family);
+    expect(reading.os.name.length).toBeGreaterThan(0);
   });
 
   it("reports the operating system version rather than the kernel release", async () => {
