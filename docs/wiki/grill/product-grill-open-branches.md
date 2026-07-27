@@ -10,7 +10,7 @@
 - [x] Fact/context schema
 - [x] Requirement/check model
 - [ ] Multi-target requirements
-- [ ] Provider SDK / plugin contract
+- [ ] Provider SDK / plugin contract - частично закрыта в `provider-plugin-contract-grill.md`: границы transport, владение сбором фактов и секретами, рантайм. Открыто: capabilities провайдера, lifecycle цели, форма команды `create`
 - [ ] Component spec/package/trust
 - [ ] Workflow/runtime integration
 - [ ] Security baseline

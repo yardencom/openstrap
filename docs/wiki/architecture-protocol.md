@@ -149,6 +149,8 @@ Public API появляется только от consumer use case.
 
 Обнови `architecture-boundaries.md`, если появился новый layer, boundary или communication contract.
 
+ADR живут в `docs/adr/` с последовательной нумерацией `NNNN-slug.md`.
+
 Напиши ADR, если решение дорого откатить:
 
 - смена validation engine;

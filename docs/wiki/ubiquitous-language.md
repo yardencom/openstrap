@@ -81,6 +81,19 @@
 | **Workspace** | Директория или дерево файлов, выбранное как файловый контекст работы. | `inputs.workspace: "."` |
 | **Transport** | Канал доступа к target. | `local`, `ssh`, `container` |
 
+## Machine Management
+
+| Термин | Описание | Пример |
+|------|------------|---------|
+| **Host** | Машина, на которой запущен openstrap. Managed target не является. | ноутбук разработчика |
+| **Guest** | Управляемая машина: VM, контейнер, удаленный сервер. | `ubuntu-vm` |
+| **Scope** | Значение, которое выбирает схему собираемых facts. Допустимо `host`, `guest`, `network`. | `scope: guest` |
+| **Target Type** | Тип доменного объекта target; со `scope` совпадать не обязан. Допустимо `vm`, `container`, `host`. | `type: vm` |
+| **Provider** | Внешний инструмент, который создает и ведет жизненный цикл машины. | UTM, VirtualBox |
+| **Secret Store** | Порт ядра для хранения секретов; плагин получает ссылку на секрет, не значение. | keychain, GPG |
+| **State Store** | Хранилище желаемого состояния, истории прогонов и машинно-локальных данных: портов, id ресурсов провайдера, снимков facts. | SQLite |
+| **Lock File** | Сгенерированный файл с вычисленными значениями, одинаковыми у всех, кто склонирует репозиторий. | `openstrap.lock.yaml` |
+
 ## Fact Collection
 
 | Термин | Описание | Пример |
@@ -195,7 +208,9 @@
 
 - **Runtime** определяет **Execution User**.
 - **Target** определяет, относительно какой системы собираются facts.
-- **Transport** определяет канал доступа к target.
+- **Transport** определяет канал доступа к target и выполняет на нем операции: чтение файла, выполнение команды, сетевой вызов.
+- **Transport** не включает вывод прогресса и окружение процесса openstrap и не отдает производных данных вроде определения ОС.
+- **Collector** меняется по операционной системе target, а не по **Transport**; **Host** собирается через локальный transport.
 - **Target User** должен быть явно задан в config или найден через collector/discovery.
 - **Provenance** связывает собранный fact с command, file, transport, timestamp и target.
 
@@ -211,3 +226,5 @@
 | **Artifact Fact** vs **File Fact** | `artifacts: [{ path: "openstrap.log", capture: hash }]` vs `files: [{ path: "openstrap.log", require: [exists] }]` | **Artifact Fact** сохраняет evidence; **File Fact** проверяет состояние файла. |
 | **Execution User** vs **Target User** | Программа запущена как `openstrap`; config проверяет `users: [{ name: root }]` | **Execution User** запускает процесс; **Target User** является объектом описания или проверки. |
 | **Provider** vs **Port** vs **Adapter** vs **Facade** | `FactsProvider` vs `ConfigValidator` vs `ZodConfigValidator` vs `Facts` | **Port** - интерфейс; **Adapter** реализует port; **Facade** - публичный API модуля; **Provider** допустим только для реального внешнего ресурса. |
+| **Scope** vs **Target Type** | `scope: guest`, `type: container` | **Scope** выбирает схему данных facts; **Target Type** говорит, чем объект является. Совпадать не обязаны. |
+| **Lock File** vs **State Store** | `openstrap.lock.yaml` с sha образа vs выделенный порт и id машины в UTM | **Lock File** хранит переносимое между людьми и коммитится; **State Store** хранит машинно-локальное. Lock file не является отчетом из state store. |
