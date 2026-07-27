@@ -6,60 +6,65 @@
 
 Проверено на: UTM 4.7.5 (`com.utmapp.UTM`, не App Store, sandboxed), macOS Darwin 25.5.0, Apple Silicon (arm64).
 
-## Что подтвердилось
+**Вывод: интерфейс провайдера из issue #29 подтверждается. Диски, сеть и проброс порта настраиваются через scripting.** Ранняя версия этого документа утверждала обратное - она была неверна, причина ошибки разобрана в конце.
 
-1. **У `utmctl` нет подкоманды `create`.** Доступны `version`, `list`, `status`, `start`, `suspend`, `stop`, `attach`, `file`, `exec`, `ip-address`, `clone`, `delete`, `usb`. Совпадает с тем, что записано в issue.
+## Что работает
 
-2. **`make` создает машину.** Возвращает id:
+1. **У `utmctl` нет подкоманды `create`.** Доступны `version`, `list`, `status`, `start`, `suspend`, `stop`, `attach`, `file`, `exec`, `ip-address`, `clone`, `delete`, `usb`. Машина создается командой AppleScript `make`.
+
+2. **`make` принимает скалярную часть конфигурации целиком:** `name`, `architecture`, `memory`, `cpu cores`, `uefi`, `hypervisor`. Досылать их отдельно не нужно.
+
+3. **Значения по умолчанию:** 512 MiB, 0 ядер, `uefi` on, `hypervisor` on, два диска и один интерфейс в режиме `shared`.
+
+4. **`update configuration` ставит и скаляры, и коллекции** - и `drives`, и `network interfaces`.
+
+5. **Диск подключается.** UTM импортирует файл в пакет `.utm` и конвертирует в qcow2:
 
    ```applescript
-   tell application "UTM"
-     make new virtual machine with properties {backend:qemu, configuration:{name:"x", architecture:"aarch64"}}
-   end tell
+   update configuration vm with {drives:{{source:POSIX file "…/image.img", interface:VirtIO}}}
    ```
 
-3. **`make` принимает скалярную часть конфигурации целиком.** Проверено одним вызовом: `name`, `architecture`, `memory`, `cpu cores`, `uefi`, `hypervisor`. Досылать их отдельной командой не нужно.
+   В `config.plist` появляется `Drive: [{ImageName: "image.qcow2", Interface: "VirtIO", …}]`.
 
-4. **Значения по умолчанию:** `memory` 512, `cpu cores` 0, `uefi` true, `hypervisor` true. После `make` машина уже имеет два диска (removable USB и VirtIO) и один сетевой интерфейс в режиме `shared` с пустым списком проброса портов.
+6. **Проброс порта работает.** Требует режима `emulated` - в `shared` его нет:
 
-5. **`update configuration` работает для скалярных свойств.** `update configuration vm with {memory:3072}` применяется.
-
-## Что опровергнуто
-
-6. **Вложенные коллекции через scripting не устанавливаются.** Ни `drives`, ни `network interfaces` не принимаются - ни в `make`, ни в `update configuration`, ни из AppleScript, ни из JXA. Ошибка одна и та же:
-
-   ```
-   Can't make {network interfaces:{{index:0, mode:shared, port forwards:{{protocol:TCP, host port:2222, guest port:22}}}}}
-   into type qemu configuration or apple configuration. (-1700)
+   ```applescript
+   update configuration vm with {network interfaces:{{mode:emulated, port forwards:{{protocol:«constant ****TcPp», host port:2222, guest port:22}}}}}
    ```
 
-   Проверены варианты: список литералов, запись собранная переменными, чтение конфигурации целиком с правкой и обратной записью, JXA с точными именами полей из `vm.configuration()`, регистр перечислителя `TCP` и `tcp`, режимы `shared` и `emulated`. Результат одинаковый.
+   В `config.plist`: `PortForward: [{GuestPort: 22, HostPort: 2222, Protocol: "TCP"}]`.
 
-   **Следствие: проброс порта через scripting API недоступен, хотя `qemu port forward` объявлен в `UTM.sdef`.** Таблица «Что покрывает API UTM» в issue #29 в строке «проброс порта» неверна: свойство объявлено, но не устанавливается.
+## Две ловушки, которые видно только экспериментом
 
-7. **Scripting требует открытого главного окна.** Пока у приложения ноль окон, любая мутирующая команда падает с `UTM is not ready to accept commands. (-2700)`, при том что чтение (`get name of every virtual machine`) работает. Лечится `open -a UTM` перед вызовом; после этого `count of windows` равен 1 и `make` проходит.
+7. **Перечислители не резолвятся по имени.** `protocol:TCP` и `protocol:tcp` дают `-1700 Can't make … into type qemu configuration`. Работает только сырой код: `«constant ****TcPp»` (TCP) и `«constant ****UdPp»` (UDP). Коды перечислителей берутся из `UTM.sdef`.
 
-   Это не задокументировано и обнаруживается только экспериментом. Провайдер обязан обеспечивать открытое окно перед созданием машины.
+   JXA не помогает: `protocol:"TCP"` там дает `Can't convert types (-1700)`. Провайдер обязан строить AppleScript с сырыми константами.
 
-## Что это меняет в плане
+8. **Файл образа должен лежать внутри песочницы UTM.** UTM подписан с `app-sandbox`. Источник из `$HOME/…` или `/private/tmp/…` дает `The file couldn't be opened because it doesn't exist (-2700)`, хотя файл есть. Из `~/Library/Containers/com.utmapp.UTM/Data/Documents/` подключается.
 
-Доступ к гостю по SSH нельзя строить на проброшенном порту, полученном через scripting. Остаются варианты, и выбор между ними - незакрытое решение:
+   Следствие: кеш образов провайдера должен жить внутри контейнера UTM либо образ копируется туда перед подключением.
 
-| Вариант | Чего стоит |
-|---|---|
-| `utmctl ip-address` и прямое подключение к IP гостя в сети `shared` | ровно то, что issue называл недостатком бэкенда `apple`. IP выдается DHCP и меняется, гость должен успеть подняться |
-| Правка `config.plist` внутри пакета `.utm` до первого запуска | обход официального API, ломается при смене формата UTM |
-| ~~`qemu additional arguments`~~ | **проверено, не работает** |
+9. **Scripting требует открытого главного окна.** Пока окон ноль, любая мутирующая команда падает с `UTM is not ready to accept commands (-2700)`, при этом чтение работает. Лечится `open -a UTM`. Не задокументировано.
 
-`qemu additional arguments` - тоже список записей, и он не устанавливается. Хуже: `update configuration` с ним не падает, а молча ничего не делает, после чего чтение свойства возвращает ошибку `-1728`. Молчаливый no-op опаснее ошибки, потому что машина создается выглядящей настроенной.
+## Почему ранняя версия документа была неверна
 
-Итог: **через scripting UTM не устанавливается ни одна коллекция.** Из трех вариантов доступа остаются два, и оба - вне официального API либо вне проброса портов.
+Первый заход утверждал, что через scripting не устанавливается ни одна коллекция, и что проброса порта нет. Обе ошибки - следствие одной причины: перечислитель `TCP` не резолвился, а ошибка `-1700` указывала на всю запись целиком, а не на поле. Отсюда вывод «коллекция не принимается», хотя не принималось одно значение внутри нее.
+
+Проверка, которую надо было сделать сразу и которая все разводит: поставить `network interfaces` **без** `port forwards`. Это проходит - значит коллекция принимается, и дело в содержимом.
+
+`qemu additional arguments` действительно молча не применяется - это отдельный дефект, и на нем ничего строить нельзя. Но обходить его больше не нужно.
 
 ## Как воспроизвести
 
 ```bash
 open -a UTM
-osascript -e 'tell application "UTM" to make new virtual machine with properties {backend:qemu, configuration:{name:"probe", architecture:"aarch64", memory:2048, cpu cores:2}}'
-/Applications/UTM.app/Contents/MacOS/utmctl list
+C="$HOME/Library/Containers/com.utmapp.UTM/Data/Documents"
+dd if=/dev/zero of="$C/test.img" bs=1048576 count=8
+
+osascript -e "tell application \"UTM\" to make new virtual machine with properties {backend:qemu, configuration:{name:\"probe\", architecture:\"aarch64\", memory:2048, cpu cores:2}}"
+# затем по id:
+osascript -e "tell application \"UTM\" to update configuration virtual machine id \"<UUID>\" with {drives:{{source:POSIX file \"$C/test.img\", interface:VirtIO}}}"
+osascript -e "tell application \"UTM\" to update configuration virtual machine id \"<UUID>\" with {network interfaces:{{mode:emulated, port forwards:{{protocol:«constant ****TcPp», host port:2222, guest port:22}}}}}"
+
 /Applications/UTM.app/Contents/MacOS/utmctl delete <UUID>
 ```
