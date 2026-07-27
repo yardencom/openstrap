@@ -64,9 +64,14 @@ export type FactsBackendCollectionItem = {
 
 export type FactsBackendCollection = readonly FactsBackendCollectionItem[];
 
+/**
+ * A backend is not tied to a channel of access.
+ *
+ * Collection varies by the operating system of the target, not by how the
+ * target is reached, so there is no transport capability here.
+ */
 export type FactsBackendCapabilities = {
   scopes: readonly string[];
-  transports: readonly string[];
   sections: readonly FactsBackendSection[];
 };
 

@@ -7,6 +7,43 @@ export {
   type OpenStrapPluginContainerCreateRequest,
 } from "./Application/OpenStrapPluginContainer.js";
 export {
+  ProviderRegistry,
+  type RegisteredProvider,
+} from "./Application/ProviderRegistry.js";
+export {
+  TransportRegistry,
+  type RegisteredTransport,
+} from "./Application/TransportRegistry.js";
+export {
+  SecretStoreRegistry,
+  type RegisteredSecretStore,
+} from "./Application/SecretStoreRegistry.js";
+export type {
+  ImageRequest,
+  MachineAccess,
+  MachineHandle,
+  MachineRequest,
+  MachineResources,
+  MachineState,
+  MachineStatus,
+  Provider,
+  ProviderAvailability,
+  ProviderCapabilities,
+  ResolvedImage,
+  TargetScope,
+  TargetType,
+} from "./Domain/Provider.js";
+export type {
+  TransportConnection,
+  TransportConnectionRequest,
+  TransportConnector,
+  TransportEndpoint,
+} from "./Domain/Transport.js";
+export type {
+  SecretReference,
+  SecretStore,
+} from "./Domain/Secret.js";
+export {
   coreFactsBackendId,
   openstrapCorePlugin,
 } from "./Core/OpenStrapCorePlugin.js";

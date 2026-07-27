@@ -38,7 +38,6 @@ export function createSystemInformationFactsBackend(id: string): FactsBackend {
     displayName: "System information",
     capabilities: {
       scopes: ["host"],
-      transports: ["local"],
       sections: [
         "os",
         "arch",

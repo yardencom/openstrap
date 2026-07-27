@@ -3,6 +3,9 @@ import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "../Domain/Ope
 import { coreFactsBackendId, openstrapCorePlugin } from "../Core/OpenStrapCorePlugin.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
 import type { FactsBackendRegistry } from "./FactsBackendRegistry.js";
+import type { ProviderRegistry } from "./ProviderRegistry.js";
+import type { SecretStoreRegistry } from "./SecretStoreRegistry.js";
+import type { TransportRegistry } from "./TransportRegistry.js";
 
 export type OpenStrapRuntimeCreateRequest = {
   config?: OpenStrapPluginConfig;
@@ -14,6 +17,9 @@ export type OpenStrapRuntime = {
   factsBackends: FactsBackendRegistry;
   factsBackend: FactsBackend;
   factsBackendId: string;
+  providers: ProviderRegistry;
+  transports: TransportRegistry;
+  secretStores: SecretStoreRegistry;
   pluginNames: readonly string[];
 };
 
@@ -34,6 +40,9 @@ export async function createOpenStrapRuntime(
     factsBackends: container.factsBackends,
     factsBackend: container.factsBackends.require(factsBackendId),
     factsBackendId,
+    providers: container.providers,
+    transports: container.transports,
+    secretStores: container.secretStores,
     pluginNames: container.listPluginNames(),
   };
 }

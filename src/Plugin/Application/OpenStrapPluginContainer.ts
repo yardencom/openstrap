@@ -1,4 +1,7 @@
 import { FactsBackendRegistry } from "./FactsBackendRegistry.js";
+import { ProviderRegistry } from "./ProviderRegistry.js";
+import { SecretStoreRegistry } from "./SecretStoreRegistry.js";
+import { TransportRegistry } from "./TransportRegistry.js";
 import { OpenStrapPluginError } from "../Domain/OpenStrapPluginError.js";
 import type {
   OpenStrapPlugin,
@@ -12,6 +15,9 @@ export type OpenStrapPluginContainerCreateRequest = {
 
 export class OpenStrapPluginContainer {
   readonly factsBackends = new FactsBackendRegistry();
+  readonly providers = new ProviderRegistry();
+  readonly transports = new TransportRegistry();
+  readonly secretStores = new SecretStoreRegistry();
   private readonly pluginNames: string[] = [];
 
   static async create(request: OpenStrapPluginContainerCreateRequest = {}): Promise<OpenStrapPluginContainer> {
@@ -49,6 +55,15 @@ export class OpenStrapPluginContainer {
     return {
       registerFactsBackend: (backend) => {
         this.factsBackends.register(backend, pluginName);
+      },
+      registerProvider: (provider) => {
+        this.providers.register(provider, pluginName);
+      },
+      registerTransport: (connector) => {
+        this.transports.register(connector, pluginName);
+      },
+      registerSecretStore: (store) => {
+        this.secretStores.register(store, pluginName);
       },
     };
   }

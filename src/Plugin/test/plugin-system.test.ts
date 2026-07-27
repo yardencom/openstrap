@@ -12,6 +12,9 @@ import {
   OpenStrapPluginContainer,
   OpenStrapPluginError,
   type FactsBackend,
+  type Provider,
+  type SecretStore,
+  type TransportConnector,
 } from "../index.js";
 
 describe("OpenStrap plugin system", () => {
@@ -79,6 +82,72 @@ describe("OpenStrap plugin system", () => {
     })).rejects.toThrow(OpenStrapPluginError);
   });
 
+  it("registers a provider, a transport and a secret store from one plugin", async () => {
+    const container = await OpenStrapPluginContainer.create({
+      plugins: [
+        defineOpenStrapPlugin({
+          name: "test:utm",
+          setup(api) {
+            api.registerProvider(createNoopProvider("utm"));
+            api.registerTransport(createNoopTransport("ssh"));
+            api.registerSecretStore(createNoopSecretStore("keychain"));
+          },
+        }),
+      ],
+    });
+
+    expect(container.providers.require("utm").id).toBe("utm");
+    expect(container.transports.require("ssh").id).toBe("ssh");
+    expect(container.secretStores.require("keychain").id).toBe("keychain");
+    expect(container.providers.list()[0]).toMatchObject({ pluginName: "test:utm" });
+  });
+
+  it("rejects duplicate provider and transport ids", async () => {
+    await expect(OpenStrapPluginContainer.create({
+      plugins: [
+        defineOpenStrapPlugin({ name: "first", setup: (api) => api.registerProvider(createNoopProvider("utm")) }),
+        defineOpenStrapPlugin({ name: "second", setup: (api) => api.registerProvider(createNoopProvider("utm")) }),
+      ],
+    })).rejects.toThrow(OpenStrapPluginError);
+
+    await expect(OpenStrapPluginContainer.create({
+      plugins: [
+        defineOpenStrapPlugin({ name: "first", setup: (api) => api.registerTransport(createNoopTransport("ssh")) }),
+        defineOpenStrapPlugin({ name: "second", setup: (api) => api.registerTransport(createNoopTransport("ssh")) }),
+      ],
+    })).rejects.toThrow(OpenStrapPluginError);
+  });
+
+  it("rejects a provider that cannot drive a full machine lifecycle", async () => {
+    const incomplete = createNoopProvider("utm");
+    delete (incomplete as Partial<Provider>).restart;
+
+    await expect(OpenStrapPluginContainer.create({
+      plugins: [defineOpenStrapPlugin({ name: "broken", setup: (api) => api.registerProvider(incomplete) })],
+    })).rejects.toThrow(/must expose restart\(\)/);
+  });
+
+  it("names the registered ids when a required one is missing", async () => {
+    const container = await OpenStrapPluginContainer.create({
+      plugins: [defineOpenStrapPlugin({ name: "test:utm", setup: (api) => api.registerProvider(createNoopProvider("utm")) })],
+    });
+
+    expect(() => container.providers.require("virtualbox")).toThrow(/Available providers: utm/);
+  });
+
+  it("accepts a facts backend that declares no transport", async () => {
+    const container = await OpenStrapPluginContainer.create({
+      plugins: [
+        defineOpenStrapPlugin({
+          name: "test:facts",
+          setup: (api) => api.registerFactsBackend(createNoopBackend("test:transportless")),
+        }),
+      ],
+    });
+
+    expect(container.factsBackends.require("test:transportless").id).toBe("test:transportless");
+  });
+
   it("creates runtime with core backend by default", async () => {
     const runtime = await createOpenStrapRuntime();
 
@@ -137,12 +206,56 @@ describe("OpenStrap plugin system", () => {
   });
 });
 
+function createNoopProvider(id: string): Provider {
+  return {
+    id,
+    capabilities: {
+      scopes: ["guest"],
+      types: ["vm"],
+      resize: false,
+      portForward: true,
+    },
+    detect: async () => ({ available: true }),
+    resolveImage: async () => {
+      throw new Error("not used in this test");
+    },
+    create: async () => ({ id: "machine-1", name: "test" }),
+    start: async () => {},
+    stop: async () => {},
+    restart: async () => {},
+    delete: async () => {},
+    inspect: async () => ({ status: "stopped" as const }),
+    access: async () => ({
+      transport: "ssh",
+      endpoint: { host: "127.0.0.1", port: 22, user: "openstrap" },
+    }),
+    find: async () => null,
+  };
+}
+
+function createNoopTransport(id: string): TransportConnector {
+  return {
+    id,
+    connect: async () => {
+      throw new Error("not used in this test");
+    },
+  };
+}
+
+function createNoopSecretStore(id: string): SecretStore {
+  return {
+    id,
+    read: async () => null,
+    write: async () => {},
+    remove: async () => {},
+  };
+}
+
 function createNoopBackend(id: string): FactsBackend {
   return {
     id,
     capabilities: {
       scopes: ["host"],
-      transports: ["local"],
       sections: ["os"],
     },
     collect: () => [],
