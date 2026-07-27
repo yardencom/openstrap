@@ -18,6 +18,7 @@ import {
   collectAndStoreFactsFromDefinition,
   type StoredFactsCollectResult,
 } from "./FactsCollectCommand.js";
+import { connectToTarget } from "./ConnectCommand.js";
 import { createTarget } from "./CreateCommand.js";
 import type { CreateMachineResult } from "../../Create/index.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
@@ -124,6 +125,18 @@ export async function main(argv: readonly string[], io: CliIo = {
         : renderCreateOutput(parsedArgs.target, created));
 
       return 0;
+    }
+
+    if (parsedArgs.command === "connect") {
+      const result = await connectToTarget({
+        target: parsedArgs.target,
+        command: parsedArgs.run,
+        runtime,
+      });
+
+      io.stdout.write(result.output);
+
+      return result.exitCode;
     }
 
     const output = await runOpenStrapFlow({

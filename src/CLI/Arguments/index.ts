@@ -1,4 +1,5 @@
 export type {
+  ConnectArgs,
   CreateArgs,
   FactsCollectArgs,
   ParsedArgs,

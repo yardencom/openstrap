@@ -1,12 +1,15 @@
 import type { BlueprintTarget } from "../../Blueprint/index.js";
 import type { MachineHandle, Provider, ProviderAvailability } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";
+import { LockFile } from "../../LockFile/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
 export type CreateMachineRequest = {
   target: BlueprintTarget;
   provider: Provider;
   store: SqliteStateStore;
+  lockFile?: LockFile;
+  pluginVersions?: Record<string, string>;
   hostPort: number;
   user?: string;
   now?: Date;
@@ -88,6 +91,19 @@ export class CreateMachine {
         architecture: process.arch,
       });
       steps.push({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
+
+      request.lockFile?.record(target.name, {
+        image: {
+          resolved: image.url,
+          sha256: image.sha256,
+          signature: "verified",
+          arch: image.architecture,
+          format: image.format,
+          boot: image.boot,
+        },
+        plugins: request.pluginVersions ?? {},
+      });
+      steps.push({ name: "write lock file", status: "succeeded" });
 
       const existing = await request.provider.find(target.name);
 

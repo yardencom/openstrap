@@ -1,5 +1,6 @@
 import type { ParsedArgs } from "./CliArgs.js";
 import type { CliCommandArgsParser } from "./CliCommandArgsParser.js";
+import { ConnectCommandArgsParser } from "./ConnectCommandArgsParser.js";
 import { CreateCommandArgsParser } from "./CreateCommandArgsParser.js";
 import { FactsCommandArgsParser } from "./FactsCommandArgsParser.js";
 import { RunCommandArgsParser } from "./RunCommandArgsParser.js";
@@ -10,6 +11,7 @@ export class CliArgsParser {
       new RunCommandArgsParser(),
       new FactsCommandArgsParser(),
       new CreateCommandArgsParser(),
+      new ConnectCommandArgsParser(),
     ],
   ) {}
 

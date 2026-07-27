@@ -11,6 +11,14 @@ export type TransportConnectionRequest = {
   target: string;
   endpoint: TransportEndpoint;
   identity?: SecretReference;
+  /**
+   * Reveals a secret the core owns.
+   *
+   * A plugin is handed a reference and this function, never a value. The core
+   * decides what may be revealed and stays the only thing that touches the
+   * store, which is what keeps the rule true once plugins run out of process.
+   */
+  reveal?(reference: SecretReference): Promise<string | null>;
 };
 
 /**

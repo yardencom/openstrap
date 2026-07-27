@@ -27,4 +27,10 @@ export type CreateArgs = {
   json: boolean;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs;
+export type ConnectArgs = {
+  command: "connect";
+  target: string;
+  run?: string;
+} & RuntimeArgs;
+
+export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs;

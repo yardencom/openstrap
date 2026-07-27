@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { Blueprints, type BlueprintTarget } from "../../Blueprint/index.js";
 import { CreateMachine, type CreateMachineResult } from "../../Create/index.js";
+import { LockFile } from "../../LockFile/index.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { RunLock } from "../../RunLock/RunLock.js";
 import { SqliteStateStore } from "../../StateStore/index.js";
@@ -65,9 +66,25 @@ export async function createTarget(request: CreateCommandRequest): Promise<Creat
       target: target as BlueprintTarget,
       provider,
       store,
+      lockFile: new LockFile(join(request.workspaceRoot, "openstrap.lock.yaml")),
+      pluginVersions: pluginVersions(request.runtime),
       hostPort: request.hostPort ?? 2222,
     }));
   } finally {
     store.close();
   }
+}
+
+/**
+ * Versions of the plugins a run used, for the lock file.
+ *
+ * They belong there because they are the same for everyone who clones the
+ * repository — unlike a reserved port or a provider resource id.
+ */
+function pluginVersions(runtime: OpenStrapRuntime): Record<string, string> {
+  return Object.fromEntries(
+    runtime.pluginNames
+      .filter((name) => name.startsWith("openstrap:") && name !== "openstrap:core")
+      .map((name) => [`@openstrap/${name.slice("openstrap:".length)}`, "0.1.0"]),
+  );
 }

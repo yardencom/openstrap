@@ -18,6 +18,7 @@ export class CliErrors {
       "Usage:",
       "  openstrap run [configPath] [--json] [--runtime-config path] [--plugin specifier] [--facts-backend id]",
       "  openstrap create vm <target> [--config path] [--host-port n] [--json] [--plugin specifier]",
+      "  openstrap connect <target> [--run command] [--plugin specifier]",
       "  openstrap facts collect host [factsPath] [--json] [--input key=value] [--runtime-config path] [--plugin specifier] [--facts-backend id]",
     ].join("\n");
   }
