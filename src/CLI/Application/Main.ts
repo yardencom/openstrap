@@ -1,43 +1,13 @@
-import {
-  Blueprints,
-} from "../../Modules/Blueprint/index.js";
-import { Facts } from "../../Modules/Facts/Facts.js";
-import {
-  createOpenStrapRuntime,
-  loadOpenStrapPlugin,
-  loadOpenStrapPluginConfig,
-  type OpenStrapRuntime,
-} from "../../Plugin/index.js";
-import {
-  mergeRequirementRuns,
-  RequiredFacts,
-  RequirementEvaluator,
-  type RequirementCheckNode,
-  type RequirementLeafCheck,
-  type RequirementRun,
-} from "../../Modules/Requirements/index.js";
-import {
-  collectHostFacts,
-  type FactsCollectResult,
-} from "./FactsCollectCommand.js";
+import { CliArgsParser, type ParsedArgs } from "../Arguments/index.js";
+import { renderCreateOutput } from "../Output/CreateOutput.js";
+import { renderFactsOutput } from "../Output/FactsOutput.js";
+import { renderRunOutput } from "../Output/RunOutput.js";
+import { createCliRuntime } from "./CliRuntime.js";
 import { connectToTarget } from "./ConnectCommand.js";
 import { createTarget } from "./CreateCommand.js";
-import type { CreatedTarget } from "./CreateCommand.js";
-import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
-
-type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
-
-export type OpenStrapRunOutput = {
-  targets: Array<{
-    name: string;
-    scope: string;
-    type: string;
-    transport: string;
-  }>;
-  facts: FactCollection;
-  requirementRun: RequirementRun;
-};
+import { collectHostFacts } from "./FactsCollectCommand.js";
+import { runOpenStrapFlow } from "./RunCommand.js";
 
 export type CliIo = {
   stdout: Pick<NodeJS.WriteStream, "write">;
@@ -45,91 +15,38 @@ export type CliIo = {
   cwd: string;
 };
 
-export async function runOpenStrapFlow(params: {
-  configPath?: string;
-  workspaceRoot: string;
-  now?: Date;
-}): Promise<OpenStrapRunOutput> {
-  const blueprint = new Blueprints().load({
-    explicitPath: params.configPath,
-    workspaceRoot: params.workspaceRoot,
-  });
-  // One instance per machine, because an instance is a way of reaching one. Every
-  // target of a plain run is the machine openstrap is on, so every one of them is
-  // read in process.
-  const host = new Facts();
-  const evaluator = new RequirementEvaluator();
-  const collected: FactCollection[number][] = [];
-  const runs: RequirementRun[] = [];
-
-  // Each target is read and then judged, in that order and against its own facts:
-  // a requirement about one machine can never be answered by another machine's
-  // snapshot if it never sees one.
-  for (const target of Object.values(blueprint.targets)) {
-    const facts = await host.collect({
-      target: {
-        name: target.name,
-        scope: target.scope,
-        type: target.type,
-        displayName: target.displayName,
-        transport: target.transport,
-      },
-      declare: new RequiredFacts({
-        requirements: target.requirements,
-        workspaceRoot: params.workspaceRoot,
-      }).declaration,
-      now: params.now,
-    });
-
-    collected.push(...facts);
-    runs.push(evaluator.evaluate({
-      target,
-      requirements: target.requirements,
-      factCollection: facts,
-      now: params.now,
-      trigger: "manual",
-      profile: "local-run",
-      purpose: "preflight",
-    }));
-  }
-
-  return {
-    targets: Object.values(blueprint.targets).map((target) => ({
-      name: target.name,
-      scope: target.scope,
-      type: target.type,
-      transport: target.transport,
-    })),
-    facts: collected,
-    requirementRun: mergeRequirementRuns(runs),
-  };
-}
-
+/**
+ * The command line: read the arguments, run the command they name, report.
+ *
+ * Nothing here decides what a command does or how its result reads — those live with
+ * the command and with its output. What is decided here is the shape every command
+ * shares: bad arguments print the usage and exit 2, a thrown error prints and exits 2,
+ * and `--json` prints the result verbatim instead of the rendered form, so anything
+ * openstrap can say a person can also parse.
+ */
 export async function main(argv: readonly string[], io: CliIo = {
   stdout: process.stdout,
   stderr: process.stderr,
   cwd: process.cwd(),
 }): Promise<number> {
-  const argsParser = new CliArgsParser();
   const errors = new CliErrors();
   let parsedArgs: ParsedArgs;
 
   try {
-    parsedArgs = argsParser.parse(argv);
+    parsedArgs = new CliArgsParser().parse(argv);
   } catch (error) {
     io.stderr.write(`${errors.format(error)}\n\n${errors.usage()}\n`);
+
     return 2;
   }
 
   try {
     if (parsedArgs.command === "facts.collect") {
-      const output = await collectHostFacts({ workspaceRoot: io.cwd });
+      const collected = await collectHostFacts({ workspaceRoot: io.cwd });
 
-      io.stdout.write(parsedArgs.json
-        ? `${JSON.stringify(output, null, 2)}\n`
-        : renderFactsCollectOutput(output));
+      io.stdout.write(printed(parsedArgs.json, collected, () => renderFactsOutput(collected)));
 
-      return output.facts.some((item) => item.run.status === "error") ? 1 : 0;
+      return collected.facts.some((item) => item.run.status === "error") ? 1 : 0;
     }
 
     if (parsedArgs.command === "create") {
@@ -141,208 +58,48 @@ export async function main(argv: readonly string[], io: CliIo = {
         workspaceRoot: io.cwd,
       });
 
-      io.stdout.write(parsedArgs.json
-        ? `${JSON.stringify(created, null, 2)}\n`
-        : renderCreateOutput(parsedArgs.target, created));
+      io.stdout.write(printed(parsedArgs.json, created, () => renderCreateOutput(parsedArgs.target, created)));
 
-      const status = created.requirementRun?.status;
-
-      return status === undefined || status === "passed" || status === "skipped" ? 0 : 1;
+      return exitCodeFor(created.requirementRun?.status);
     }
 
     if (parsedArgs.command === "connect") {
-      const result = await connectToTarget({
+      const connected = await connectToTarget({
         target: parsedArgs.target,
         command: parsedArgs.run,
         runtime: await createCliRuntime(parsedArgs, io.cwd),
       });
 
-      io.stdout.write(result.output);
+      io.stdout.write(connected.output);
 
-      return result.exitCode;
+      return connected.exitCode;
     }
 
-    const output = await runOpenStrapFlow({
+    const run = await runOpenStrapFlow({
       configPath: parsedArgs.configPath,
       workspaceRoot: io.cwd,
     });
 
-    io.stdout.write(parsedArgs.json
-      ? `${JSON.stringify(output, null, 2)}\n`
-      : renderHumanOutput(output));
+    io.stdout.write(printed(parsedArgs.json, run, () => renderRunOutput(run)));
 
-    return output.requirementRun.status === "passed" || output.requirementRun.status === "skipped" ? 0 : 1;
+    return exitCodeFor(run.requirementRun.status);
   } catch (error) {
     io.stderr.write(`${errors.format(error)}\n`);
+
     return 2;
   }
 }
 
-async function createCliRuntime(args: RuntimeArgs, cwd: string): Promise<OpenStrapRuntime> {
-  const config = await loadOpenStrapPluginConfig({
-    cwd,
-    configPath: args.runtimeConfigPath,
-  });
-  const plugins = await Promise.all(args.pluginSpecifiers.map((specifier) => loadOpenStrapPlugin({
-    cwd,
-    specifier,
-  })));
-
-  return createOpenStrapRuntime({
-    config,
-    plugins,
-  });
-}
-
-function renderCreateOutput(name: string, result: CreatedTarget): string {
-  const lines: string[] = [];
-
-  lines.push(`OpenStrap create: ${result.created ? "created" : "already present"}`);
-  lines.push("");
-  lines.push("Steps:");
-
-  for (const step of result.steps) {
-    lines.push(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
-  }
-
-  lines.push("");
-  lines.push("Image:");
-  lines.push(`  ${result.image.reference} ${result.image.format}/${result.image.boot}`);
-  lines.push(`  ${result.image.url}`);
-  lines.push(`  sha256 ${result.image.sha256}`);
-  lines.push("");
-  lines.push(`Machine: ${name} (${result.handle.id})`);
-  if (result.requirementRun) {
-    lines.push("");
-    lines.push(`Requirements: ${result.requirementRun.status}`);
-
-    for (const requirement of result.requirementRun.results) {
-      lines.push(`  - ${requirement.requirementId}: ${requirement.status}`);
-    }
-  }
-
-  lines.push("");
-  lines.push(`Access:  ssh ${result.endpoint.user}@${result.endpoint.host} -p ${result.endpoint.port}`);
-  lines.push(`         openstrap connect ${name}`);
-  lines.push("");
-
-  return lines.join("\n");
-}
-
-function renderHumanOutput(output: OpenStrapRunOutput): string {
-  const lines: string[] = [];
-
-  lines.push(`OpenStrap run: ${output.requirementRun.status}`);
-  lines.push("");
-  lines.push("Targets:");
-
-  for (const item of output.facts) {
-    lines.push(
-      `  - ${item.snapshot.target.id} (${item.snapshot.scope}/${item.snapshot.target.type}) ` +
-      `snapshot=${item.snapshot.id} factRun=${item.run.id}`,
-    );
-  }
-
-  lines.push("");
-  lines.push("Requirements:");
-
-  for (const result of output.requirementRun.results) {
-    lines.push(`  - ${result.requirementId} [${result.target}]: ${result.status}`);
-
-    for (const leaf of flattenChecks(result.checks)) {
-      if (leaf.check.status === "passed") {
-        continue;
-      }
-
-      lines.push(
-        `      ${leaf.path}: ${leaf.check.status}; expected=${JSON.stringify(leaf.check.expected?.value ?? null)} ` +
-        `actual=${JSON.stringify(leaf.check.actual)}${leaf.check.details?.message ? `; ${leaf.check.details.message}` : ""}`,
-      );
-    }
-  }
-
-  lines.push("");
-
-  return `${lines.join("\n")}\n`;
+function printed(asJson: boolean, result: unknown, render: () => string): string {
+  return asJson ? `${JSON.stringify(result, null, 2)}\n` : render();
 }
 
 /**
- * What was read, as a person would want to see it.
+ * A run that passed, or had nothing to check, leaves openstrap successful.
  *
- * The sections that answer with one value each are printed as values; the ones that
- * are maps are printed as counts, because a machine with seven hundred processes on
- * it is not readable as a list and the stored result has every one of them.
+ * Anything else is a failure the caller has to be able to notice from a script, which
+ * is why it is an exit code and not only a line of output.
  */
-function renderFactsCollectOutput(output: FactsCollectResult): string {
-  const item = output.facts[0]!;
-  const data = item.snapshot.data as FactSummary;
-  const lines: string[] = [];
-
-  lines.push(`OpenStrap facts collect: ${item.run.status}`);
-  lines.push(`Target: ${item.snapshot.target.id}`);
-  lines.push(`Snapshot: ${item.snapshot.id} factRun=${item.run.id}`);
-  lines.push(`Result file: ${output.storage.resultPath}`);
-  lines.push("");
-  lines.push(`${data.os.display?.pretty ?? data.os.name} ${data.arch}, kernel ${data.os.kernel ?? "unknown"}`);
-  lines.push(`cpu      ${data.cpu.cores} cores${data.cpu.model ? ` ${data.cpu.model}` : ""}`);
-  lines.push(`memory   ${gigabytes(data.memory.availableBytes)} of ${gigabytes(data.memory.totalBytes)} available`);
-  lines.push(`storage  ${gigabytes(data.storage.availableBytes)} of ${gigabytes(data.storage.totalBytes)} available`);
-  lines.push(`user     ${named(data.users)} (${data.privileges.mode ?? "unknown"})`);
-  lines.push("");
-
-  for (const [section, entries] of countable(data)) {
-    lines.push(`${section.padEnd(10)} ${entries}`);
-  }
-
-  lines.push("");
-
-  return `${lines.join("\n")}\n`;
-}
-
-type FactSummary = {
-  os: { name: string; kernel?: string; display?: { pretty?: string } };
-  arch: string;
-  cpu: { cores: number; model?: string };
-  memory: { totalBytes?: number; availableBytes?: number };
-  storage: { totalBytes?: number; availableBytes?: number };
-  privileges: { mode?: string };
-  users: Record<string, { name?: string }>;
-} & Record<string, unknown>;
-
-/** Sections that hold named things, and how many of them were found. */
-function countable(data: FactSummary): Array<[string, number]> {
-  return ["processes", "services", "users", "groups", "tools", "runtimes", "paths", "env", "commands", "artifacts"]
-    .map((section): [string, number] => [section, Object.keys((data[section] ?? {}) as object).length]);
-}
-
-function named(users: Record<string, { name?: string }>): string {
-  return Object.values(users)[0]?.name ?? "unknown";
-}
-
-function gigabytes(bytes: number | undefined): string {
-  return bytes === undefined ? "unknown" : `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
-}
-
-function flattenChecks(node: RequirementCheckNode, path: readonly string[] = []): Array<{
-  path: string;
-  check: RequirementLeafCheck;
-}> {
-  if (isLeafCheck(node)) {
-    return [{
-      path: path.join("."),
-      check: node,
-    }];
-  }
-
-  return Object.entries(node).flatMap(([key, value]) => flattenChecks(value, [...path, key]));
-}
-
-function isLeafCheck(value: RequirementCheckNode): value is RequirementLeafCheck {
-  return Boolean(
-    value &&
-    typeof value === "object" &&
-    "status" in value &&
-    "expected" in value &&
-    "actual" in value,
-  );
+function exitCodeFor(status: string | undefined): number {
+  return status === undefined || status === "passed" || status === "skipped" ? 0 : 1;
 }
