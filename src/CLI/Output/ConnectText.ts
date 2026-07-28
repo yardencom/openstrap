@@ -8,7 +8,7 @@ import type { CommandText } from "./CommandText.js";
  * around it would be talking over the answer.
  */
 export class ConnectText implements CommandText<ConnectResult> {
-  describe(result: ConnectResult): string {
+  print(result: ConnectResult): string {
     return result.output;
   }
 }

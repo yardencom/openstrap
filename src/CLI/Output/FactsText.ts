@@ -26,7 +26,7 @@ type ReadMachine = {
  * readable as a list and the stored result has every one of them.
  */
 export class FactsText implements CommandText<FactsCollectResult> {
-  describe(result: FactsCollectResult): string {
+  print(result: FactsCollectResult): string {
     const item = result.facts[0]!;
     const machine = item.snapshot.data as ReadMachine;
     const lines: string[] = [];

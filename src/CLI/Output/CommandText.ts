@@ -6,5 +6,5 @@
  * saying a result, not another mechanism for saying it.
  */
 export interface CommandText<TResult> {
-  describe(result: TResult): string;
+  print(result: TResult): string;
 }

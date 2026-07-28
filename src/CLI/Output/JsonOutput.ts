@@ -7,7 +7,7 @@ import type { Output } from "./Output.js";
  * it came from is of no interest here.
  */
 export class JsonOutput implements Output {
-  describe(_command: string, result: unknown): string {
-    return `${JSON.stringify(result, null, 2)}\n`;
+  print(_command: string, result: unknown): string {
+    return JSON.stringify(result, null, 2);
   }
 }
