@@ -1,4 +1,4 @@
-import { OpenStrapPluginError } from "../../Plugin/index.js";
+import { OpenStrapPluginError } from "../Plugin/index.js";
 
 export class CliErrors {
   format(error: unknown): string {

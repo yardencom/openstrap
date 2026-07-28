@@ -1,5 +1,5 @@
 import type { FactsCollectArgs, SubcommandArgsParser } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "./CommandArguments.js";
+import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 /**
  * `openstrap facts collect host`.

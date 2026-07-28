@@ -1,5 +1,5 @@
 import type { CommandArgsParser, CreateArgs } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "./CommandArguments.js";
+import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 /** What openstrap knows how to create. */
 const kinds = ["vm"] as const;

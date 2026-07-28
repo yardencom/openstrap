@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { ConnectToTarget } from "../../Connect/index.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { SqliteStateStore } from "../../StateStore/index.js";
-import { stateHome } from "./CreateCommand.js";
+import { stateHome } from "./CreateArgs.js";
 
 export type ConnectCommandRequest = {
   target: string;

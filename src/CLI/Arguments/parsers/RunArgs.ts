@@ -1,5 +1,5 @@
 import type { CommandArgsParser, RunArgs } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "./CommandArguments.js";
+import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 export class RunArgsParser implements CommandArgsParser {
   readonly command = "run";

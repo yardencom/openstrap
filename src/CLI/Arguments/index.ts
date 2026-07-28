@@ -8,4 +8,4 @@ export type {
   RuntimeArgs,
   SubcommandArgsParser,
 } from "./types.js";
-export { CliArgsParser } from "./parsers/CliArgs.js";
+export { CliArgsParser } from "./CliArgsParser.js";

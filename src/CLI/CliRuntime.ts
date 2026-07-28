@@ -3,8 +3,8 @@ import {
   loadOpenStrapPlugin,
   loadOpenStrapPluginConfig,
   type OpenStrapRuntime,
-} from "../../Plugin/index.js";
-import type { RuntimeArgs } from "../Arguments/index.js";
+} from "../Plugin/index.js";
+import type { RuntimeArgs } from "./Arguments/index.js";
 
 /**
  * What a command can reach: the plugins this invocation asked for.

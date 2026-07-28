@@ -2,7 +2,7 @@ import type {
   RequirementCheckNode,
   RequirementLeafCheck,
 } from "../../Modules/Requirements/index.js";
-import type { OpenStrapRunOutput } from "../Application/RunCommand.js";
+import type { OpenStrapRunOutput } from "../application/RunArgs.js";
 
 /**
  * What a run found, and only what went wrong.

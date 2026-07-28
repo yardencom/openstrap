@@ -1,8 +1,8 @@
-import type { CommandArgsParser, ParsedArgs } from "../types.js";
-import { ConnectArgsParser } from "./ConnectArgs.js";
-import { CreateArgsParser } from "./CreateArgs.js";
-import { FactsArgsParser } from "./FactsArgs.js";
-import { RunArgsParser } from "./RunArgs.js";
+import type { CommandArgsParser, ParsedArgs } from "./types.js";
+import { ConnectArgsParser } from "./parsers/ConnectArgs.js";
+import { CreateArgsParser } from "./parsers/CreateArgs.js";
+import { FactsArgsParser } from "./FactsArgsParser.js";
+import { RunArgsParser } from "./parsers/RunArgs.js";
 
 /**
  * The first word of the command line decides who reads the rest.

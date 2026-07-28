@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { main } from "../src/CLI/Application/Main.js";
+import { main } from "../src/CLI/Main.js";
 
 describe("openstrap CLI", () => {
   it("runs the local sample and prints human output", async () => {

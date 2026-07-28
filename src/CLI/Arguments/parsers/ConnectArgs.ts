@@ -1,5 +1,5 @@
 import type { CommandArgsParser, ConnectArgs } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "./CommandArguments.js";
+import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 export class ConnectArgsParser implements CommandArgsParser {
   readonly command = "connect";

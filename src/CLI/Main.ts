@@ -1,13 +1,13 @@
-import { CliArgsParser, type ParsedArgs } from "../Arguments/index.js";
-import { renderCreateOutput } from "../Output/CreateOutput.js";
-import { renderFactsOutput } from "../Output/FactsOutput.js";
-import { renderRunOutput } from "../Output/RunOutput.js";
+import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
+import { renderCreateOutput } from "./Output/CreateOutput.js";
+import { renderFactsOutput } from "./Output/FactsOutput.js";
+import { renderRunOutput } from "./Output/RunOutput.js";
 import { createCliRuntime } from "./CliRuntime.js";
-import { connectToTarget } from "./ConnectCommand.js";
-import { createTarget } from "./CreateCommand.js";
+import { connectToTarget } from "./application/ConnectArgs.js";
+import { createTarget } from "./application/CreateArgs.js";
 import { CliErrors } from "./Errors.js";
-import { collectHostFacts } from "./FactsCollectCommand.js";
-import { runOpenStrapFlow } from "./RunCommand.js";
+import { collectHostFacts } from "./application/FactsCollectArgs.js";
+import { runOpenStrapFlow } from "./application/RunArgs.js";
 
 export type CliIo = {
   stdout: Pick<NodeJS.WriteStream, "write">;

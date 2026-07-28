@@ -1,5 +1,5 @@
-import type { CommandArgsParser, ParsedArgs, SubcommandArgsParser } from "../types.js";
-import { FactsCollectArgsParser } from "./FactsCollectArgs.js";
+import type { CommandArgsParser, ParsedArgs, SubcommandArgsParser } from "./types.js";
+import { FactsCollectArgsParser } from "./parsers/FactsCollectArgs.js";
 
 export class FactsArgsParser implements CommandArgsParser {
   readonly command = "facts";

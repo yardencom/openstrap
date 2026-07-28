@@ -1,4 +1,4 @@
-import type { CreatedTarget } from "../Application/CreateCommand.js";
+import type { CreatedTarget } from "../application/CreateArgs.js";
 
 /**
  * What `create` did, and how to reach what it made.
