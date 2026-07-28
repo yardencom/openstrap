@@ -1,4 +1,4 @@
-import type { Output } from "./Output.js";
+import type { Output } from "../types.js";
 
 /**
  * A result as a program reads it: the thing itself, indented, one trailing newline.

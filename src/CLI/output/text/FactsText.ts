@@ -1,5 +1,5 @@
-import type { FactsCollectResult } from "../application/FactsCollectCommand.js";
-import type { CommandText } from "./CommandText.js";
+import type { FactsCollectResult } from "../../application/FactsCollectCommand.js";
+import type { CommandText } from "../types.js";
 
 /** Sections that hold things asked about by name, printed as counts. */
 const namedSections = [

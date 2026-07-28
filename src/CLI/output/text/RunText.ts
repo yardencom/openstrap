@@ -1,9 +1,9 @@
 import type {
   RequirementCheckNode,
   RequirementLeafCheck,
-} from "../../Modules/Requirements/index.js";
-import type { RunResult } from "../application/RunCommand.js";
-import type { CommandText } from "./CommandText.js";
+} from "../../../Modules/Requirements/index.js";
+import type { RunResult } from "../../application/RunCommand.js";
+import type { CommandText } from "../types.js";
 
 /**
  * What a run found, and only what went wrong.

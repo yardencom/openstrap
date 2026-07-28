@@ -1,5 +1,5 @@
-import type { ConnectResult } from "../application/ConnectCommand.js";
-import type { CommandText } from "./CommandText.js";
+import type { ConnectResult } from "../../application/ConnectCommand.js";
+import type { CommandText } from "../types.js";
 
 /**
  * What the machine said, unchanged.
