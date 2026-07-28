@@ -19,5 +19,4 @@ export type FactOrder = {
    * snapshot twice and get the same name for it.
    */
   now?: Date;
-  attempt?: number;
 };

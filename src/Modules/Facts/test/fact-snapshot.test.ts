@@ -20,10 +20,8 @@ describe("making a snapshot", () => {
     expect(snapshot.scope).toBe("host");
     expect(snapshot.target).toEqual({ type: "host", id: "host", displayName: undefined });
     expect(snapshot.reading).toEqual({
-      startedAt: "2026-06-08T10:00:00.000Z",
-      finishedAt: "2026-06-08T10:00:02.000Z",
+      takenAt: "2026-06-08T10:00:02.000Z",
       status: "success",
-      attempt: 1,
     });
   });
 

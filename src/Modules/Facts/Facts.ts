@@ -45,7 +45,7 @@ export class Facts {
     return new FactSnapshot(
       order.target,
       { ...data, transports: this.transports(order) },
-      { startedAt, finishedAt: new Date(), attempt: order.attempt },
+      { startedAt, finishedAt: new Date() },
     );
   }
 

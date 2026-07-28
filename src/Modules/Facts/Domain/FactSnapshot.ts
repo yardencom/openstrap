@@ -8,17 +8,18 @@ const schemaVersion = "facts.v1";
 export type ReadingStatus = "success" | "warning" | "error";
 
 /**
- * How the snapshot came to be.
+ * How the snapshot came to be: when it was taken, and whether the taking went cleanly.
  *
- * Kept apart from the machine's own facts rather than mixed in with them: when a snapshot was taken
- * and whether the taking went cleanly are not things about the machine, and a requirement comparing
- * two snapshots must not trip over them.
+ * Kept apart from the machine's own facts rather than mixed in with them, because neither is a thing
+ * about the machine and a requirement comparing two snapshots must not trip over them.
+ *
+ * Taken, not started: the moment the reading began is already the snapshot's name, and the same
+ * instant written twice is one of them waiting to disagree with the other. How long the reading took
+ * is nobody's question yet, and if it becomes one it is a duration and not two stamps to subtract.
  */
 export type Reading = {
-  startedAt: string;
-  finishedAt: string;
+  takenAt: string;
   status: ReadingStatus;
-  attempt: number;
 };
 
 /**
@@ -30,8 +31,7 @@ export type Reading = {
  *
  * - an identity, so it can be stored, referred to by a requirement result and named in a report;
  * - the schema it claims, so a reader can tell whether it understands the shape before trusting it;
- * - the reading that produced it: when it ran, which attempt it was, and whether anything it asked
- *   for failed;
+ * - the reading that produced it: when it was taken, and whether anything it asked for failed;
  * - the channel it came through, which no reading can know because a machine does not know how
  *   anyone got in.
  *
@@ -51,16 +51,16 @@ export class FactSnapshot {
   readonly reading: Reading;
 
   /**
-   * @param reading When the reading ran and which attempt it was. Both times are given rather than
-   * taken from the clock here: a snapshot is made after the reading has finished, so it could
-   * observe the end and never the beginning, and half a measurement is not a measurement. The
-   * outcome is not given, because it follows from the data and nobody should be able to disagree
-   * with it.
+   * @param reading When the reading began, which names the snapshot, and when it finished, which is
+   * when the snapshot was taken. Both are given rather than read from the clock here: a snapshot is
+   * made after the reading has finished, so it could observe the end and never the beginning. The
+   * outcome is not given, because it follows from the data and nobody should be able to disagree with
+   * it.
    */
   constructor(
     target: FactTarget,
     data: FactData,
-    reading: { startedAt: Date; finishedAt: Date; attempt?: number },
+    reading: { startedAt: Date; finishedAt: Date },
   ) {
     // Named from the start of the reading, so the same machine read twice at the same instant is the
     // same snapshot and two readings never collide.
@@ -71,10 +71,8 @@ export class FactSnapshot {
     this.target = { type: target.type, id: target.name, displayName: target.displayName };
     this.data = data;
     this.reading = {
-      startedAt: reading.startedAt.toISOString(),
-      finishedAt: reading.finishedAt.toISOString(),
+      takenAt: reading.finishedAt.toISOString(),
       status: this.status(data),
-      attempt: reading.attempt ?? 1,
     };
 
     this.freeze(this);

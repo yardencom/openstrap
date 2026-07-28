@@ -69,7 +69,7 @@ export class VerifyMachine {
         target: request.target.name,
         runId: request.runId,
         schemaVersion: snapshot.schemaVersion,
-        capturedAt: snapshot.reading.finishedAt,
+        capturedAt: snapshot.reading.takenAt,
         data: snapshot.data,
       });
 
