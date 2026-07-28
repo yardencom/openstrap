@@ -1,4 +1,4 @@
-import type { FileSystemAPI } from "../../../../Transport/index.js";
+import type { FileSystemAPI } from "../Transport/index.js";
 
 /** An executable every POSIX machine has, read for the header it carries. */
 const probedExecutable = "/bin/sh";

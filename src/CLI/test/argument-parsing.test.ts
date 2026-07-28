@@ -143,19 +143,44 @@ describe("openstrap connect", () => {
 });
 
 describe("openstrap facts collect", () => {
-  it("reads the host and takes no file", () => {
+  it("reads this machine and takes no file", () => {
     expect(parse("facts", "collect", "host", "--json")).toEqual({
       command: "facts.collect",
-      target: "host",
       json: true,
+      order: undefined,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
   });
 
-  it("needs to be told which machine, and knows only one", () => {
-    expect(() => parse("facts", "collect")).toThrow("Missing facts target");
-    expect(() => parse("facts", "collect", "guest")).toThrow("Missing facts target");
+  it("reads this machine when told nothing at all", () => {
+    expect(parse("facts", "collect")).toMatchObject({ command: "facts.collect", order: undefined });
+  });
+
+  it("knows only the machine it is running on, whatever else it is called", () => {
+    expect(() => parse("facts", "collect", "guest")).toThrow('Unexpected argument "guest"');
+  });
+
+  it("takes the order openstrap hands it when openstrap is the caller", () => {
+    const order = {
+      target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
+      declare: { sections: ["os"] },
+      channel: { type: "ssh", authMethods: ["publickey"] },
+    };
+    const encoded = Buffer.from(JSON.stringify(order)).toString("base64");
+
+    expect(parse("facts", "collect", "--order", encoded)).toMatchObject({
+      command: "facts.collect",
+      order: { ...order, now: undefined },
+    });
+  });
+
+  it("refuses an order it cannot read, rather than reading the wrong machine", () => {
+    expect(() => parse("facts", "collect", "--order", "not base64 json")).toThrow("--order must");
+    expect(() => parse("facts", "collect", "--order", Buffer.from("[]").toString("base64")))
+      .toThrow("--order must decode to an order");
+    expect(() => parse("facts", "collect", "--order", Buffer.from("{}").toString("base64")))
+      .toThrow("--order must name the target it is about");
   });
 
   it("takes no definition file, because a facts file of its own does not exist", () => {

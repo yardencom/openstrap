@@ -27,14 +27,13 @@ type ReadMachine = {
  */
 export class FactsText implements CommandText<FactsCollectResult> {
   print(result: FactsCollectResult): string {
-    const snapshot = result.snapshot;
+    const snapshot = result;
     const machine = snapshot.data as ReadMachine;
     const lines: string[] = [];
 
     lines.push(`OpenStrap facts collect: ${snapshot.reading.status}`);
     lines.push(`Target: ${snapshot.target.id}`);
     lines.push(`Snapshot: ${snapshot.id}`);
-    lines.push(`Result file: ${result.storage.resultPath}`);
     lines.push("");
     lines.push(`${machine.os.display?.pretty ?? machine.os.name} ${machine.arch}, kernel ${machine.os.kernel ?? "unknown"}`);
     lines.push(`cpu      ${machine.cpu.cores} cores${machine.cpu.model ? ` ${machine.cpu.model}` : ""}`);

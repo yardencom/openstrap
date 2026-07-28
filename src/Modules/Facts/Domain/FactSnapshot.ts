@@ -69,48 +69,48 @@ export class FactSnapshot {
     this.data = data;
     this.reading = {
       takenAt: takenAt.toISOString(),
-      status: this.status(data),
+      status: statusOf(data),
     };
 
-    this.freeze(this);
+    freeze(this);
+  }
+}
+
+/**
+ * Whether the reading got everything it was asked for.
+   *
+ * A machine that could not be read at all never gets this far — that is an exception. What is left
+ * is a machine that answered, where some declared thing failed: a command that would not run, a
+ * path that failed what was required of it, a user found under another id. The snapshot is still
+ * usable, so the reading is a warning rather than a failure, and the reason sits on the section
+ * that failed.
+ *
+ * Found by walking the data rather than by a list of sections to look in. A list is a thing to
+ * forget: `users` was added to the model and not to the list, and a snapshot holding a failed user
+ * fact reported a clean reading.
+ */
+function statusOf(value: unknown): ReadingStatus {
+  if (!value || typeof value !== "object") {
+    return "success";
   }
 
-  /**
-   * Whether the reading got everything it was asked for.
-   *
-   * A machine that could not be read at all never gets this far — that is an exception. What is left
-   * is a machine that answered, where some declared thing failed: a command that would not run, a
-   * path that failed what was required of it, a user found under another id. The snapshot is still
-   * usable, so the reading is a warning rather than a failure, and the reason sits on the section
-   * that failed.
-   *
-   * Found by walking the data rather than by a list of sections to look in. A list is a thing to
-   * forget: `users` was added to the model and not to the list, and a snapshot holding a failed user
-   * fact reported a clean reading.
-   */
-  private status(value: unknown): ReadingStatus {
-    if (!value || typeof value !== "object") {
-      return "success";
-    }
-
-    if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
-      return "warning";
-    }
-
-    return Object.values(value).some((property) => this.status(property) === "warning")
-      ? "warning"
-      : "success";
+  if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
+    return "warning";
   }
 
-  private freeze(value: unknown): void {
-    if (!value || typeof value !== "object") {
-      return;
-    }
+  return Object.values(value).some((property) => statusOf(property) === "warning")
+    ? "warning"
+    : "success";
+}
 
-    Object.freeze(value);
+function freeze(value: unknown): void {
+  if (!value || typeof value !== "object") {
+    return;
+  }
 
-    for (const property of Object.values(value)) {
-      this.freeze(property);
-    }
+  Object.freeze(value);
+
+  for (const property of Object.values(value)) {
+    freeze(property);
   }
 }

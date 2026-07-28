@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { FileSystemAPI } from "../../../../Transport/index.js";
+import type { FileSystemAPI } from "../Transport/index.js";
 import { TargetPlatform, UnreadableTargetPlatformError } from "./TargetPlatform.js";
 
 describe("TargetPlatform", () => {

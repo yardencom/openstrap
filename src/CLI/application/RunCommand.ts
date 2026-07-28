@@ -50,9 +50,8 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
       explicitPath: args.configPath,
       workspaceRoot: context.workspaceRoot,
     });
-    // One instance per machine, because an instance is a way of reaching one. Every
-    // target of a plain run is the machine openstrap is on, so every one of them is
-    // read in process.
+    // One collection, used for every target: a plain run is about the machine openstrap is on, and
+    // that is the only machine the facts module ever reads.
     const host = new Facts();
     const collected: FactSnapshot[] = [];
     const runs: RequirementRun[] = [];
@@ -64,7 +63,6 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
           scope: target.scope,
           type: target.type,
           displayName: target.displayName,
-          transport: target.transport,
         },
         declare: new RequiredFacts({
           requirements: target.requirements,

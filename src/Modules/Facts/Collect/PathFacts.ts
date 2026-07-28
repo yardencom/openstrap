@@ -6,8 +6,8 @@ import type {
   ArtifactDeclaration,
   PathDeclaration,
   PathRequirement,
-} from "../../Domain/FactDeclaration.js";
-import type { ArtifactFact, PathFact } from "../../Domain/FactModel.js";
+} from "../Domain/FactDeclaration.js";
+import type { ArtifactFact, PathFact } from "../Domain/FactModel.js";
 import type { Platform } from "./Platform.js";
 import { Redaction } from "./Redaction.js";
 

@@ -21,10 +21,12 @@ describe("Facts boundaries", () => {
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
-    expect(factsEntries).toEqual(expect.arrayContaining(["Domain", "Reading"]));
+    expect(factsEntries).toEqual(expect.arrayContaining(["Domain", "Collect"]));
     expect(publicBarrel).toBe("export {};\n");
     expect(factsEntries).not.toContain("Application");
-    expect(factsEntries).not.toContain("Collectors");
+    // No local case and no remote case: there is one way to collect, so there is nothing to choose
+    // between and no reading to pick.
+    expect(factsEntries).not.toContain("Reading");
     // A facts file of its own does not exist: what to read comes from the caller,
     // and the only config that says it is the blueprint, which Blueprint owns.
     expect(factsEntries).not.toContain("Definition");
@@ -45,22 +47,22 @@ describe("Facts boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("allows consumers to import only the Facts class from Facts/Facts", () => {
+  it("lets consumers import only what the facade offers", () => {
+    const offered = new Set([
+      "Facts", "FactOrder", "FactChannel", "FactTarget", "FactDeclaration", "FactSnapshot",
+    ]);
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
       (filePath: string) => !filePath.includes("/src/Modules/Facts/"),
     );
     const offenders = nonFactsSourcePaths.filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
-      const imports = [...source.matchAll(/import\s+\{([^}]+)\}\s+from\s+["'][^"']*Facts\/Facts\.js["']/g)];
+      const imports = [...source.matchAll(/import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+["'][^"']*Facts\/Facts\.js["']/g)];
 
-      return imports.some((match) => {
-        const names = match[1]!
-          .split(",")
-          .map((name) => name.trim())
-          .filter(Boolean);
-
-        return names.length !== 1 || names[0] !== "Facts";
-      });
+      return imports.some((match) => match[1]!
+        .split(",")
+        .map((name) => name.trim().replace(/^type\s+/, ""))
+        .filter(Boolean)
+        .some((name) => !offered.has(name)));
     });
 
     expect(offenders).toEqual([]);

@@ -6,14 +6,14 @@ import type {
   ProcessDeclaration,
   ServiceDeclaration,
   ToolDeclaration,
-} from "../../Domain/FactDeclaration.js";
+} from "../Domain/FactDeclaration.js";
 import type {
   PackageFact,
   ProcessFact,
   RuntimeFact,
   ServiceFact,
   ToolFact,
-} from "../../Domain/FactModel.js";
+} from "../Domain/FactModel.js";
 import type { Platform } from "./Platform.js";
 
 /**

@@ -1,9 +1,9 @@
 import { connect } from "node:net";
 
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
-import { Facts } from "../../Modules/Facts/Facts.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
 import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Modules/Requirements/index.js";
+import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
@@ -48,19 +48,23 @@ export class VerifyMachine {
     });
 
     try {
-      const snapshot = await new Facts(connection).collect({
+      // Read by openstrap on the machine itself, delivered over this connection. The connection is
+      // how it gets there and how it answers; it is not where any fact comes from.
+      const snapshot = await new RemoteOpenStrap(connection).collect({
         target: {
           name: request.target.name,
           scope: request.target.scope,
           type: request.target.type,
           displayName: request.target.displayName,
-          transport: request.target.transport,
-          // What the connection reports it authenticated with, not what the
-          // blueprint called the channel: a security requirement checked against
-          // openstrap's own configuration checks nothing.
-          authMethods: connection.authMethods,
         },
         declare: new RequiredFacts({ requirements: request.target.requirements }).declaration,
+        channel: {
+          type: request.target.transport,
+          // What the connection reports it authenticated with, not what the blueprint called the
+          // channel: a security requirement checked against openstrap's own configuration checks
+          // nothing.
+          authMethods: connection.authMethods,
+        },
       });
 
 

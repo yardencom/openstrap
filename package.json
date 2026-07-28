@@ -45,8 +45,8 @@
     }
   },
   "scripts": {
-    "build": "find dist -mindepth 1 -maxdepth 1 ! -name agent -exec rm -rf {} + 2>/dev/null; tsc -p tsconfig.build.json",
-    "agent:build": "tsx src/Modules/Facts/Reading/Agent/BuildAgent.ts",
+    "build": "find dist -mindepth 1 -maxdepth 1 ! -name remote -exec rm -rf {} + 2>/dev/null; tsc -p tsconfig.build.json",
+    "remote:build": "tsx src/RemoteOpenStrap/BuildOpenStrapForLinux.ts",
     "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

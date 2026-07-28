@@ -1,46 +1,58 @@
-import type { Transport } from "../../Transport/index.js";
 import { FactSnapshot } from "./Domain/FactSnapshot.js";
+import type { FactDeclaration } from "./Domain/FactDeclaration.js";
 import type { FactOrder } from "./Domain/FactOrder.js";
-import type { TransportFact } from "./Domain/FactModel.js";
-import { LocalReading } from "./Reading/LocalReading.js";
-import { RemoteReading } from "./Reading/RemoteReading.js";
-import type { SystemReading } from "./Reading/SystemReading.js";
+import type { FactData, ToolFact, TransportFact } from "./Domain/FactModel.js";
+import { AccountFacts } from "./Collect/AccountFacts.js";
+import { CommandFacts } from "./Collect/CommandFacts.js";
+import { EntityFacts } from "./Collect/EntityFacts.js";
+import { PathFacts } from "./Collect/PathFacts.js";
+import { Platform } from "./Collect/Platform.js";
+import { SystemFacts } from "./Collect/SystemFacts.js";
 
 /**
- * Facts about a machine.
+ * What a caller has to name and handle to use this module.
  *
- * The only way into this module, and `collect` is the only way to read: an instance
- * is made by naming the machine — with no transport it reads the one it is running
- * on, with a transport the one at the other end — and then asked once.
+ * Re-exported here rather than reached for in `Domain/`, so the module has one door: the class that
+ * collects, the order it takes and the snapshot it gives back.
+ */
+export type { FactOrder, FactChannel } from "./Domain/FactOrder.js";
+export type { FactTarget } from "./Domain/FactTarget.js";
+export type { FactDeclaration } from "./Domain/FactDeclaration.js";
+// A type and not the class: a snapshot a caller assembled out of whatever it liked would be a
+// snapshot nothing else in openstrap is entitled to trust.
+export type { FactSnapshot } from "./Domain/FactSnapshot.js";
+
+/** A section a caller can name things in. */
+type DeclaredSection = Exclude<keyof FactDeclaration, "sections">;
+
+/**
+ * Facts about the machine this is running on.
  *
- * There is no second entry point and no way to reach a collector, a reading or a
- * section from outside, because a fact only means anything together with how it was
- * obtained. A caller able to assemble its own reading could produce a snapshot
- * nothing else in openstrap would be entitled to trust.
+ * The only way in, and there is one way to collect: openstrap reads the machine it is on. It is not
+ * told where that is and has nothing to decide about it — no local case and no remote case, because a
+ * machine openstrap is not on is read by openstrap being put there and asked the same question. That
+ * is what makes two snapshots comparable: not agreement between two implementations, but the absence
+ * of a second one.
  *
- * Reading is a method rather than a constructor: reaching a machine can mean
- * waiting on a network, and a constructor cannot wait.
+ * Every value comes from an API — systeminformation, `node:os`, `node:fs`, PATH resolution — and
+ * never from openstrap parsing the output of a program it chose to run. The two exceptions are stated
+ * where they are made: whether `sudo` runs without a password, and programs the caller declared.
+ *
+ * Collecting is a method rather than a constructor because reading waits, and a constructor cannot.
  */
 export class Facts {
-  private readonly reading: SystemReading;
-  private readonly channelWasOpened: boolean;
+  private readonly platform = Platform.current();
+  private readonly system = new SystemFacts(this.platform);
+  private readonly entities = new EntityFacts(this.platform);
+  private readonly paths = new PathFacts(this.platform);
+  private readonly commands = new CommandFacts(this.platform);
+  private readonly accounts = new AccountFacts(this.platform);
 
-  /**
-   * @param transport How to reach the machine. Omitted for the machine openstrap
-   * is running on, which is read in process — there is no local channel to open,
-   * so there is none to pass.
-   */
-  constructor(transport?: Transport) {
-    this.channelWasOpened = transport !== undefined;
-    this.reading = transport === undefined ? new LocalReading() : new RemoteReading(transport);
-  }
-
-  /** Reads the machine and returns one snapshot of it. */
+  /** Reads this machine and returns one snapshot of it. */
   async collect(order: FactOrder): Promise<FactSnapshot> {
-    const data = await this.reading.read(order.declare ?? {});
+    const data = await this.read(order.declare ?? {});
 
-    // The moment is taken here, because this is what waited for the machine to answer, and the
-    // channel is recorded here because this is what opened it.
+    // The moment is taken here, because this is what waited for the machine to answer.
     return new FactSnapshot(
       order.target,
       { ...data, transports: this.transports(order) },
@@ -48,33 +60,91 @@ export class Facts {
     );
   }
 
+  private async read(declaration: FactDeclaration): Promise<FactData> {
+    const scalars = await this.system.read();
+    const tools = await this.readTools(declaration);
+
+    return {
+      ...scalars,
+      packages: {
+        ...scalars.packages,
+        installed: this.entities.packages(this.wanted(declaration, "packages") ? declaration.packages ?? {} : {}),
+      },
+      users: this.accounts.accounts(this.wanted(declaration, "users") ? declaration.users ?? {} : {}),
+      groups: this.wanted(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
+      processes: this.wanted(declaration, "processes")
+        ? await this.entities.processes(declaration.processes ?? {})
+        : {},
+      services: this.wanted(declaration, "services")
+        ? await this.entities.services(declaration.services ?? {})
+        : {},
+      tools: this.wanted(declaration, "tools") ? tools : {},
+      runtimes: this.entities.runtimes(tools),
+      paths: this.wanted(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
+      artifacts: this.wanted(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
+      commands: this.wanted(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
+      env: this.wanted(declaration, "env") ? this.commands.env(declaration.env ?? {}) : {},
+      transports: {},
+    };
+  }
+
   /**
-   * The `transports` section: the channel this snapshot was read through, when
-   * there was one.
+   * The `transports` section: the channel this snapshot was read through, when there was one.
    *
-   * No reading can work this out: the machine does not know how anyone got in. It
-   * matters because a requirement can be written about the channel itself, and
-   * because two snapshots are only comparable when they were taken the same way.
+   * Nothing on a machine can answer this — a machine does not know how anyone got in — so it is
+   * recorded only when whoever opened the channel says so. It matters because a requirement can be
+   * written about the channel itself.
    *
-   * `present` and `ready` are evidence rather than assertion — this runs only after
-   * a reading came back through that channel, and a channel that was not there
-   * would have thrown instead. There is nothing here when openstrap read the
-   * machine in its own process: no channel was opened, so naming one would be
-   * inventing it, and a requirement about a `local` transport was passing against
-   * exactly that invention.
+   * Nothing is invented here. openstrap reading the machine it is on opened nothing, so it names
+   * nothing; a `local` transport written in anyway was an invention, and a requirement about a
+   * `local` transport was passing against exactly that.
    */
   private transports(order: FactOrder): Record<string, TransportFact> {
-    if (!this.channelWasOpened) {
+    if (order.channel === undefined) {
       return {};
     }
 
     return {
-      [order.target.transport]: {
+      [order.channel.type]: {
         status: "present",
-        type: order.target.transport,
+        type: order.channel.type,
         ready: true,
-        authMethods: order.target.authMethods === undefined ? undefined : [...order.target.authMethods],
+        authMethods: order.channel.authMethods === undefined ? undefined : [...order.channel.authMethods],
       },
     };
+  }
+
+  /**
+   * Tools, read once for two sections.
+   *
+   * Runtimes are tools seen from the other side, so asking for either asks for the same lookup. Doing
+   * it once means the two sections cannot disagree.
+   */
+  private async readTools(declaration: FactDeclaration): Promise<Record<string, ToolFact>> {
+    if (!this.wanted(declaration, "tools") && !this.requested(declaration, "runtimes")) {
+      return {};
+    }
+
+    return this.entities.tools(declaration.tools ?? {});
+  }
+
+  /**
+   * Whether a section was asked for.
+   *
+   * Naming something in a section is itself a request for it — a caller that declares a process
+   * should not also have to list `processes`.
+   */
+  private wanted(declaration: FactDeclaration, section: DeclaredSection): boolean {
+    return Object.keys(declaration[section] ?? {}).length > 0 || this.requested(declaration, section);
+  }
+
+  /**
+   * Whether a caller listed a section by name.
+   *
+   * A caller that names no sections at all gets everything, because it has not said what it cares
+   * about and the cheapest wrong answer is a missing fact.
+   */
+  private requested(declaration: FactDeclaration, section: string): boolean {
+    return declaration.sections === undefined || declaration.sections.includes(section);
   }
 }

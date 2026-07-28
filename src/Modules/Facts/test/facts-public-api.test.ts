@@ -21,24 +21,30 @@ describe("Facts public API", () => {
   });
 
   it("offers one way to read a machine and no other", () => {
-    const methods = Object.getOwnPropertyNames(Facts.prototype).filter((name) => name !== "constructor");
-    const publicMethods = methods.filter((name) => /^(collect|read|inspect|gather)/.test(name));
+    const source = readFileSync(join(process.cwd(), "src/Modules/Facts/Facts.ts"), "utf8");
+    // Declared without `private`, which is the only kind of method a caller can reach.
+    const reachable = [...source.matchAll(/^ {2}(?:async )?([a-z]\w*)\(/gm)].map((match) => match[1]);
 
-    expect(publicMethods).toEqual(["collect"]);
+    expect(reachable).toEqual(["collect"]);
   });
 
-  it("exports one class and no other value", () => {
+  it("exports one class, and otherwise only types", () => {
     const source = readFileSync(join(process.cwd(), "src/Modules/Facts/Facts.ts"), "utf8");
     const exported = [...source.matchAll(/^export\s+(class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
       .map((match) => ({ kind: match[1], name: match[2] }));
 
     expect(exported.filter((entry) => entry.kind !== "type")).toEqual([{ kind: "class", name: "Facts" }]);
-    expect(source).not.toMatch(/^export\s+\{/m);
+    // Re-exports carry the names a caller has to spell, and nothing that can be constructed: a
+    // snapshot assembled by a caller out of whatever it liked would be a snapshot nothing is
+    // entitled to trust.
+    for (const line of source.split("\n").filter((text) => /^export\s+\{/.test(text))) {
+      expect(line).toMatch(/^export\s+type\s+\{/);
+    }
   });
 
   it("reads a machine through a method, because reaching one means waiting", async () => {
     const machine = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      target: { name: "host", scope: "host", type: "host" },
       declare: { sections: ["os"] },
     });
 

@@ -65,21 +65,44 @@ targets:
     }
   });
 
-  it("collects host facts with nothing declared, and keeps the result", async () => {
-    const output = await captureCli(["facts", "collect", "host", "--json"]);
-    const json = JSON.parse(output.stdout);
-    const data = json.snapshot.data;
+  it("collects host facts with nothing declared, and writes nothing anywhere", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-facts-"));
+
+    try {
+      const output = await captureCli(["facts", "collect", "host", "--json"], directory);
+      const data = JSON.parse(output.stdout).data;
+
+      expect(output.exitCode).toBe(0);
+      expect(data.os.name).not.toBe("");
+      expect(Object.keys(data.processes).length).toBeGreaterThan(0);
+      // Nothing was asked about by name, so nothing is answered by name.
+      expect(data.commands).toEqual({});
+      expect(data.paths).toEqual({});
+      // The answer is the answer. A run keeps its snapshots in the state store, and this command has
+      // to leave nothing behind because it is what openstrap runs on a machine it was asked to read.
+      expect(existsSync(join(directory, ".openstrap"))).toBe(false);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("reads what it is told to read, when openstrap is the one asking", async () => {
+    const order = Buffer.from(JSON.stringify({
+      target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
+      declare: { sections: ["os", "arch"] },
+      channel: { type: "ssh", authMethods: ["publickey"] },
+    })).toString("base64");
+
+    const output = await captureCli(["facts", "collect", "--json", "--order", order]);
+    const snapshot = JSON.parse(output.stdout);
 
     expect(output.exitCode).toBe(0);
-    expect(data.os.name).not.toBe("");
-    expect(Object.keys(data.processes).length).toBeGreaterThan(0);
-    // Nothing was asked about by name, so nothing is answered by name.
-    expect(data.commands).toEqual({});
-    expect(data.paths).toEqual({});
-    expect(json.storage.resultPath).toContain("/.openstrap/runs/facts/");
-    expect(existsSync(json.storage.resultPath)).toBe(true);
-    expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).snapshot.id)
-      .toBe(json.snapshot.id);
+    // Named as the caller names it: the machine cannot know what anyone calls it from outside.
+    expect(snapshot.target).toEqual({ id: "ubuntu-vm", type: "vm", displayName: undefined });
+    expect(snapshot.id).toMatch(/^snap_ubuntu-vm_/);
+    // The channel is recorded because the caller opened it, and nothing else is invented.
+    expect(snapshot.data.transports).toEqual({ ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } });
+    expect(snapshot.data.processes).toEqual({});
   });
 
   it("prints what it read", async () => {
@@ -88,7 +111,6 @@ targets:
     expect(output.exitCode).toBe(0);
     expect(output.stdout).toContain("OpenStrap facts collect: success");
     expect(output.stdout).toContain("Target: host");
-    expect(output.stdout).toContain("Result file:");
     expect(output.stderr).toBe("");
   });
 
