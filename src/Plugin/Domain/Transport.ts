@@ -27,6 +27,16 @@ export type TransportConnectionRequest = {
  */
 export type TransportConnection = Transport & {
   close(): Promise<void>;
+  /**
+   * How this channel actually authenticated.
+   *
+   * Reported by the connector because the connector is the only thing that knows:
+   * the machine does not know how anyone got in, and the caller only knows which
+   * connector it asked for. A security promise — "this target accepts a key and
+   * nothing else" — is worth nothing when the thing asserting it is the thing that
+   * never checked.
+   */
+  authMethods: readonly string[];
 };
 
 /**

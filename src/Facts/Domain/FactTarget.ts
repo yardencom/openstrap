@@ -18,4 +18,11 @@ export type FactTarget = {
    * does not know how you got in.
    */
   transport: string;
+  /**
+   * How the channel authenticated, as the thing that opened it reported.
+   *
+   * Absent when nobody said, and then the snapshot says nothing about it. A guess
+   * here would be a fabricated fact, and requirements are written against this.
+   */
+  authMethods?: readonly string[];
 };

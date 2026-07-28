@@ -82,6 +82,28 @@ describe("reading a machine", () => {
     expect(data.transports.local).toMatchObject({ status: "present", type: "local", ready: true });
   });
 
+  it("says nothing about how a channel authenticated unless it was told", async () => {
+    const facts = await new Facts().collect({
+      target: { name: "guest", scope: "guest", type: "vm", transport: "ssh" },
+      declare: { sections: ["os"] },
+    });
+    const data = facts[0]!.snapshot.data as { transports: Record<string, { authMethods?: string[] }> };
+
+    // Naming the channel `ssh` is not evidence that a key was used. A requirement
+    // written about key-only login has to fail here rather than pass on a guess.
+    expect(data.transports.ssh!.authMethods).toBeUndefined();
+  });
+
+  it("records the authentication the caller reported, verbatim", async () => {
+    const facts = await new Facts().collect({
+      target: { name: "guest", scope: "guest", type: "vm", transport: "ssh", authMethods: ["publickey"] },
+      declare: { sections: ["os"] },
+    });
+    const data = facts[0]!.snapshot.data as { transports: Record<string, { authMethods?: string[] }> };
+
+    expect(data.transports.ssh!.authMethods).toEqual(["publickey"]);
+  });
+
   it("reads the machine it is running on when given no transport", async () => {
     const facts = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },

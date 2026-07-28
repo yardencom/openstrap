@@ -55,6 +55,10 @@ export class VerifyMachine {
           type: request.target.type,
           displayName: request.target.displayName,
           transport: request.target.transport,
+          // What the connection reports it authenticated with, not what the
+          // blueprint called the channel: a security requirement checked against
+          // openstrap's own configuration checks nothing.
+          authMethods: connection.authMethods,
         },
         declare: new RequiredFacts({ requirements: request.target.requirements }).declaration,
       });

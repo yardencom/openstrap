@@ -73,7 +73,7 @@ export class Facts {
         snapshotId,
         startedAt: startedAt.toISOString(),
         finishedAt: new Date().toISOString(),
-        status: this.status(data),
+        status: runStatus(data),
         attempt: order.attempt ?? 1,
       },
     }]);
@@ -118,6 +118,11 @@ export class Facts {
    * It matters because a requirement can be written about the channel itself —
    * "this target is reachable over ssh with a key" — and because two snapshots
    * are only comparable when they were taken the same way.
+   *
+   * Only what the caller reported is recorded. This used to write
+   * `authMethods: ["publickey"]` whenever the transport was named `ssh`, which
+   * made `key-only-login` check a value openstrap had written from the blueprint's
+   * own text: it would have passed on a connection authenticated by password.
    */
   private withTransport(data: FactData, order: FactOrder): FactData {
     return {
@@ -127,32 +132,32 @@ export class Facts {
           status: "present",
           type: order.target.transport,
           ready: true,
-          authMethods: order.target.transport === "ssh" ? ["publickey"] : undefined,
+          authMethods: order.target.authMethods === undefined ? undefined : [...order.target.authMethods],
         },
       },
     };
   }
 
-  /**
-   * Whether the run got everything it was asked for.
-   *
-   * A machine that could not be read at all never reaches this point — that is an
-   * exception, because there is no snapshot to report. What is left is a machine
-   * that answered, where some declared thing failed: a command that would not
-   * run, a path that failed what was required of it, a user found under another
-   * id. The snapshot is still usable, so the run is a warning rather than a
-   * failure, and the reason sits on the section that failed.
-   *
-   * Found by looking, not by a list of sections to look in. A list is a thing to
-   * forget: `users` was added to the model and not to the list, and a snapshot
-   * with a failed user fact in it reported a clean run.
-   */
-  private status(data: FactData): FactRunStatus {
-    return reportsAnError(data) ? "warning" : "success";
-  }
 }
 
-/** Whether anything anywhere in a snapshot says it failed. */
+/**
+ * Whether the run got everything it was asked for.
+ *
+ * A machine that could not be read at all never reaches this point — that is an
+ * exception, because there is no snapshot to report. What is left is a machine
+ * that answered, where some declared thing failed: a command that would not run,
+ * a path that failed what was required of it, a user found under another id. The
+ * snapshot is still usable, so the run is a warning rather than a failure, and the
+ * reason sits on the section that failed.
+ *
+ * Found by looking, not by a list of sections to look in. A list is a thing to
+ * forget: `users` was added to the model and not to the list, and a snapshot with a
+ * failed user fact in it reported a clean run.
+ */
+function runStatus(data: FactData): FactRunStatus {
+  return reportsAnError(data) ? "warning" : "success";
+}
+
 function reportsAnError(value: unknown): boolean {
   if (!value || typeof value !== "object") {
     return false;
