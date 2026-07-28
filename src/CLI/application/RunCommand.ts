@@ -10,7 +10,7 @@ import {
 import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
+type ReadMachine = Awaited<ReturnType<Facts["collect"]>>;
 
 export type RunResult = {
   targets: Array<{
@@ -19,7 +19,7 @@ export type RunResult = {
     type: string;
     transport: string;
   }>;
-  facts: FactCollection;
+  facts: readonly ReadMachine[];
   requirementRun: RequirementRun;
 };
 
@@ -54,11 +54,11 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
     // target of a plain run is the machine openstrap is on, so every one of them is
     // read in process.
     const host = new Facts();
-    const collected: FactCollection[number][] = [];
+    const collected: ReadMachine[] = [];
     const runs: RequirementRun[] = [];
 
     for (const target of Object.values(blueprint.targets)) {
-      const facts = await host.collect({
+      const machine = await host.collect({
         target: {
           name: target.name,
           scope: target.scope,
@@ -73,11 +73,11 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
         now: context.now,
       });
 
-      collected.push(...facts);
+      collected.push(machine);
       runs.push(this.evaluator.evaluate({
         target,
         requirements: target.requirements,
-        factCollection: facts,
+        factCollection: [machine],
         now: context.now,
         trigger: "manual",
         profile: "local-run",

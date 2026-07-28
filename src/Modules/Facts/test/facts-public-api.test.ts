@@ -37,16 +37,15 @@ describe("Facts public API", () => {
   });
 
   it("reads a machine through a method, because reaching one means waiting", async () => {
-    const facts = await new Facts().collect({
+    const machine = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });
 
-    expect(facts).toHaveLength(1);
-    expect(facts[0]!.snapshot.target.id).toBe("host");
+    expect(machine.snapshot.target.id).toBe("host");
   });
 
-  it("hands back a collection rather than being one", () => {
+  it("hands back what it read rather than being it", () => {
     expect(Array.isArray(new Facts())).toBe(false);
     expect(Facts.prototype instanceof Array).toBe(false);
   });

@@ -48,7 +48,7 @@ export class VerifyMachine {
     });
 
     try {
-      const facts = await new Facts(connection).collect({
+      const machine = await new Facts(connection).collect({
         target: {
           name: request.target.name,
           scope: request.target.scope,
@@ -62,7 +62,7 @@ export class VerifyMachine {
         },
         declare: new RequiredFacts({ requirements: request.target.requirements }).declaration,
       });
-      const item = facts[0]!;
+      const item = machine;
 
       request.store.saveFactSnapshot({
         id: item.snapshot.id,
@@ -78,7 +78,7 @@ export class VerifyMachine {
         requirementRun: this.evaluator.evaluate({
           target: request.target,
           requirements: request.target.requirements,
-          factCollection: facts,
+          factCollection: [machine],
           trigger: "create",
           profile: "local-vm",
           purpose: "verify",

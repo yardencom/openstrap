@@ -27,7 +27,7 @@ type ReadMachine = {
  */
 export class FactsText implements CommandText<FactsCollectResult> {
   print(result: FactsCollectResult): string {
-    const item = result.facts[0]!;
+    const item = result.facts;
     const machine = item.snapshot.data as ReadMachine;
     const lines: string[] = [];
 

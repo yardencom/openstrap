@@ -1,96 +1,81 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createFactCollection,
+  createFactCollectionItem,
   FactCollectionValidationError,
-  type FactCollectionItem,
+  type FactReading,
 } from "../Domain/FactCollection.js";
 import { Facts } from "../Facts.js";
 
-describe("fact collections", () => {
-  it("rejects an empty collection", () => {
-    expect(() => createFactCollection([])).toThrow(FactCollectionValidationError);
+const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
+
+describe("a machine that was read", () => {
+  it("pairs the run with the snapshot it produced", () => {
+    const machine = createFactCollectionItem(reading());
+
+    expect(machine.run.snapshotId).toBe(machine.snapshot.id);
+    expect(machine.snapshot.schemaVersion).toBe("facts.v1");
   });
 
-  it("requires every run to point at the snapshot it produced", () => {
-    expect(() =>
-      createFactCollection([
-        {
-          snapshot: minimalItem().snapshot,
-          run: { ...minimalItem().run, snapshotId: "different_snapshot" },
-        },
-      ]),
-    ).toThrow(/snapshotId/);
-  });
+  it("names the snapshot and the run after the machine and the moment", () => {
+    const machine = createFactCollectionItem(reading());
 
-  it("keeps why a snapshot was taken out of the snapshot", () => {
-    for (const key of ["profile", "purpose", "provenance", "metadata", "sources", "confidence"]) {
-      expect(() =>
-        createFactCollection([
-          {
-            ...minimalItem(),
-            snapshot: { ...minimalItem().snapshot, [key]: "not-allowed" } as never,
-          },
-        ]),
-      ).toThrow(FactCollectionValidationError);
-    }
-  });
-
-  it("keeps failures on the section that failed rather than in one bag", () => {
-    expect(() =>
-      createFactCollection([
-        {
-          ...minimalItem(),
-          snapshot: {
-            ...minimalItem().snapshot,
-            data: { errors: ["something went wrong"] },
-          },
-        },
-      ]),
-    ).toThrow(/errors/);
+    expect(machine.snapshot.id).toBe("snap_host_20260608T100000000Z");
+    expect(machine.run.id).toBe("fact_run_host_20260608T100000000Z");
   });
 
   it("cannot be edited after it is made", () => {
-    const collection = createFactCollection([minimalItem()]);
+    const machine = createFactCollectionItem(reading());
 
-    expect(Object.isFrozen(collection)).toBe(true);
-    expect(Object.isFrozen(collection[0]!.snapshot)).toBe(true);
+    expect(Object.isFrozen(machine)).toBe(true);
+    expect(Object.isFrozen(machine.snapshot)).toBe(true);
+    expect(Object.isFrozen(machine.snapshot.data)).toBe(true);
+  });
+
+  it("keeps failures on the section that failed rather than in one bag", () => {
+    expect(() => createFactCollectionItem(reading({ errors: ["something went wrong"] })))
+      .toThrow(FactCollectionValidationError);
+    expect(() => createFactCollectionItem(reading({ errors: [] })))
+      .toThrow(/must not contain top-level errors/);
+  });
+
+  it("records the channel it was read through", () => {
+    const machine = createFactCollectionItem({
+      ...reading(),
+      transports: { ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } },
+    });
+    const data = machine.snapshot.data as { transports: Record<string, { authMethods?: string[] }> };
+
+    expect(data.transports.ssh!.authMethods).toEqual(["publickey"]);
   });
 });
 
 describe("reading a machine", () => {
   it("stamps the target it read and pairs the run with the snapshot", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
-      declare: { sections: ["os", "arch"] },
-    });
+    const machine = await new Facts().collect({ target: host, declare: { sections: ["os", "arch"] } });
 
-    expect(facts).toHaveLength(1);
-    expect(facts[0]!.snapshot.scope).toBe("host");
-    expect(facts[0]!.snapshot.target).toMatchObject({ id: "host", type: "host" });
-    expect(facts[0]!.run.snapshotId).toBe(facts[0]!.snapshot.id);
-    expect(facts[0]!.run.status).toBe("success");
+    expect(machine.snapshot.scope).toBe("host");
+    expect(machine.snapshot.target).toMatchObject({ id: "host", type: "host" });
+    expect(machine.run.snapshotId).toBe(machine.snapshot.id);
+    expect(machine.run.status).toBe("success");
   });
 
   it("names no channel when it opened none", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
-      declare: { sections: ["os"] },
-    });
-    const data = facts[0]!.snapshot.data as { transports: Record<string, unknown> };
+    const machine = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    const data = machine.snapshot.data as { transports: Record<string, unknown> };
 
-    // Reading in process opens nothing, so there is nothing to report. A `local`
-    // transport written here would be an invention, and a requirement about it
-    // used to pass against exactly that.
+    // Reading in process opens nothing, so there is nothing to report. A `local` transport
+    // written here would be an invention, and a requirement about it used to pass against
+    // exactly that.
     expect(data.transports).toEqual({});
   });
 
   it("reads the machine it is running on when given no transport", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
+    const machine = await new Facts().collect({
+      target: host,
       declare: { sections: ["os", "arch", "cpu", "memory"] },
     });
-    const data = facts[0]!.snapshot.data as {
+    const data = machine.snapshot.data as {
       os: { family: string; name: string; version: string };
       arch: string;
       cpu: { cores: number };
@@ -106,74 +91,56 @@ describe("reading a machine", () => {
   });
 
   it("does not read a section nobody asked about", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
-      declare: { sections: ["os"] },
-    });
-    const data = facts[0]!.snapshot.data as { processes: Record<string, unknown>; commands: Record<string, unknown> };
+    const machine = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    const data = machine.snapshot.data as { processes: Record<string, unknown>; commands: Record<string, unknown> };
 
     expect(data.processes).toEqual({});
     expect(data.commands).toEqual({});
   });
 
-  it("marks the run a warning when any section reports a failure, whichever section it is", async () => {
-    const target = { name: "host", scope: "host", type: "host", transport: "local" } as const;
-    const clean = await new Facts().collect({ target, declare: { sections: ["os"] } });
-    // root exists, but the declaration asserts a uid it does not have.
-    const failed = await new Facts().collect({
-      target,
-      declare: { users: { superuser: { name: "root", uid: 1234 } } },
-    });
-    const data = failed[0]!.snapshot.data as { users: Record<string, { status: string }> };
-
-    expect(clean[0]!.run.status).toBe("success");
-    expect(data.users.superuser!.status).toBe("error");
-    expect(failed[0]!.run.status).toBe("warning");
-  });
-
   it("reads everything it can when the order names nothing", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "host", scope: "host", type: "host", transport: "local" },
-    });
-    const data = facts[0]!.snapshot.data as {
+    const machine = await new Facts().collect({ target: host });
+    const data = machine.snapshot.data as {
       os: { name: string };
       processes: Record<string, unknown>;
       commands: Record<string, unknown>;
     };
 
-    // "Tell me about this machine": every section that answers without being told a
-    // name does, and the ones that need names stay empty rather than inventing entries.
+    // "Tell me about this machine": every section that answers without being told a name does,
+    // and the ones that need names stay empty rather than inventing entries.
     expect(data.os.name).not.toBe("");
     expect(Object.keys(data.processes).length).toBeGreaterThan(0);
     expect(data.commands).toEqual({});
   });
 
+  it("marks the run a warning when any section reports a failure, whichever section it is", async () => {
+    const clean = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    // root exists, but the declaration asserts a uid it does not have.
+    const failed = await new Facts().collect({
+      target: host,
+      declare: { users: { superuser: { name: "root", uid: 1234 } } },
+    });
+    const data = failed.snapshot.data as { users: Record<string, { status: string }> };
+
+    expect(clean.run.status).toBe("success");
+    expect(data.users.superuser!.status).toBe("error");
+    expect(failed.run.status).toBe("warning");
+  });
+
   it("gives every snapshot a name of its own", async () => {
     const facts = new Facts();
-    const target = { name: "host", scope: "host", type: "host", transport: "local" } as const;
-    const first = await facts.collect({ target, declare: { sections: ["os"] }, now: new Date("2026-01-01T00:00:00Z") });
-    const second = await facts.collect({ target, declare: { sections: ["os"] }, now: new Date("2026-01-02T00:00:00Z") });
+    const first = await facts.collect({ target: host, declare: { sections: ["os"] }, now: new Date("2026-01-01T00:00:00Z") });
+    const second = await facts.collect({ target: host, declare: { sections: ["os"] }, now: new Date("2026-01-02T00:00:00Z") });
 
-    expect(first[0]!.snapshot.id).not.toBe(second[0]!.snapshot.id);
+    expect(first.snapshot.id).not.toBe(second.snapshot.id);
   });
 });
 
-function minimalItem(): FactCollectionItem {
+function reading(data: Record<string, unknown> = { arch: "x64" }): FactReading {
   return {
-    snapshot: {
-      id: "snap_host",
-      schemaVersion: "facts.v1",
-      scope: "host",
-      target: { type: "machine", id: "host" },
-      data: { arch: "x64" },
-    },
-    run: {
-      id: "fact_run_host",
-      snapshotId: "snap_host",
-      startedAt: "2026-06-08T10:00:00.000Z",
-      finishedAt: "2026-06-08T10:00:00.000Z",
-      status: "success",
-      attempt: 1,
-    },
+    target: host,
+    data: data as FactReading["data"],
+    transports: {},
+    startedAt: new Date("2026-06-08T10:00:00.000Z"),
   };
 }

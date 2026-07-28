@@ -8,14 +8,20 @@ import {
 import type { FactTarget } from "./FactTarget.js";
 
 /** Which shape of snapshot this is. Every reader compares against it before trusting one. */
-export const factsSchemaVersion = "facts.v1";
+const factsSchemaVersion = "facts.v1";
 
+/**
+ * One machine read, as a snapshot and the run that produced it.
+ *
+ * The unit of the model. There is nothing that has to hold of several of them together — every
+ * rule is about one — so a list of them is a list and not a thing of its own to guard.
+ */
 export type FactCollectionItem = {
   snapshot: FactSnapshot<unknown>;
   run: FactRun;
 };
 
-/** Everything one collection run found, one item per machine read. */
+/** Several machines read, one item each. */
 export type FactCollection = readonly FactCollectionItem[];
 
 /** One machine, as it was just read. */
@@ -29,51 +35,11 @@ export type FactReading = {
 };
 
 /**
- * A snapshot, paired with the run that produced it.
- *
- * Everything that makes a reading into a snapshot happens here: its identity, the
- * schema it claims, which machine it is about, and the outcome of the run. It sits
- * beside the collection because a snapshot never exists alone in this model — it is
- * only ever half of an item, and the other half is how it came to be.
- *
- * The names are stamped from the start of the run, so the same reading asked for
- * twice at the same instant is the same snapshot, and two readings never collide.
- */
-export function createFactCollectionItem(reading: FactReading): FactCollectionItem {
-  const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
-  const snapshotId = `snap_${reading.target.name}_${stamp}`;
-  const data = { ...reading.data, transports: reading.transports };
-
-  return {
-    snapshot: {
-      id: snapshotId,
-      schemaVersion: factsSchemaVersion,
-      scope: reading.target.scope,
-      target: {
-        type: reading.target.type,
-        id: reading.target.name,
-        displayName: reading.target.displayName,
-      },
-      data,
-    },
-    run: {
-      id: `fact_run_${reading.target.name}_${stamp}`,
-      snapshotId,
-      startedAt: reading.startedAt.toISOString(),
-      finishedAt: new Date().toISOString(),
-      status: factRunStatus(data),
-      attempt: reading.attempt ?? 1,
-    },
-  };
-}
-
-/**
  * Keys a snapshot may never carry.
  *
- * A snapshot says what a machine is. Why it was read, how confident anyone is
- * about it and where it came from are properties of the run that read it, and
- * letting them into the snapshot is how a snapshot stops being comparable to
- * the next one.
+ * A snapshot says what a machine is. Why it was read, how confident anyone is about it and where
+ * it came from are properties of the run that read it, and letting them into the snapshot is how
+ * a snapshot stops being comparable to the next one.
  */
 const forbiddenSnapshotKeys = new Set([
   "profile",
@@ -95,48 +61,73 @@ export class FactCollectionValidationError extends Error {
 }
 
 /**
- * The only way to get a fact collection.
+ * The only way to get a read machine, and the only place it is checked.
  *
- * Every rule that has to hold of a collection is checked here and the result is
- * frozen, so a collection cannot exist in an invalid state and cannot be edited
- * into one afterwards. Anything downstream — a requirement check, a stored
- * snapshot, a printed report — can then read it without re-validating.
+ * Everything that turns a reading into a snapshot happens here: its identity, the schema it
+ * claims, which machine it is about, and the outcome of the run. Then every rule that has to hold
+ * is checked and the result is frozen, so a snapshot cannot exist in an invalid state and cannot
+ * be edited into one afterwards — anything downstream reads it without checking again.
+ *
+ * The rules were once checked over a list instead, which guarded nothing: no rule spans two
+ * machines, and a caller reading several assembled the list itself, so the list that reached a
+ * requirement check had never been near the check or the freeze.
+ *
+ * The names are stamped from the start of the run, so the same reading asked for twice at the same
+ * instant is the same snapshot, and two readings never collide.
  */
-export function createFactCollection(items: readonly FactCollectionItem[]): FactCollection {
+export function createFactCollectionItem(reading: FactReading): FactCollectionItem {
+  const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
+  const snapshotId = `snap_${reading.target.name}_${stamp}`;
+  const data = { ...reading.data, transports: reading.transports };
+  const item: FactCollectionItem = {
+    snapshot: {
+      id: snapshotId,
+      schemaVersion: factsSchemaVersion,
+      scope: reading.target.scope,
+      target: {
+        type: reading.target.type,
+        id: reading.target.name,
+        displayName: reading.target.displayName,
+      },
+      data,
+    },
+    run: {
+      id: `fact_run_${reading.target.name}_${stamp}`,
+      snapshotId,
+      startedAt: reading.startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: factRunStatus(data),
+      attempt: reading.attempt ?? 1,
+    },
+  };
+
+  verify(item);
+
+  return deepFreeze(item);
+}
+
+function verify(item: FactCollectionItem): void {
   const issues: string[] = [];
 
-  if (items.length === 0) {
-    issues.push("FactCollection must contain at least one snapshot");
+  if (item.run.snapshotId !== item.snapshot.id) {
+    issues.push("run.snapshotId must match snapshot.id");
   }
 
-  items.forEach((item, index) => {
-    const prefix = `items.${index}`;
-
-    if (item.run.snapshotId !== item.snapshot.id) {
-      issues.push(`${prefix}.run.snapshotId must match ${prefix}.snapshot.id`);
+  for (const key of forbiddenSnapshotKeys) {
+    if (hasOwn(item.snapshot, key)) {
+      issues.push(`snapshot must not contain ${key}`);
     }
+  }
 
-    for (const key of forbiddenSnapshotKeys) {
-      if (hasOwn(item.snapshot, key)) {
-        issues.push(`${prefix}.snapshot must not contain ${key}`);
-      }
-    }
-
-    // An error belongs to the section that failed, so that the sections which
-    // answered stay usable. A top-level bag of errors loses that.
-    if (isRecord(item.snapshot.data) && hasOwn(item.snapshot.data, "errors")) {
-      issues.push(`${prefix}.snapshot.data must not contain top-level errors`);
-    }
-  });
+  // An error belongs to the section that failed, so that the sections which answered stay usable.
+  // A top-level bag of errors loses that.
+  if (isRecord(item.snapshot.data) && hasOwn(item.snapshot.data, "errors")) {
+    issues.push("snapshot.data must not contain top-level errors");
+  }
 
   if (issues.length > 0) {
     throw new FactCollectionValidationError(issues);
   }
-
-  return deepFreeze(items.map((item) => ({
-    snapshot: item.snapshot,
-    run: item.run,
-  })));
 }
 
 function hasOwn(value: object, key: string): boolean {

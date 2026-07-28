@@ -68,10 +68,9 @@ targets:
   it("collects host facts with nothing declared, and keeps the result", async () => {
     const output = await captureCli(["facts", "collect", "host", "--json"]);
     const json = JSON.parse(output.stdout);
-    const data = json.facts[0].snapshot.data;
+    const data = json.facts.snapshot.data;
 
     expect(output.exitCode).toBe(0);
-    expect(json.facts).toHaveLength(1);
     expect(data.os.name).not.toBe("");
     expect(Object.keys(data.processes).length).toBeGreaterThan(0);
     // Nothing was asked about by name, so nothing is answered by name.
@@ -79,8 +78,8 @@ targets:
     expect(data.paths).toEqual({});
     expect(json.storage.resultPath).toContain("/.openstrap/runs/facts/");
     expect(existsSync(json.storage.resultPath)).toBe(true);
-    expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).facts[0].snapshot.id)
-      .toBe(json.facts[0].snapshot.id);
+    expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).facts.snapshot.id)
+      .toBe(json.facts.snapshot.id);
   });
 
   it("prints what it read", async () => {
