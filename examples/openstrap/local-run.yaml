@@ -15,13 +15,6 @@ requirements:
         ready: true
         version: ">=18.0.0"
 
-  - id: local-transport
-    target: local
-    transports:
-      local:
-        status: present
-        ready: true
-
   - id: resources
     target: local
     cpu:

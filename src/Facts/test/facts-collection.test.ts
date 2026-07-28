@@ -72,36 +72,17 @@ describe("reading a machine", () => {
     expect(facts[0]!.run.status).toBe("success");
   });
 
-  it("records how the machine was reached, which no reading can know", async () => {
+  it("names no channel when it opened none", async () => {
     const facts = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });
-    const data = facts[0]!.snapshot.data as { transports: Record<string, { type: string; ready: boolean }> };
+    const data = facts[0]!.snapshot.data as { transports: Record<string, unknown> };
 
-    expect(data.transports.local).toMatchObject({ status: "present", type: "local", ready: true });
-  });
-
-  it("says nothing about how a channel authenticated unless it was told", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "guest", scope: "guest", type: "vm", transport: "ssh" },
-      declare: { sections: ["os"] },
-    });
-    const data = facts[0]!.snapshot.data as { transports: Record<string, { authMethods?: string[] }> };
-
-    // Naming the channel `ssh` is not evidence that a key was used. A requirement
-    // written about key-only login has to fail here rather than pass on a guess.
-    expect(data.transports.ssh!.authMethods).toBeUndefined();
-  });
-
-  it("records the authentication the caller reported, verbatim", async () => {
-    const facts = await new Facts().collect({
-      target: { name: "guest", scope: "guest", type: "vm", transport: "ssh", authMethods: ["publickey"] },
-      declare: { sections: ["os"] },
-    });
-    const data = facts[0]!.snapshot.data as { transports: Record<string, { authMethods?: string[] }> };
-
-    expect(data.transports.ssh!.authMethods).toEqual(["publickey"]);
+    // Reading in process opens nothing, so there is nothing to report. A `local`
+    // transport written here would be an invention, and a requirement about it
+    // used to pass against exactly that.
+    expect(data.transports).toEqual({});
   });
 
   it("reads the machine it is running on when given no transport", async () => {

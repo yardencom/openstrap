@@ -5,7 +5,7 @@ import { DeclaredFacts } from "./Definition/DeclaredFacts.js";
 import { FactsDefinitionReader } from "./Definition/FactsDefinitionReader.js";
 import { createFactCollection, type FactCollection } from "./Domain/FactCollection.js";
 import type { DefinitionFactOrder, FactOrder } from "./Domain/FactOrder.js";
-import type { FactData, FactRunStatus } from "./Domain/FactSnapshot.js";
+import { factRunStatus, type TransportFact } from "./Domain/FactSnapshot.js";
 import { LocalReading } from "./Reading/LocalReading.js";
 import { RemoteReading } from "./Reading/RemoteReading.js";
 import type { SystemReading } from "./Reading/SystemReading.js";
@@ -39,6 +39,7 @@ export type DefinedFacts = {
  */
 export class Facts {
   private readonly reading: SystemReading;
+  private readonly channelWasOpened: boolean;
 
   /**
    * @param transport How to reach the machine. Omitted for the machine openstrap
@@ -46,6 +47,7 @@ export class Facts {
    * so there is none to pass.
    */
   constructor(transport?: Transport) {
+    this.channelWasOpened = transport !== undefined;
     this.reading = transport === undefined ? new LocalReading() : new RemoteReading(transport);
   }
 
@@ -66,14 +68,14 @@ export class Facts {
           id: order.target.name,
           displayName: order.target.displayName,
         },
-        data: this.withTransport(data, order),
+        data: { ...data, transports: this.channel(order) },
       },
       run: {
         id: `fact_run_${order.target.name}_${stamp}`,
         snapshotId,
         startedAt: startedAt.toISOString(),
         finishedAt: new Date().toISOString(),
-        status: runStatus(data),
+        status: factRunStatus(data),
         attempt: order.attempt ?? 1,
       },
     }]);
@@ -112,60 +114,31 @@ export class Facts {
   }
 
   /**
-   * How the machine was reached, recorded beside what was found on it.
+   * The channel this snapshot was read through, when there was one.
    *
-   * No reading can work this out: the machine does not know how anyone got in.
-   * It matters because a requirement can be written about the channel itself —
-   * "this target is reachable over ssh with a key" — and because two snapshots
-   * are only comparable when they were taken the same way.
+   * No reading can work this out: the machine does not know how anyone got in. It
+   * matters because a requirement can be written about the channel itself, and
+   * because two snapshots are only comparable when they were taken the same way.
    *
-   * Only what the caller reported is recorded. This used to write
-   * `authMethods: ["publickey"]` whenever the transport was named `ssh`, which
-   * made `key-only-login` check a value openstrap had written from the blueprint's
-   * own text: it would have passed on a connection authenticated by password.
+   * `present` and `ready` are evidence rather than assertion — this runs only after
+   * a reading came back through that channel, and a channel that was not there
+   * would have thrown instead. There is nothing here when openstrap read the
+   * machine in its own process: no channel was opened, so naming one would be
+   * inventing it, and a requirement about a `local` transport was passing against
+   * exactly that invention.
    */
-  private withTransport(data: FactData, order: FactOrder): FactData {
+  private channel(order: FactOrder): Record<string, TransportFact> {
+    if (!this.channelWasOpened) {
+      return {};
+    }
+
     return {
-      ...data,
-      transports: {
-        [order.target.transport]: {
-          status: "present",
-          type: order.target.transport,
-          ready: true,
-          authMethods: order.target.authMethods === undefined ? undefined : [...order.target.authMethods],
-        },
+      [order.target.transport]: {
+        status: "present",
+        type: order.target.transport,
+        ready: true,
+        authMethods: order.target.authMethods === undefined ? undefined : [...order.target.authMethods],
       },
     };
   }
-
-}
-
-/**
- * Whether the run got everything it was asked for.
- *
- * A machine that could not be read at all never reaches this point — that is an
- * exception, because there is no snapshot to report. What is left is a machine
- * that answered, where some declared thing failed: a command that would not run,
- * a path that failed what was required of it, a user found under another id. The
- * snapshot is still usable, so the run is a warning rather than a failure, and the
- * reason sits on the section that failed.
- *
- * Found by looking, not by a list of sections to look in. A list is a thing to
- * forget: `users` was added to the model and not to the list, and a snapshot with a
- * failed user fact in it reported a clean run.
- */
-function runStatus(data: FactData): FactRunStatus {
-  return reportsAnError(data) ? "warning" : "success";
-}
-
-function reportsAnError(value: unknown): boolean {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
-    return true;
-  }
-
-  return Object.values(value).some((property) => reportsAnError(property));
 }

@@ -49,11 +49,11 @@ targets:
   local: {}
 
 requirements:
-  - id: local-transport
+  - id: resources
     target: local
-    transports:
-      local:
-        ready: true
+    cpu:
+      cores:
+        minimum: 1
 `,
       );
 
