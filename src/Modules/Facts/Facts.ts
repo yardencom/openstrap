@@ -40,15 +40,13 @@ export class Facts {
     const startedAt = order.now ?? new Date();
     const data = await this.reading.read(order.declare ?? {});
 
-    // Both ends of the reading are measured here, because this is what waited for it.
-    return new FactSnapshot({
-      target: order.target,
-      data,
-      transports: this.transports(order),
-      startedAt,
-      finishedAt: new Date(),
-      attempt: order.attempt,
-    });
+    // Both ends of the reading are measured here, because this is what waited for it, and the
+    // channel is recorded here because this is what opened it.
+    return new FactSnapshot(
+      order.target,
+      { ...data, transports: this.transports(order) },
+      { startedAt, finishedAt: new Date(), attempt: order.attempt },
+    );
   }
 
   /**

@@ -1,20 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { FactSnapshot, type FactReading } from "../Domain/FactSnapshot.js";
+import { FactSnapshot } from "../Domain/FactSnapshot.js";
+import type { FactData } from "../Domain/FactModel.js";
 import { Facts } from "../Facts.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
 describe("making a snapshot", () => {
   it("names it after the machine and the moment the reading started", () => {
-    const snapshot = new FactSnapshot(reading());
+    const snapshot = snapshotOf();
 
     expect(snapshot.id).toBe("snap_host_20260608T100000000Z");
     expect(snapshot.schemaVersion).toBe("facts.v1");
   });
 
   it("says which machine it is about, and how the reading went", () => {
-    const snapshot = new FactSnapshot(reading());
+    const snapshot = snapshotOf();
 
     expect(snapshot.scope).toBe("host");
     expect(snapshot.target).toEqual({ type: "host", id: "host", displayName: undefined });
@@ -27,27 +28,18 @@ describe("making a snapshot", () => {
   });
 
   it("cannot be edited after it is made", () => {
-    const snapshot = new FactSnapshot(reading());
+    const snapshot = snapshotOf();
 
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.data)).toBe(true);
     expect(Object.isFrozen(snapshot.reading)).toBe(true);
   });
 
-  it("records the channel it was read through", () => {
-    const snapshot = new FactSnapshot({
-      ...reading(),
-      transports: { ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } },
-    });
-
-    expect(snapshot.data.transports.ssh!.authMethods).toEqual(["publickey"]);
-  });
-
   it("calls a reading a warning when any section reports a failure", () => {
-    const failed = new FactSnapshot(reading({ users: { root: { status: "error", name: "root" } } }));
+    const failed = snapshotOf({ users: { root: { status: "error", name: "root" } } });
 
     expect(failed.reading.status).toBe("warning");
-    expect(new FactSnapshot(reading()).reading.status).toBe("success");
+    expect(snapshotOf().reading.status).toBe("success");
   });
 });
 
@@ -122,12 +114,9 @@ describe("reading a machine", () => {
   });
 });
 
-function reading(data: Record<string, unknown> = { arch: "x64" }): FactReading {
-  return {
-    target: host,
-    data: data as unknown as FactReading["data"],
-    transports: {},
+function snapshotOf(data: Record<string, unknown> = { arch: "x64" }): FactSnapshot {
+  return new FactSnapshot(host, data as unknown as FactData, {
     startedAt: new Date("2026-06-08T10:00:00.000Z"),
     finishedAt: new Date("2026-06-08T10:00:02.000Z"),
-  };
+  });
 }

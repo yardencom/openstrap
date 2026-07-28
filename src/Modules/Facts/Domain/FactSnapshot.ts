@@ -1,4 +1,4 @@
-import type { FactData, TransportFact } from "./FactModel.js";
+import type { FactData } from "./FactModel.js";
 import type { FactTarget } from "./FactTarget.js";
 
 /** Which shape of snapshot this is. Every reader compares against it before trusting one. */
@@ -19,23 +19,6 @@ export type Reading = {
   finishedAt: string;
   status: ReadingStatus;
   attempt: number;
-};
-
-/**
- * What a reading came back with, before it is anything anyone can refer to.
- *
- * Both times are given rather than taken from the clock here: a snapshot is made after the reading
- * has finished, so it could observe the end and never the beginning, and half a measurement taken
- * by whoever measured and half invented afterwards is not a measurement.
- */
-export type FactReading = {
-  target: FactTarget;
-  data: FactData;
-  /** The channel it was read through; empty when it was read in openstrap's own process. */
-  transports: Record<string, TransportFact>;
-  startedAt: Date;
-  finishedAt: Date;
-  attempt?: number;
 };
 
 /**
@@ -67,23 +50,30 @@ export class FactSnapshot {
   readonly data: FactData;
   readonly reading: Reading;
 
-  constructor(reading: FactReading) {
+  /**
+   * @param reading When the reading ran and which attempt it was. Both times are given rather than
+   * taken from the clock here: a snapshot is made after the reading has finished, so it could
+   * observe the end and never the beginning, and half a measurement is not a measurement. The
+   * outcome is not given, because it follows from the data and nobody should be able to disagree
+   * with it.
+   */
+  constructor(
+    target: FactTarget,
+    data: FactData,
+    reading: { startedAt: Date; finishedAt: Date; attempt?: number },
+  ) {
     // Named from the start of the reading, so the same machine read twice at the same instant is the
     // same snapshot and two readings never collide.
     const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
 
-    this.id = `snap_${reading.target.name}_${stamp}`;
-    this.scope = reading.target.scope;
-    this.target = {
-      type: reading.target.type,
-      id: reading.target.name,
-      displayName: reading.target.displayName,
-    };
-    this.data = { ...reading.data, transports: reading.transports };
+    this.id = `snap_${target.name}_${stamp}`;
+    this.scope = target.scope;
+    this.target = { type: target.type, id: target.name, displayName: target.displayName };
+    this.data = data;
     this.reading = {
       startedAt: reading.startedAt.toISOString(),
       finishedAt: reading.finishedAt.toISOString(),
-      status: this.status(this.data),
+      status: this.status(data),
       attempt: reading.attempt ?? 1,
     };
 
