@@ -1,7 +1,7 @@
 import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
 import { createCliRuntime } from "./CliRuntime.js";
 import { CliErrors } from "./Errors.js";
-import type { CliCommand, CommandContext, CommandOutcome } from "./application/CliCommand.js";
+import type { CommandContext, CommandOutcome } from "./application/CliCommand.js";
 import { ConnectCommand } from "./application/ConnectCommand.js";
 import { CreateCommand } from "./application/CreateCommand.js";
 import { FactsCollectCommand } from "./application/FactsCollectCommand.js";
@@ -65,20 +65,12 @@ export async function main(argv: readonly string[], io: CliIo = {
 function run(args: ParsedArgs, context: CommandContext): Promise<CommandOutcome> {
   switch (args.command) {
     case "run":
-      return execute(new RunCommand(), args, context);
+      return new RunCommand().execute(args, context);
     case "create":
-      return execute(new CreateCommand(), args, context);
+      return new CreateCommand().execute(args, context);
     case "connect":
-      return execute(new ConnectCommand(), args, context);
+      return new ConnectCommand().execute(args, context);
     case "facts.collect":
-      return execute(new FactsCollectCommand(), args, context);
+      return new FactsCollectCommand().execute(args, context);
   }
-}
-
-function execute<TArgs extends ParsedArgs>(
-  command: CliCommand<TArgs>,
-  args: TArgs,
-  context: CommandContext,
-): Promise<CommandOutcome> {
-  return command.execute(args, context);
 }
