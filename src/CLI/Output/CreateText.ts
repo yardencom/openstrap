@@ -9,7 +9,7 @@ import type { CommandText } from "./CommandText.js";
  * "created".
  */
 export class CreateText implements CommandText<CreatedTarget> {
-  of(result: CreatedTarget): string {
+  describe(result: CreatedTarget): string {
     const lines: string[] = [];
 
     lines.push(`OpenStrap create: ${result.created ? "created" : "already present"}`);

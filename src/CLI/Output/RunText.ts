@@ -12,7 +12,7 @@ import type { CommandText } from "./CommandText.js";
  * a hundred lines saying so would bury the one that did not.
  */
 export class RunText implements CommandText<RunResult> {
-  of(result: RunResult): string {
+  describe(result: RunResult): string {
     const lines: string[] = [];
 
     lines.push(`OpenStrap run: ${result.requirementRun.status}`);

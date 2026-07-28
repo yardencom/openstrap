@@ -1,3 +1,4 @@
+import { CliUsageError } from "./CliUsageError.js";
 import type { CommandArgsParser, ParsedArgs } from "./types.js";
 import { ConnectArgsParser } from "./parsers/ConnectArgs.js";
 import { CreateArgsParser } from "./parsers/CreateArgs.js";
@@ -24,15 +25,23 @@ export class CliArgsParser {
     const [, , command, ...args] = argv;
 
     if (!command) {
-      throw new Error("Missing command");
+      throw new CliUsageError("Missing command");
     }
 
     const parser = this.commandParsers.find((candidate) => candidate.command === command);
 
     if (!parser) {
-      throw new Error(`Unknown command "${command}"`);
+      throw new CliUsageError(`Unknown command "${command}"`);
     }
 
-    return parser.parse(args);
+    // Everything a parser rejects is the command line being wrong, so it all reads the
+    // same way to the caller: the complaint, then what is on offer.
+    try {
+      return parser.parse(args);
+    } catch (error) {
+      throw error instanceof CliUsageError
+        ? error
+        : new CliUsageError(error instanceof Error ? error.message : String(error));
+    }
   }
 }

@@ -1,19 +1,21 @@
 import { OpenStrapPluginError } from "../Plugin/index.js";
+import { CliUsageError } from "./Arguments/index.js";
 
 export class CliErrors {
+  /**
+   * How an error reads on the command line.
+   *
+   * A mistyped command line is followed by what is on offer; anything else is not, because
+   * a machine that would not answer is not a question of syntax and the usage would bury
+   * the reason.
+   */
   format(error: unknown): string {
-    if (error instanceof OpenStrapPluginError) {
-      return error.message;
-    }
+    const message = error instanceof Error ? error.message : String(error);
 
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return String(error);
+    return error instanceof CliUsageError ? `${message}\n\n${this.usage()}` : message;
   }
 
-  usage(): string {
+  private usage(): string {
     return [
       "Usage:",
       "  openstrap run [configPath] [--json] [--runtime-config path] [--plugin specifier]",
