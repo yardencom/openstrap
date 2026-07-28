@@ -8,8 +8,6 @@ import { runSucceeded, type RequirementRun } from "../../Modules/Requirements/in
 import { RunLock } from "../../RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../Arguments/types.js";
-import { renderCreateOutput } from "../Output/CreateOutput.js";
-import { asJson } from "../Output/JsonOutput.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 export class UnknownTargetError extends Error {
@@ -26,7 +24,17 @@ export class MissingProviderError extends Error {
   }
 }
 
-export type CreatedTarget = CreateMachineResult & { requirementRun?: RequirementRun };
+/**
+ * What creating a target produced.
+ *
+ * The target's name is part of it: anything reading this result needs to know which
+ * machine it is about, and asking the caller to remember alongside is how a report ends
+ * up naming the wrong one.
+ */
+export type CreatedTarget = CreateMachineResult & {
+  target: string;
+  requirementRun?: RequirementRun;
+};
 
 /**
  * `openstrap create` — bring a declared target into being and check what it promised.
@@ -35,17 +43,17 @@ export type CreatedTarget = CreateMachineResult & { requirementRun?: Requirement
  * a port and writes provider state, and two runs doing that at once would each believe
  * they owned both.
  */
-export class CreateCommand implements CliCommand<CreateArgs> {
+export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
   constructor(
     private readonly blueprints = new Blueprints(),
     private readonly stateHome = new StateHome(),
   ) {}
 
-  async execute(args: CreateArgs, context: CommandContext): Promise<CommandOutcome> {
+  async execute(args: CreateArgs, context: CommandContext): Promise<CommandOutcome<CreatedTarget>> {
     const created = await this.create(args, context);
 
     return {
-      output: args.json ? asJson(created) : renderCreateOutput(args.target, created),
+      result: created,
       exitCode: runSucceeded(created.requirementRun?.status) ? 0 : 1,
     };
   }
@@ -83,7 +91,7 @@ export class CreateCommand implements CliCommand<CreateArgs> {
       // Nothing was required of it, so there is nothing to verify and nothing to
       // report: the machine is up, which is all that was asked.
       if (target.requirements.length === 0) {
-        return created;
+        return { ...created, target: args.target };
       }
 
       const identity = store.readSecretReference(args.target, "ssh-identity");
@@ -96,7 +104,7 @@ export class CreateCommand implements CliCommand<CreateArgs> {
         runId: created.runId,
       });
 
-      return { ...created, requirementRun: verified.requirementRun };
+      return { ...created, target: args.target, requirementRun: verified.requirementRun };
     } finally {
       store.close();
     }

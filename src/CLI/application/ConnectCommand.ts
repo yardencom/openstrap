@@ -10,10 +10,16 @@ import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js
  * the machine printed, unchanged and undecorated, and exits with the code the machine
  * exited with. Anything added around that would be openstrap talking over the answer.
  */
-export class ConnectCommand implements CliCommand<ConnectArgs> {
+/** What reaching a machine produced: what it said, and how it ended. */
+export type ConnectResult = {
+  output: string;
+  exitCode: number;
+};
+
+export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
   constructor(private readonly stateHome = new StateHome()) {}
 
-  async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome> {
+  async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome<ConnectResult>> {
     const runtime = await context.runtime();
     const store = new SqliteStateStore(this.stateHome.database());
 
@@ -36,25 +42,29 @@ export class ConnectCommand implements CliCommand<ConnectArgs> {
     }
   }
 
-  private reached(target: string, access: Connection["access"]): CommandOutcome {
+  private reached(target: string, access: Connection["access"]): CommandOutcome<ConnectResult> {
     return {
-      output: [
+      result: {
+        output: [
         `Connected to ${target} over ${access.transport}.`,
         `  ${access.endpoint.user}@${access.endpoint.host}:${access.endpoint.port}`,
         "",
-        `Run a command with: openstrap connect ${target} --run '<command>'`,
-        "",
-      ].join("\n"),
+          `Run a command with: openstrap connect ${target} --run '<command>'`,
+          "",
+        ].join("\n"),
+        exitCode: 0,
+      },
       exitCode: 0,
     };
   }
 
-  private async ran(connection: Connection, command: string): Promise<CommandOutcome> {
+  private async ran(connection: Connection, command: string): Promise<CommandOutcome<ConnectResult>> {
     const result = await connection.run(command);
+    const exitCode = result.exitCode ?? 1;
 
     return {
-      output: `${result.stdout}${result.stderr}`,
-      exitCode: result.exitCode ?? 1,
+      result: { output: `${result.stdout}${result.stderr}`, exitCode },
+      exitCode,
     };
   }
 }

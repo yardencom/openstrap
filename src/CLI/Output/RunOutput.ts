@@ -2,7 +2,7 @@ import type {
   RequirementCheckNode,
   RequirementLeafCheck,
 } from "../../Modules/Requirements/index.js";
-import type { OpenStrapRunOutput } from "../application/RunCommand.js";
+import type { RunResult } from "../application/RunCommand.js";
 
 /**
  * What a run found, and only what went wrong.
@@ -10,7 +10,7 @@ import type { OpenStrapRunOutput } from "../application/RunCommand.js";
  * A passing check needs no line: the run's own status already says everything passed,
  * and a hundred lines saying so would bury the one that did not.
  */
-export function renderRunOutput(output: OpenStrapRunOutput): string {
+export function renderRunOutput(output: RunResult): string {
   const lines: string[] = [];
 
   lines.push(`OpenStrap run: ${output.requirementRun.status}`);

@@ -3,8 +3,6 @@ import { join } from "node:path";
 import { JsonFileExporter } from "../../Export/index.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs } from "../Arguments/types.js";
-import { renderFactsOutput } from "../Output/FactsOutput.js";
-import { asJson } from "../Output/JsonOutput.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
@@ -25,14 +23,14 @@ export type FactsCollectResult = {
  * blueprint intends are deliberately absent — `openstrap run` is the command that
  * compares, and this one only looks.
  */
-export class FactsCollectCommand implements CliCommand<FactsCollectArgs> {
+export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
   constructor(private readonly exporter = new JsonFileExporter()) {}
 
-  async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome> {
+  async execute(_args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
     const collected = await this.collect(context);
 
     return {
-      output: args.json ? asJson(collected) : renderFactsOutput(collected),
+      result: collected,
       // A machine that could not be read at all throws; a run that came back with a
       // failed section is still a result, and the caller has to be able to notice.
       exitCode: collected.facts.some((item) => item.run.status === "error") ? 1 : 0,

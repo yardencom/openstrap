@@ -15,20 +15,23 @@ export type CommandContext = {
   runtime(): Promise<OpenStrapRuntime>;
 };
 
-/** What a command leaves behind: something to print, and how the process should end. */
-export type CommandOutcome = {
-  output: string;
+/** What a command produces, and what its outcome means for the process. */
+export type CommandOutcome<TResult> = {
+  result: TResult;
   exitCode: number;
 };
 
 /**
  * One command of the command line.
  *
- * Every command decides everything about itself: what it does, how its result reads,
- * and what its outcome means for the exit code. The dispatcher only picks which one
- * runs — it cannot render, and it cannot judge, because a command that needed the
- * dispatcher's help with either would have put its own rules somewhere else.
+ * A command does its work and says what came of it. It does not know whether the answer
+ * is going to be read by a person or by a program, and it must not: `--json` is a
+ * question about presentation, and a command that answered it would be deciding how it
+ * looks as well as what it is.
+ *
+ * The exit code is the command's own, because only the command knows what its result
+ * means. Turning a result into text is somebody else's job entirely.
  */
-export interface CliCommand<TArgs extends ParsedArgs> {
-  execute(args: TArgs, context: CommandContext): Promise<CommandOutcome>;
+export interface CliCommand<TArgs extends ParsedArgs, TResult> {
+  execute(args: TArgs, context: CommandContext): Promise<CommandOutcome<TResult>>;
 }

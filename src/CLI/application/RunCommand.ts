@@ -8,13 +8,11 @@ import {
   type RequirementRun,
 } from "../../Modules/Requirements/index.js";
 import type { RunArgs } from "../Arguments/types.js";
-import { renderRunOutput } from "../Output/RunOutput.js";
-import { asJson } from "../Output/JsonOutput.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 
-export type OpenStrapRunOutput = {
+export type RunResult = {
   targets: Array<{
     name: string;
     scope: string;
@@ -32,22 +30,22 @@ export type OpenStrapRunOutput = {
  * machine is never answered by another machine's snapshot: the evaluator is handed only
  * the facts of the target it is judging.
  */
-export class RunCommand implements CliCommand<RunArgs> {
+export class RunCommand implements CliCommand<RunArgs, RunResult> {
   constructor(
     private readonly blueprints = new Blueprints(),
     private readonly evaluator = new RequirementEvaluator(),
   ) {}
 
-  async execute(args: RunArgs, context: CommandContext): Promise<CommandOutcome> {
+  async execute(args: RunArgs, context: CommandContext): Promise<CommandOutcome<RunResult>> {
     const run = await this.run(args, context);
 
     return {
-      output: args.json ? asJson(run) : renderRunOutput(run),
+      result: run,
       exitCode: runSucceeded(run.requirementRun.status) ? 0 : 1,
     };
   }
 
-  private async run(args: RunArgs, context: CommandContext): Promise<OpenStrapRunOutput> {
+  private async run(args: RunArgs, context: CommandContext): Promise<RunResult> {
     const blueprint = this.blueprints.load({
       explicitPath: args.configPath,
       workspaceRoot: context.workspaceRoot,

@@ -7,7 +7,7 @@ import type { CreatedTarget } from "../application/CreateCommand.js";
  * is the answer to running the command twice and a reader has to be able to tell
  * that from "created".
  */
-export function renderCreateOutput(name: string, result: CreatedTarget): string {
+export function renderCreateOutput(result: CreatedTarget): string {
   const lines: string[] = [];
 
   lines.push(`OpenStrap create: ${result.created ? "created" : "already present"}`);
@@ -24,7 +24,7 @@ export function renderCreateOutput(name: string, result: CreatedTarget): string 
   lines.push(`  ${result.image.url}`);
   lines.push(`  sha256 ${result.image.sha256}`);
   lines.push("");
-  lines.push(`Machine: ${name} (${result.handle.id})`);
+  lines.push(`Machine: ${result.target} (${result.handle.id})`);
 
   if (result.requirementRun) {
     lines.push("");
@@ -37,7 +37,7 @@ export function renderCreateOutput(name: string, result: CreatedTarget): string 
 
   lines.push("");
   lines.push(`Access:  ssh ${result.endpoint.user}@${result.endpoint.host} -p ${result.endpoint.port}`);
-  lines.push(`         openstrap connect ${name}`);
+  lines.push(`         openstrap connect ${result.target}`);
   lines.push("");
 
   return lines.join("\n");
