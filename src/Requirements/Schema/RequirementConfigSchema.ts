@@ -1,5 +1,5 @@
 import type { ConfigSchema, ConfigSchemaNode } from "../../ConfigCore/index.js";
-import type { Requirement, TargetlessRequirement } from "../Domain/Requirements.js";
+import type { TargetlessRequirement } from "../Domain/Requirements.js";
 
 const factBlockNames = [
   "os",
@@ -26,20 +26,6 @@ const factBlockNames = [
 
 export class RequirementConfigSchema {
   constructor(private readonly schema: ConfigSchema) {}
-
-  withTarget(): ConfigSchemaNode<Requirement> {
-    return this.schema.strictObject(
-      {
-        id: identifier(this.schema),
-        target: identifier(this.schema),
-        optional: this.schema.optional(this.schema.boolean()),
-        ...this.factBlocks(),
-      },
-      {
-        requireAtLeastOneField: [...factBlockNames],
-      },
-    ) as ConfigSchemaNode<Requirement>;
-  }
 
   withoutTarget(): ConfigSchemaNode<TargetlessRequirement> {
     return this.schema.strictObject(

@@ -1,15 +1,14 @@
-import type { Requirement, TargetlessRequirement } from "../../Requirements/index.js";
 import type { Blueprint, BlueprintTarget, TargetScope, TargetType } from "../Domain/Blueprint.js";
 import type { BlueprintConfig, BlueprintTargetConfig } from "../Schema/BlueprintConfig.js";
 
 /**
  * Turns the blueprint a developer wrote into the targets a run works with.
  *
- * Requirements are written once at the top level and name their target, so
- * they are grouped here rather than repeated under every target.
+ * Only what can be derived is added: which kind of machine a target is, and how it is
+ * reached. Requirements are already where they belong — inside the target they are
+ * about — so nothing is regrouped and nothing can point at a target that is not there.
  */
 export function declaredTargets(config: BlueprintConfig): Blueprint {
-  const requirements = groupRequirementsByTarget(config);
   const targets: Record<string, BlueprintTarget> = {};
 
   for (const [name, target] of Object.entries(config.targets)) {
@@ -21,46 +20,11 @@ export function declaredTargets(config: BlueprintConfig): Blueprint {
       provider: target.provider,
       image: target.image,
       size: target.size,
-      requirements: requirements.get(name) ?? [],
+      requirements: target.requirements ?? [],
     };
   }
 
   return { targets };
-}
-
-/**
- * Reports requirements that name a target the blueprint does not declare.
- *
- * The engine never guesses a target, so an unknown name is an error rather
- * than a requirement that quietly evaluates against nothing.
- */
-export function unknownRequirementTargets(config: BlueprintConfig): readonly string[] {
-  return [
-    ...new Set(
-      config.requirements
-        .filter((requirement) => !Object.hasOwn(config.targets, requirement.target))
-        .map((requirement) => requirement.target),
-    ),
-  ];
-}
-
-function groupRequirementsByTarget(config: BlueprintConfig): Map<string, TargetlessRequirement[]> {
-  const grouped = new Map<string, TargetlessRequirement[]>();
-
-  for (const requirement of config.requirements) {
-    const existing = grouped.get(requirement.target) ?? [];
-
-    existing.push(withoutTarget(requirement));
-    grouped.set(requirement.target, existing);
-  }
-
-  return grouped;
-}
-
-function withoutTarget(requirement: Requirement): TargetlessRequirement {
-  const { target: _target, ...rest } = requirement;
-
-  return rest;
 }
 
 /**

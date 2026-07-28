@@ -5,30 +5,26 @@
 targets:
   local:
     displayName: Local machine
+    requirements:
+      - id: node-runtime
+        runtimes:
+          node:
+            status: present
+            ready: true
+            version: ">=18.0.0"
 
-requirements:
-  - id: node-runtime
-    target: local
-    runtimes:
-      node:
-        status: present
-        ready: true
-        version: ">=18.0.0"
+      - id: resources
+        cpu:
+          cores:
+            minimum: 1
+        memory:
+          totalBytes:
+            minimum: 1
 
-  - id: resources
-    target: local
-    cpu:
-      cores:
-        minimum: 1
-    memory:
-      totalBytes:
-        minimum: 1
-
-  - id: workspace-ready
-    target: local
-    paths:
-      workspace:
-        status: present
-        exists: true
-        type: directory
-        readable: true
+      - id: workspace-ready
+        paths:
+          workspace:
+            status: present
+            exists: true
+            type: directory
+            readable: true

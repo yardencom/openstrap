@@ -1,11 +1,5 @@
 export type CheckStatus = "passed" | "failed" | "error" | "skipped";
 
-export type Requirement = {
-  id: string;
-  target: string;
-  optional?: boolean;
-} & Record<string, unknown>;
-
 export type TargetlessRequirement = {
   id: string;
   optional?: boolean;

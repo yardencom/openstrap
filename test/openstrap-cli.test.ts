@@ -46,14 +46,12 @@ describe("openstrap CLI", () => {
         join(directory, "openstrap.yaml"),
         `
 targets:
-  local: {}
-
-requirements:
-  - id: resources
-    target: local
-    cpu:
-      cores:
-        minimum: 1
+  local:
+    requirements:
+      - id: resources
+        cpu:
+          cores:
+            minimum: 1
 `,
       );
 

@@ -8,70 +8,64 @@ targets:
     transport: ssh
     provider: utm
     image: ubuntu:24.04
+    requirements:
+      # The machine is what was asked for, read from the machine itself rather than
+      # from the image we chose.
+      - id: ubuntu-2404-arm64
+        os:
+          name:
+            const: ubuntu
+          version:
+            const: "24.04"
+        arch:
+          const: arm64
 
-requirements:
-  # The machine is what was asked for, read from the machine itself rather than
-  # from the image we chose.
-  - id: ubuntu-2404-arm64
-    target: ubuntu-vm
-    os:
-      name:
-        const: ubuntu
-      version:
-        const: "24.04"
-    arch:
-      const: arm64
+      # Reached over ssh, and by a key: the channel is a fact about the machine too,
+      # reported by the connector that opened it.
+      - id: key-only-login
+        transports:
+          ssh:
+            status: present
+            ready: true
+            authMethods:
+              const:
+                - publickey
 
-  # Reached over ssh, and by a key: the channel is a fact about the machine too.
-  - id: key-only-login
-    target: ubuntu-vm
-    transports:
-      ssh:
-        status: present
-        ready: true
-        authMethods:
-          const:
-            - publickey
+      - id: ssh-running
+        services:
+          ssh:
+            status: present
+            running: true
 
-  - id: ssh-running
-    target: ubuntu-vm
-    services:
-      ssh:
-        status: present
-        running: true
+      - id: passwordless-sudo
+        privileges:
+          sudo:
+            status: present
+            passwordless: true
 
-  - id: passwordless-sudo
-    target: ubuntu-vm
-    privileges:
-      sudo:
-        status: present
-        passwordless: true
+      - id: account-ready
+        paths:
+          home:
+            status: present
+            type: directory
+            writable: true
 
-  - id: account-ready
-    target: ubuntu-vm
-    paths:
-      home:
-        status: present
-        type: directory
-        writable: true
-
-  # The account cloud-init was told to make.
-  #
-  # Membership of `sudo` is deliberately not asserted: cloud-init grants sudo with
-  # a rule in /etc/sudoers.d, not with a group, and the facts say so — `id` on the
-  # machine reports `groups=1000(openstrap)` and `getent group sudo` is empty. What
-  # matters is that sudo works, which `passwordless-sudo` checks directly.
-  - id: openstrap-account
-    target: ubuntu-vm
-    users:
-      openstrap:
-        status: present
-        uid: 1000
-        shell:
-          const: /bin/bash
+      # The account cloud-init was told to make.
+      #
+      # Membership of `sudo` is deliberately not asserted: cloud-init grants sudo with
+      # a rule in /etc/sudoers.d, not with a group, and the facts say so — `id` on the
+      # machine reports `groups=1000(openstrap)` and `getent group sudo` is empty. What
+      # matters is that sudo works, which `passwordless-sudo` checks directly.
+      - id: openstrap-account
+        users:
+          openstrap:
+            status: present
+            uid: 1000
+            shell:
+              const: /bin/bash
+            groups:
+              contains: openstrap
         groups:
-          contains: openstrap
-    groups:
-      sudo:
-        status: present
-        gid: 27
+          sudo:
+            status: present
+            gid: 27

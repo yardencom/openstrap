@@ -6,10 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   Blueprints,
 } from "../index.js";
-import {
-  BlueprintReadError,
-  BlueprintTargetError,
-} from "../Application/BlueprintErrors.js";
+import { BlueprintReadError } from "../Application/BlueprintErrors.js";
 
 const blueprints = new Blueprints();
 
@@ -31,36 +28,42 @@ describe("Blueprint", () => {
       transport: "local",
     });
     expect(blueprint.targets.local!.requirements.map((requirement) => requirement.id)).toContain("node-runtime");
-    expect(blueprint.targets.local!.requirements.every((requirement) => "target" in requirement)).toBe(false);
   });
 
-  it("carries several targets and gives each one its own requirements", () => {
+  it("carries several targets, each with the requirements written inside it", () => {
     const blueprint = loadBlueprint(`
 targets:
   builder:
     displayName: Local machine
+    requirements:
+      - id: node-runtime
+        runtimes:
+          node:
+            ready: true
   ubuntu-vm:
     provider: utm
     image: ubuntu:24.04
     size: medium
-
-requirements:
-  - id: node-runtime
-    target: builder
-    runtimes:
-      node:
-        ready: true
-  - id: ssh-ready
-    target: ubuntu-vm
-    transports:
-      ssh:
-        status: present
-        ready: true
+    requirements:
+      - id: ssh-ready
+        transports:
+          ssh:
+            status: present
+            ready: true
 `);
 
     expect(Object.keys(blueprint.targets)).toEqual(["builder", "ubuntu-vm"]);
     expect(blueprint.targets.builder!.requirements.map((requirement) => requirement.id)).toEqual(["node-runtime"]);
     expect(blueprint.targets["ubuntu-vm"]!.requirements.map((requirement) => requirement.id)).toEqual(["ssh-ready"]);
+  });
+
+  it("accepts a target with nothing required of it", () => {
+    const blueprint = loadBlueprint(`
+targets:
+  app: {}
+`);
+
+    expect(blueprint.targets.app!.requirements).toEqual([]);
   });
 
   it("derives scope, type and transport instead of asking for them", () => {
@@ -70,13 +73,11 @@ targets:
     provider: utm
     image: ubuntu:24.04
     size: medium
-
-requirements:
-  - id: ssh-ready
-    target: ubuntu-vm
-    transports:
-      ssh:
-        ready: true
+    requirements:
+      - id: ssh-ready
+        transports:
+          ssh:
+            ready: true
 `);
 
     expect(blueprint.targets["ubuntu-vm"]).toMatchObject({
@@ -96,10 +97,46 @@ targets:
   app:
     scope: guest
     type: vm
+    requirements:
+      - id: node-runtime
+        runtimes:
+          node:
+            ready: true
+`),
+    ).toThrow(BlueprintReadError);
+  });
+
+  /**
+   * A requirement cannot name a target, because it is already inside one.
+   *
+   * This used to be a flat list where every requirement repeated the name of the
+   * target it was about, which made "a requirement pointing at a target nobody
+   * declared" a state the format allowed and the loader had to catch. Inside a
+   * target the name is redundant and the dangling reference is unwritable.
+   */
+  it("rejects a requirement that names a target", () => {
+    expect(() =>
+      loadBlueprint(`
+targets:
+  app:
+    requirements:
+      - id: node-runtime
+        target: app
+        runtimes:
+          node:
+            ready: true
+`),
+    ).toThrow(BlueprintReadError);
+  });
+
+  it("rejects requirements written outside a target", () => {
+    expect(() =>
+      loadBlueprint(`
+targets:
+  app: {}
 
 requirements:
   - id: node-runtime
-    target: app
     runtimes:
       node:
         ready: true
@@ -124,118 +161,62 @@ target:
     ).toThrow(BlueprintReadError);
   });
 
-  it("rejects a requirement that names a target the blueprint does not declare", () => {
+  it("rejects duplicate requirement ids within a target", () => {
     expect(() =>
       loadBlueprint(`
 targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    target: other
-    runtimes:
-      node:
-        ready: true
-`),
-    ).toThrow(BlueprintTargetError);
-  });
-
-  it("names the declared targets when a requirement points at nothing", () => {
-    expect(() =>
-      loadBlueprint(`
-targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    target: other
-    runtimes:
-      node:
-        ready: true
-`),
-    ).toThrow(/Declared targets: app/);
-  });
-
-  it("requires every requirement to name its target", () => {
-    expect(() =>
-      loadBlueprint(`
-targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    runtimes:
-      node:
-        ready: true
-`),
-    ).toThrow(BlueprintReadError);
-  });
-
-  it("rejects duplicate requirement ids", () => {
-    expect(() =>
-      loadBlueprint(`
-targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    target: app
-    runtimes:
-      node:
-        ready: true
-  - id: node-runtime
-    target: app
-    transports:
-      local:
-        ready: true
+  app:
+    requirements:
+      - id: node-runtime
+        runtimes:
+          node:
+            ready: true
+      - id: node-runtime
+        transports:
+          local:
+            ready: true
 `),
     ).toThrow(BlueprintReadError);
   });
 
   it("rejects backend and engine fields on requirements", () => {
-    expect(() =>
-      loadBlueprint(`
+    for (const field of ["backend: goss", "engine: cel"]) {
+      expect(() =>
+        loadBlueprint(`
 targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    target: app
-    backend: goss
-    runtimes:
-      node:
-        ready: true
+  app:
+    requirements:
+      - id: node-runtime
+        ${field}
+        runtimes:
+          node:
+            ready: true
 `),
-    ).toThrow(BlueprintReadError);
-
-    expect(() =>
-      loadBlueprint(`
-targets:
-  app: {}
-
-requirements:
-  - id: node-runtime
-    target: app
-    engine: cel
-    runtimes:
-      node:
-        ready: true
-`),
-    ).toThrow(BlueprintReadError);
+      ).toThrow(BlueprintReadError);
+    }
   });
 
   it("rejects requirement blocks that do not match facts sections", () => {
     expect(() =>
       loadBlueprint(`
 targets:
-  app: {}
+  app:
+    requirements:
+      - id: node-runtime
+        runtime:
+          node:
+            ready: true
+`),
+    ).toThrow(BlueprintReadError);
+  });
 
-requirements:
-  - id: node-runtime
-    target: app
-    runtime:
-      node:
-        ready: true
+  it("requires a requirement to say something about the machine", () => {
+    expect(() =>
+      loadBlueprint(`
+targets:
+  app:
+    requirements:
+      - id: says-nothing
 `),
     ).toThrow(BlueprintReadError);
   });
