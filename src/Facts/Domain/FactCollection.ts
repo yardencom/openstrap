@@ -1,4 +1,14 @@
-import type { FactRun, FactSnapshot } from "./FactSnapshot.js";
+import {
+  factRunStatus,
+  type FactData,
+  type FactRun,
+  type FactSnapshot,
+  type TransportFact,
+} from "./FactSnapshot.js";
+import type { FactTarget } from "./FactTarget.js";
+
+/** Which shape of snapshot this is. Every reader compares against it before trusting one. */
+export const factsSchemaVersion = "facts.v1";
 
 export type FactCollectionItem = {
   snapshot: FactSnapshot<unknown>;
@@ -7,6 +17,55 @@ export type FactCollectionItem = {
 
 /** Everything one collection run found, one item per machine read. */
 export type FactCollection = readonly FactCollectionItem[];
+
+/** One machine, as it was just read. */
+export type FactReading = {
+  target: FactTarget;
+  data: FactData;
+  /** The channel it was read through; empty when it was read in openstrap's own process. */
+  transports: Record<string, TransportFact>;
+  startedAt: Date;
+  attempt?: number;
+};
+
+/**
+ * A snapshot, paired with the run that produced it.
+ *
+ * Everything that makes a reading into a snapshot happens here: its identity, the
+ * schema it claims, which machine it is about, and the outcome of the run. It sits
+ * beside the collection because a snapshot never exists alone in this model — it is
+ * only ever half of an item, and the other half is how it came to be.
+ *
+ * The names are stamped from the start of the run, so the same reading asked for
+ * twice at the same instant is the same snapshot, and two readings never collide.
+ */
+export function createFactCollectionItem(reading: FactReading): FactCollectionItem {
+  const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
+  const snapshotId = `snap_${reading.target.name}_${stamp}`;
+  const data = { ...reading.data, transports: reading.transports };
+
+  return {
+    snapshot: {
+      id: snapshotId,
+      schemaVersion: factsSchemaVersion,
+      scope: reading.target.scope,
+      target: {
+        type: reading.target.type,
+        id: reading.target.name,
+        displayName: reading.target.displayName,
+      },
+      data,
+    },
+    run: {
+      id: `fact_run_${reading.target.name}_${stamp}`,
+      snapshotId,
+      startedAt: reading.startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: factRunStatus(data),
+      attempt: reading.attempt ?? 1,
+    },
+  };
+}
 
 /**
  * Keys a snapshot may never carry.

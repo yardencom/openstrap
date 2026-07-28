@@ -3,9 +3,13 @@ import { readFileSync } from "node:fs";
 import type { Transport } from "../Transport/index.js";
 import { DeclaredFacts } from "./Definition/DeclaredFacts.js";
 import { FactsDefinitionReader } from "./Definition/FactsDefinitionReader.js";
-import { createFactCollection, type FactCollection } from "./Domain/FactCollection.js";
+import {
+  createFactCollection,
+  createFactCollectionItem,
+  type FactCollection,
+} from "./Domain/FactCollection.js";
 import type { DefinitionFactOrder, FactOrder } from "./Domain/FactOrder.js";
-import { factRunStatus, type TransportFact } from "./Domain/FactSnapshot.js";
+import type { TransportFact } from "./Domain/FactSnapshot.js";
 import { LocalReading } from "./Reading/LocalReading.js";
 import { RemoteReading } from "./Reading/RemoteReading.js";
 import type { SystemReading } from "./Reading/SystemReading.js";
@@ -54,31 +58,15 @@ export class Facts {
   /** Reads the machine and returns one snapshot of it, with the run that produced it. */
   async collect(order: FactOrder): Promise<FactCollection> {
     const startedAt = order.now ?? new Date();
-    const stamp = startedAt.toISOString().replace(/[-:.]/g, "");
-    const snapshotId = `snap_${order.target.name}_${stamp}`;
     const data = await this.reading.read(order.declare ?? {});
 
-    return createFactCollection([{
-      snapshot: {
-        id: snapshotId,
-        schemaVersion: "facts.v1",
-        scope: order.target.scope,
-        target: {
-          type: order.target.type,
-          id: order.target.name,
-          displayName: order.target.displayName,
-        },
-        data: { ...data, transports: this.channel(order) },
-      },
-      run: {
-        id: `fact_run_${order.target.name}_${stamp}`,
-        snapshotId,
-        startedAt: startedAt.toISOString(),
-        finishedAt: new Date().toISOString(),
-        status: factRunStatus(data),
-        attempt: order.attempt ?? 1,
-      },
-    }]);
+    return createFactCollection([createFactCollectionItem({
+      target: order.target,
+      data,
+      transports: this.transports(order),
+      startedAt,
+      attempt: order.attempt,
+    })]);
   }
 
   /**
@@ -97,24 +85,27 @@ export class Facts {
       workspaceRoot: order.workspaceRoot,
     });
 
+    const facts = await this.collect({
+      target: order.target,
+      declare: declared.declaration,
+      now: order.now,
+      attempt: order.attempt,
+    });
+
     return {
       definition: {
         id: definition.id,
         version: definition.version,
         description: definition.description,
       },
-      facts: await this.collect({
-        target: order.target,
-        declare: declared.declaration,
-        now: order.now,
-        attempt: order.attempt,
-      }),
+      facts,
       unread: declared.unread,
     };
   }
 
   /**
-   * The channel this snapshot was read through, when there was one.
+   * The `transports` section: the channel this snapshot was read through, when
+   * there was one.
    *
    * No reading can work this out: the machine does not know how anyone got in. It
    * matters because a requirement can be written about the channel itself, and
@@ -127,7 +118,7 @@ export class Facts {
    * inventing it, and a requirement about a `local` transport was passing against
    * exactly that invention.
    */
-  private channel(order: FactOrder): Record<string, TransportFact> {
+  private transports(order: FactOrder): Record<string, TransportFact> {
     if (!this.channelWasOpened) {
       return {};
     }
