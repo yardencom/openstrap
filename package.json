@@ -50,6 +50,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "agent:build": "tsx src/Facts/Reading/Agent/BuildAgent.ts",
     "schema:generate": "tsx src/Blueprint/Schema/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -58,6 +59,7 @@
     "env-paths": "^4.0.0",
     "lilconfig": "^3.1.3",
     "semver": "^7.8.2",
+    "systeminformation": "^5.33.1",
     "tar": "^7.5.22",
     "which": "^6.0.1",
     "yaml": "^2.8.1",
@@ -67,6 +69,8 @@
     "@types/node": "^24.10.1",
     "@types/semver": "^7.7.1",
     "@types/which": "^3.0.4",
+    "@yao-pkg/pkg": "^6.21.0",
+    "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"

@@ -10,19 +10,22 @@ import {
   type OpenStrapRuntime,
 } from "../../Plugin/index.js";
 import {
+  RequiredFacts,
   type RequirementCheckNode,
   type RequirementLeafCheck,
   type RequirementRun,
 } from "../../Requirements/index.js";
 import {
-  collectAndStoreFactsFromDefinition,
-  type StoredFactsCollectResult,
+  collectFactsFromDefinition,
+  type FactsCollectResult,
 } from "./FactsCollectCommand.js";
 import { connectToTarget } from "./ConnectCommand.js";
 import { createTarget } from "./CreateCommand.js";
 import type { CreatedTarget } from "./CreateCommand.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
+
+type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>;
 
 export type OpenStrapRunOutput = {
   targets: Array<{
@@ -31,7 +34,7 @@ export type OpenStrapRunOutput = {
     type: string;
     transport: string;
   }>;
-  facts: Facts;
+  facts: CollectedFacts;
   requirementRun: RequirementRun;
 };
 
@@ -43,7 +46,6 @@ export type CliIo = {
 
 export async function runOpenStrapFlow(params: {
   configPath?: string;
-  runtime: OpenStrapRuntime;
   workspaceRoot: string;
   now?: Date;
 }): Promise<OpenStrapRunOutput> {
@@ -51,9 +53,14 @@ export async function runOpenStrapFlow(params: {
     explicitPath: params.configPath,
     workspaceRoot: params.workspaceRoot,
   });
+  // One instance per machine, because an instance is a way of reaching one. Every
+  // target of a plain run is the machine openstrap is on, so every one of them is
+  // read in process.
+  const host = new Facts();
+  const collected: CollectedFacts[number][] = [];
 
-  const facts = new Facts(await params.runtime.factsBackend.collect({
-    targets: Object.values(blueprint.targets).map((target) => ({
+  for (const target of Object.values(blueprint.targets)) {
+    collected.push(...await host.collect({
       target: {
         name: target.name,
         scope: target.scope,
@@ -61,14 +68,17 @@ export async function runOpenStrapFlow(params: {
         displayName: target.displayName,
         transport: target.transport,
       },
-      selectors: selectorsOf(target.requirements),
-    })),
-    workspaceRoot: params.workspaceRoot,
-    now: params.now,
-  }));
+      declare: new RequiredFacts({
+        requirements: target.requirements,
+        workspaceRoot: params.workspaceRoot,
+      }).declaration,
+      now: params.now,
+    }));
+  }
+
   const result = await new OpenStrapRun().execute({
     blueprint,
-    facts,
+    facts: collected,
     workspaceRoot: params.workspaceRoot,
     now: params.now,
   });
@@ -80,7 +90,7 @@ export async function runOpenStrapFlow(params: {
       type: target.type,
       transport: target.transport,
     })),
-    facts,
+    facts: collected,
     requirementRun: result.requirementRun,
   };
 }
@@ -102,11 +112,8 @@ export async function main(argv: readonly string[], io: CliIo = {
   }
 
   try {
-    const runtime = await createCliRuntime(parsedArgs, io.cwd);
-
     if (parsedArgs.command === "facts.collect") {
-      const output = await collectAndStoreFactsFromDefinition({
-        backend: runtime.factsBackend,
+      const output = await collectFactsFromDefinition({
         path: parsedArgs.configPath,
         workspaceRoot: io.cwd,
         inputs: parsedArgs.inputs,
@@ -124,7 +131,7 @@ export async function main(argv: readonly string[], io: CliIo = {
         target: parsedArgs.target,
         configPath: parsedArgs.configPath,
         hostPort: parsedArgs.hostPort,
-        runtime,
+        runtime: await createCliRuntime(parsedArgs, io.cwd),
         workspaceRoot: io.cwd,
       });
 
@@ -141,7 +148,7 @@ export async function main(argv: readonly string[], io: CliIo = {
       const result = await connectToTarget({
         target: parsedArgs.target,
         command: parsedArgs.run,
-        runtime,
+        runtime: await createCliRuntime(parsedArgs, io.cwd),
       });
 
       io.stdout.write(result.output);
@@ -151,7 +158,6 @@ export async function main(argv: readonly string[], io: CliIo = {
 
     const output = await runOpenStrapFlow({
       configPath: parsedArgs.configPath,
-      runtime,
       workspaceRoot: io.cwd,
     });
 
@@ -166,28 +172,7 @@ export async function main(argv: readonly string[], io: CliIo = {
   }
 }
 
-/**
- * Which fact sections the requirements of a target ask about.
- *
- * Mapping a blueprint onto a collection request belongs here rather than in
- * the facts module: that module reads machines and has no idea what a
- * blueprint is.
- */
-function selectorsOf(requirements: readonly Record<string, unknown>[]): Record<string, unknown> {
-  const merged: Record<string, unknown> = {};
-
-  for (const requirement of requirements) {
-    for (const [section, value] of Object.entries(requirement)) {
-      if (section !== "id" && section !== "optional") {
-        merged[section] = value;
-      }
-    }
-  }
-
-  return merged;
-}
-
-async function createCliRuntime(args: RuntimeArgs, cwd: string) {
+async function createCliRuntime(args: RuntimeArgs, cwd: string): Promise<OpenStrapRuntime> {
   const config = await loadOpenStrapPluginConfig({
     cwd,
     configPath: args.runtimeConfigPath,
@@ -199,7 +184,6 @@ async function createCliRuntime(args: RuntimeArgs, cwd: string) {
 
   return createOpenStrapRuntime({
     config,
-    factsBackendId: args.factsBackendId,
     plugins,
   });
 }
@@ -276,9 +260,9 @@ function renderHumanOutput(output: OpenStrapRunOutput): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderFactsCollectOutput(output: StoredFactsCollectResult): string {
+function renderFactsCollectOutput(output: FactsCollectResult): string {
   const item = output.facts[0]!;
-  const data = item.snapshot.data as any;
+  const data = item.snapshot.data as Record<string, Record<string, Record<string, unknown>>>;
   const lines: string[] = [];
 
   lines.push(`OpenStrap facts collect: ${item.run.status}`);
@@ -286,57 +270,35 @@ function renderFactsCollectOutput(output: StoredFactsCollectResult): string {
   lines.push(`Target: ${item.snapshot.target.id}`);
   lines.push(`Snapshot: ${item.snapshot.id} factRun=${item.run.id}`);
   lines.push(`Result file: ${output.storage.resultPath}`);
-  lines.push("");
-  lines.push(`Processes (${Object.keys(data.processes ?? {}).length}):`);
-  for (const [id, processFact] of Object.entries<any>(data.processes ?? {})) {
-    const processDetails = [
-      processFact.pid !== undefined ? `pid=${processFact.pid}` : undefined,
-      processFact.pids ? `pids=${processFact.pids.join(",")}` : undefined,
-      processFact.user ? `user=${processFact.user}` : undefined,
-      processFact.state ? `state=${processFact.state}` : undefined,
-      processFact.command ? `command=${processFact.command}` : undefined,
-    ].filter(Boolean).join(" ");
 
-    lines.push(`  - ${id}: ${processFact.status}${processDetails ? ` ${processDetails}` : ""}`);
-  }
+  for (const section of ["processes", "services", "paths", "env", "commands", "artifacts"]) {
+    const entries = Object.entries(data[section] ?? {}).filter(([id]) => !id.startsWith("pid-"));
 
-  lines.push("");
-  lines.push(`Services (${Object.keys(data.services ?? {}).length}):`);
-  for (const [id, serviceFact] of Object.entries<any>(data.services ?? {})) {
-    const serviceDetails = [
-      serviceFact.manager ? `manager=${serviceFact.manager}` : undefined,
-      serviceFact.running !== undefined ? `running=${serviceFact.running}` : undefined,
-      serviceFact.pid !== undefined ? `pid=${serviceFact.pid}` : undefined,
-      serviceFact.state ? `state=${serviceFact.state}` : undefined,
-    ].filter(Boolean).join(" ");
+    lines.push("");
+    lines.push(`${section} (${entries.length}):`);
 
-    lines.push(`  - ${id}: ${serviceFact.status}${serviceDetails ? ` ${serviceDetails}` : ""}`);
-  }
-
-  lines.push("");
-  lines.push("Files:");
-  for (const [id, pathFact] of Object.entries<any>(data.paths ?? {})) {
-    if (id === "home" || id === "workspace") {
-      continue;
+    for (const [id, fact] of entries) {
+      lines.push(`  - ${id}: ${String(fact.status)}${describe(fact)}`);
     }
-
-    lines.push(`  - ${id}: ${pathFact.status} ${pathFact.path}${pathFact.type ? ` type=${pathFact.type}` : ""}`);
   }
 
-  lines.push("");
-  lines.push("Evidence:");
-  for (const [id, command] of Object.entries<any>(output.evidence.commands)) {
-    const lineCount = command.stdout ? command.stdout.split("\n").filter(Boolean).length : 0;
-    lines.push(`  - command ${id}: ${command.status}${lineCount > 0 ? ` lines=${lineCount}` : ""}`);
-  }
-
-  for (const [id, artifact] of Object.entries<any>(output.evidence.artifacts)) {
-    lines.push(`  - artifact ${id}: ${artifact.status} ${artifact.path}`);
+  if (output.unread.length > 0) {
+    lines.push("");
+    lines.push(`Declared but not read: ${output.unread.join(", ")}`);
   }
 
   lines.push("");
 
   return `${lines.join("\n")}\n`;
+}
+
+/** The fields of a fact worth putting on one line beside its status. */
+function describe(fact: Record<string, unknown>): string {
+  const shown = ["name", "path", "pid", "running", "state", "manager", "type", "version", "exitCode", "reason"]
+    .filter((field) => fact[field] !== undefined)
+    .map((field) => `${field}=${String(fact[field])}`);
+
+  return shown.length === 0 ? "" : ` ${shown.join(" ")}`;
 }
 
 function flattenChecks(node: RequirementCheckNode, path: readonly string[] = []): Array<{

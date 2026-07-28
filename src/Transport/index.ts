@@ -1,4 +1,5 @@
 export type {
+  BinaryFileWriteOptions,
   FileAccess,
   FileSystemAPI,
   FileSystemWriteOptions,

@@ -11,7 +11,6 @@ import {
   loadOpenStrapPluginConfig,
   OpenStrapPluginContainer,
   OpenStrapPluginError,
-  type FactsBackend,
   type Provider,
   type SecretStore,
   type TransportConnector,
@@ -47,39 +46,6 @@ describe("OpenStrap plugin system", () => {
     });
 
     expect(order).toEqual(["pre", "normal", "post"]);
-  });
-
-  it("registers facts backends through plugin setup", async () => {
-    const container = await OpenStrapPluginContainer.create({
-      plugins: [
-        defineOpenStrapPlugin({
-          name: "test:facts",
-          setup(api) {
-            api.registerFactsBackend(createNoopBackend("test:facts-backend"));
-          },
-        }),
-      ],
-    });
-
-    expect(container.factsBackends.require("test:facts-backend").id).toBe("test:facts-backend");
-    expect(container.factsBackends.list()[0]).toMatchObject({
-      pluginName: "test:facts",
-    });
-  });
-
-  it("rejects duplicate facts backend ids", async () => {
-    await expect(OpenStrapPluginContainer.create({
-      plugins: [
-        defineOpenStrapPlugin({
-          name: "first",
-          setup: (api) => api.registerFactsBackend(createNoopBackend("test:duplicate")),
-        }),
-        defineOpenStrapPlugin({
-          name: "second",
-          setup: (api) => api.registerFactsBackend(createNoopBackend("test:duplicate")),
-        }),
-      ],
-    })).rejects.toThrow(OpenStrapPluginError);
   });
 
   it("registers a provider, a transport and a secret store from one plugin", async () => {
@@ -135,25 +101,24 @@ describe("OpenStrap plugin system", () => {
     expect(() => container.providers.require("virtualbox")).toThrow(/Available providers: utm/);
   });
 
-  it("accepts a facts backend that declares no transport", async () => {
+  it("offers no facts registry, because there is one way to read a machine", async () => {
+    const runtime = await createOpenStrapRuntime();
+    let slots: string[] = [];
+
     const container = await OpenStrapPluginContainer.create({
-      plugins: [
-        defineOpenStrapPlugin({
-          name: "test:facts",
-          setup: (api) => api.registerFactsBackend(createNoopBackend("test:transportless")),
-        }),
-      ],
+      plugins: [defineOpenStrapPlugin({
+        name: "capture",
+        setup: (api) => {
+          slots = Object.keys(api);
+        },
+      })],
     });
 
-    expect(container.factsBackends.require("test:transportless").id).toBe("test:transportless");
-  });
-
-  it("creates runtime with core backend by default", async () => {
-    const runtime = await createOpenStrapRuntime();
-
-    expect(runtime.factsBackendId).toBe("openstrap:local");
-    expect(runtime.factsBackend.id).toBe("openstrap:local");
-    expect(runtime.pluginNames).toContain("openstrap:core");
+    expect(runtime).not.toHaveProperty("factsBackend");
+    expect(runtime).not.toHaveProperty("factsBackendId");
+    expect(runtime.pluginNames).toEqual([]);
+    expect(container).not.toHaveProperty("factsBackends");
+    expect(slots).toEqual(["registerProvider", "registerTransport", "registerSecretStore"]);
   });
 
   it("loads plugin config and external plugin modules", async () => {
@@ -165,15 +130,10 @@ describe("OpenStrap plugin system", () => {
       export default {
         name: "external-plugin",
         setup(api) {
-          api.registerFactsBackend({
-            id: "external:facts",
-            capabilities: {
-              scopes: ["host"],
-              transports: ["local"],
-              sections: ["os"]
-            },
-            collect() {
-              return [];
+          api.registerTransport({
+            id: "external:ssh",
+            connect() {
+              throw new Error("not used in this test");
             }
           });
         }
@@ -183,10 +143,7 @@ describe("OpenStrap plugin system", () => {
       import plugin from "./plugin.mjs";
 
       export default {
-        plugins: [plugin],
-        facts: {
-          backend: "external:facts"
-        }
+        plugins: [plugin]
       };
     `);
 
@@ -201,8 +158,8 @@ describe("OpenStrap plugin system", () => {
     const runtime = await createOpenStrapRuntime({ config });
 
     expect(plugin.name).toBe("external-plugin");
-    expect(runtime.factsBackendId).toBe("external:facts");
-    expect(runtime.factsBackend.id).toBe("external:facts");
+    expect(runtime.pluginNames).toEqual(["external-plugin"]);
+    expect(runtime.transports.require("external:ssh").id).toBe("external:ssh");
   });
 });
 
@@ -248,16 +205,5 @@ function createNoopSecretStore(id: string): SecretStore {
     read: async () => null,
     write: async () => {},
     remove: async () => {},
-  };
-}
-
-function createNoopBackend(id: string): FactsBackend {
-  return {
-    id,
-    capabilities: {
-      scopes: ["host"],
-      sections: ["os"],
-    },
-    collect: async () => [],
   };
 }

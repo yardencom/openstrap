@@ -24,94 +24,18 @@ describe("openstrap CLI", () => {
     expect(json.facts).toHaveLength(1);
   });
 
-  it("runs the local sample through an external facts backend plugin", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-plugin-"));
-    const pluginPath = join(directory, "plugin.mjs");
+  it("does not let a plugin replace how a machine is read", async () => {
+    const output = await captureCli([
+      "run",
+      "examples/openstrap/local-run.yaml",
+      "--facts-backend",
+      "test:plugin-backend",
+      "--json",
+    ]);
 
-    try {
-      writeFileSync(pluginPath, `
-        export default {
-          name: "test-cli-plugin",
-          setup(api) {
-            api.registerFactsBackend({
-              id: "test:plugin-backend",
-              capabilities: {
-                scopes: ["host"],
-                transports: ["local"],
-                sections: ["cpu", "memory", "paths", "runtimes", "transports"]
-              },
-              collect(request) {
-                const target = request.targets[0].target;
-
-                return [{
-                  snapshot: {
-                    id: "snap_test_plugin",
-                    schemaVersion: "facts.v1",
-                    scope: target.scope,
-                    target: {
-                      type: target.type,
-                      id: target.name
-                    },
-                    data: {
-                      cpu: { cores: 8 },
-                      memory: { totalBytes: 17179869184 },
-                      paths: {
-                        workspace: {
-                          status: "present",
-                          path: request.workspaceRoot,
-                          exists: true,
-                          type: "directory",
-                          readable: true
-                        }
-                      },
-                      runtimes: {
-                        node: {
-                          status: "present",
-                          type: "node",
-                          version: "99.0.0",
-                          ready: true
-                        }
-                      },
-                      transports: {
-                        local: {
-                          status: "present",
-                          type: "local",
-                          ready: true
-                        }
-                      }
-                    }
-                  },
-                  run: {
-                    id: "fact_run_test_plugin",
-                    snapshotId: "snap_test_plugin",
-                    startedAt: "2026-06-09T00:00:00.000Z",
-                    finishedAt: "2026-06-09T00:00:00.000Z",
-                    status: "success"
-                  }
-                }];
-              }
-            });
-          }
-        };
-      `);
-
-      const output = await captureCli([
-        "run",
-        "examples/openstrap/local-run.yaml",
-        "--plugin",
-        pluginPath,
-        "--facts-backend",
-        "test:plugin-backend",
-        "--json",
-      ]);
-      const json = JSON.parse(output.stdout);
-
-      expect(output.exitCode).toBe(0);
-      expect(json.requirementRun.status).toBe("passed");
-      expect(json.facts[0].run.id).toBe("fact_run_test_plugin");
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
+    expect(output.exitCode).toBe(2);
+    expect(output.stderr).toContain("--facts-backend");
+    expect(output.stdout).toBe("");
   });
 
   it("fails when an explicit run config path is missing instead of falling back to workspace config", async () => {
@@ -150,10 +74,17 @@ requirements:
     expect(output.exitCode).toBe(0);
     expect(json.definition.id).toBe("system-inventory");
     expect(json.facts).toHaveLength(1);
-    expect(Object.keys(json.facts[0].snapshot.data.processes).length).toBeGreaterThan(0);
-    expect(Object.keys(json.facts[0].snapshot.data.services).length).toBeGreaterThan(0);
-    expect(json.facts[0].snapshot.data.processes).toHaveProperty("node-process");
-    expect(json.evidence.artifacts).toHaveProperty("tree-root-metadata");
+
+    const data = json.facts[0].snapshot.data;
+
+    expect(Object.keys(data.processes).length).toBeGreaterThan(0);
+    expect(data.processes).toHaveProperty("node-process");
+    expect(data.paths["tree-root"]).toMatchObject({ status: "present", type: "directory" });
+    expect(data.artifacts).toHaveProperty("tree-root-metadata");
+    expect(data.artifacts["tree-root-metadata"].status).toBe("present");
+    // The definition declares `services: []`, so nothing was asked about and
+    // nothing is reported. A machine is never asked for all of its services.
+    expect(data.services).toEqual({});
     expect(json.storage.resultPath).toContain("/.openstrap/runs/facts/");
     expect(existsSync(json.storage.resultPath)).toBe(true);
     expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).definition.id).toBe("system-inventory");
@@ -166,8 +97,8 @@ requirements:
     expect(output.stdout).toContain("OpenStrap facts collect: success");
     expect(output.stdout).toContain("Target: host");
     expect(output.stdout).toContain("Result file:");
-    expect(output.stdout).toContain("Processes (");
-    expect(output.stdout).toContain("Services (");
+    expect(output.stdout).toContain("processes (");
+    expect(output.stdout).toContain("artifacts (");
     expect(output.stderr).toBe("");
   });
 

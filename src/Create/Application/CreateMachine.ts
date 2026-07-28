@@ -108,8 +108,10 @@ export class CreateMachine {
       const existing = await request.provider.find(target.name);
 
       if (existing) {
-        const access = await request.provider.access(existing);
         steps.push({ name: "create machine", status: "skipped", detail: "a machine with this name already exists" });
+        steps.push(await this.ensureRunning(request.provider, existing));
+
+        const access = await request.provider.access(existing);
         this.recordSteps(request.store, runId, steps, timestamp);
         request.store.finishRun(runId, "succeeded", new Date().toISOString());
 
@@ -174,6 +176,27 @@ export class CreateMachine {
 
       throw error;
     }
+  }
+
+  /**
+   * Leaves an adopted machine in the state a created one would be left in.
+   *
+   * `create` promises a machine you can connect to, and it has to keep that
+   * promise the second time it is run as well. A machine that was found stopped
+   * and left stopped would satisfy "it already exists" and nothing else: every
+   * step that follows — verifying it, connecting to it — is waiting on a machine
+   * that is never going to answer.
+   */
+  private async ensureRunning(provider: Provider, machine: MachineHandle): Promise<CreateStep> {
+    const state = await provider.inspect(machine);
+
+    if (state.status === "running") {
+      return { name: "start machine", status: "skipped", detail: "already running" };
+    }
+
+    await provider.start(machine);
+
+    return { name: "start machine", status: "succeeded", detail: `was ${state.status}` };
   }
 
   private recordSteps(store: SqliteStateStore, runId: string, steps: readonly CreateStep[], startedAt: string): void {

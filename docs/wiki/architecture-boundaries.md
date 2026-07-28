@@ -23,7 +23,7 @@ Consumer
 
 Текущий реализованный product module - `Facts`.
 
-`Plugin` является отдельным runtime extension module. CLI использует его как composition/runtime layer для выбора facts backend, но `Plugin` не является публичным API модуля `Facts` и не владеет facts schema, requirements schema или blueprint schema.
+`Plugin` является отдельным runtime extension module: providers, transports, secret stores. CLI использует его как composition/runtime layer, но `Plugin` не является публичным API модуля `Facts`, не умеет читать машину и не владеет facts schema, requirements schema или blueprint schema. Единственный вход в факты - `new Facts(...)` (ADR 0007).
 
 Будущие product modules, например `WorkflowConfig` и `StorageConfig`, должны повторять эту форму: свой domain, своя schema, свой facade, общий `ConfigCore`.
 

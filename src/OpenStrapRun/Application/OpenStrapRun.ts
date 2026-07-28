@@ -1,21 +1,30 @@
 import type { Blueprint } from "../../Blueprint/index.js";
-import { Facts } from "../../Facts/Facts.js";
+import type { Facts } from "../../Facts/Facts.js";
 import {
   RequirementEvaluator,
   type RequirementRun,
 } from "../../Requirements/index.js";
 import { mergeRequirementRuns } from "./MergeRequirementRuns.js";
 
+/**
+ * What the facts module hands back.
+ *
+ * Spelled through the one entry point rather than imported as a type of its own:
+ * a fact collection only exists as the result of a reading, and nothing outside
+ * that module is allowed to name its parts.
+ */
+type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>;
+
 export type OpenStrapRunRequest = {
   blueprint: Blueprint;
-  facts: Facts;
+  facts: CollectedFacts;
   workspaceRoot: string;
   now?: Date;
 };
 
 export type OpenStrapRunResult = {
   blueprint: Blueprint;
-  facts: Facts;
+  facts: CollectedFacts;
   requirementRun: RequirementRun;
 };
 
@@ -36,7 +45,7 @@ export class OpenStrapRun {
 
   private evaluateBlueprintRequirements(
     blueprint: Blueprint,
-    facts: Facts,
+    facts: CollectedFacts,
     request: OpenStrapRunRequest,
   ): RequirementRun {
     return mergeRequirementRuns(

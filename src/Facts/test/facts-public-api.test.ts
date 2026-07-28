@@ -3,7 +3,6 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { LocalTransport } from "../../Transport/index.js";
 import { Facts } from "../Facts.js";
 
 describe("Facts public API", () => {
@@ -11,69 +10,44 @@ describe("Facts public API", () => {
     const publicBarrel = readFileSync(join(process.cwd(), "src/Facts/index.ts"), "utf8");
 
     expect(publicBarrel).toBe("export {};\n");
-    expect(publicBarrel).not.toContain("CollectFactsFromDefinition");
-    expect(publicBarrel).not.toContain("FactsDefinitionJsonSchema");
-    expect(publicBarrel).not.toContain("HostFacts");
-    expect(publicBarrel).not.toContain("SystemSnapshot");
-    expect(publicBarrel).not.toContain("ProcessServiceInventory");
-    expect(publicBarrel).not.toContain("FactImportance");
-    expect(publicBarrel).not.toContain("CommandFact");
   });
 
-  it("keeps Facts instance free of collection methods", () => {
-    const publicMethods = Object.getOwnPropertyNames(Facts.prototype).filter((name) => name !== "constructor");
+  it("is entered by making an instance and nothing else", () => {
+    const statics = Object.getOwnPropertyNames(Facts).filter(
+      (name) => !["length", "name", "prototype"].includes(name),
+    );
 
-    expect(publicMethods).toEqual([]);
+    expect(statics).toEqual([]);
   });
 
-  it("represents facts as an array", () => {
-    const facts = new Facts([minimalItem()]);
+  it("offers reading a machine, and reading it against a definition file", () => {
+    const facts = new Facts();
 
-    expect(Array.isArray(facts)).toBe(true);
-    expect(facts).toHaveLength(1);
-    expect(facts[0]!.snapshot.id).toBe("snap_host");
+    expect(typeof facts.collect).toBe("function");
+    expect(typeof facts.collectFromDefinition).toBe("function");
   });
 
-  it("reads a machine through an API that can wait, not through a constructor", async () => {
-    const facts = await Facts.read({
-      transport: new LocalTransport(),
+  it("exports one class and no other value", () => {
+    const source = readFileSync(join(process.cwd(), "src/Facts/Facts.ts"), "utf8");
+    const exported = [...source.matchAll(/^export\s+(class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
+      .map((match) => ({ kind: match[1], name: match[2] }));
+
+    expect(exported.filter((entry) => entry.kind !== "type")).toEqual([{ kind: "class", name: "Facts" }]);
+    expect(source).not.toMatch(/^export\s+\{/m);
+  });
+
+  it("reads a machine through a method, because reaching one means waiting", async () => {
+    const facts = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
-      sections: ["os"],
+      declare: { sections: ["os"] },
     });
 
     expect(facts).toHaveLength(1);
     expect(facts[0]!.snapshot.target.id).toBe("host");
   });
 
-  it("exports only Facts from Facts/Facts", () => {
-    const source = readFileSync(join(process.cwd(), "src/Facts/Facts.ts"), "utf8");
-    const exportedNames = [...source.matchAll(/^export\s+(?:class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
-      .map((match) => match[1]);
-
-    expect(source).not.toMatch(/^export\s+\{/m);
-    expect(source).not.toContain("Symbol.species");
-    expect(exportedNames).toEqual(["FactTarget", "FactCollectionOrder", "Facts"]);
+  it("hands back a collection rather than being one", () => {
+    expect(Array.isArray(new Facts())).toBe(false);
+    expect(Facts.prototype instanceof Array).toBe(false);
   });
 });
-
-function minimalItem() {
-  return {
-    snapshot: {
-      id: "snap_host",
-      schemaVersion: "facts.v1",
-      scope: "host",
-      target: {
-        type: "machine",
-        id: "host",
-      },
-      data: {},
-    },
-    run: {
-      id: "fact_run_host",
-      snapshotId: "snap_host",
-      startedAt: "2026-06-08T10:00:00.000Z",
-      finishedAt: "2026-06-08T10:00:00.000Z",
-      status: "success" as const,
-    },
-  };
-}

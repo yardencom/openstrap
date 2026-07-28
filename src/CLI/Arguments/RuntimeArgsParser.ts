@@ -33,16 +33,6 @@ export class RuntimeArgsParser {
       return index;
     }
 
-    if (arg === "--facts-backend") {
-      runtimeArgs.factsBackendId = this.readRequiredOptionValue(arg, args[index + 1]);
-      return index + 1;
-    }
-
-    if (arg.startsWith("--facts-backend=")) {
-      runtimeArgs.factsBackendId = this.readInlineOptionValue("--facts-backend", arg);
-      return index;
-    }
-
     return undefined;
   }
 

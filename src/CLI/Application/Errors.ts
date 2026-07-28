@@ -16,10 +16,10 @@ export class CliErrors {
   usage(): string {
     return [
       "Usage:",
-      "  openstrap run [configPath] [--json] [--runtime-config path] [--plugin specifier] [--facts-backend id]",
+      "  openstrap run [configPath] [--json] [--runtime-config path] [--plugin specifier]",
       "  openstrap create vm <target> [--config path] [--host-port n] [--json] [--plugin specifier]",
       "  openstrap connect <target> [--run command] [--plugin specifier]",
-      "  openstrap facts collect host [factsPath] [--json] [--input key=value] [--runtime-config path] [--plugin specifier] [--facts-backend id]",
+      "  openstrap facts collect host [factsPath] [--json] [--input key=value] [--runtime-config path] [--plugin specifier]",
     ].join("\n");
   }
 }

@@ -9,40 +9,17 @@ It follows the build-system shape used by Vite/Webpack: a user provides plugin o
 A plugin registers capabilities through `setup(api)`:
 
 ```text
-api.registerFactsBackend(backend)
 api.registerProvider(provider)
 api.registerTransport(connector)
 api.registerSecretStore(store)
 ```
 
+There is no slot for reading a machine. Facts are not pluggable: openstrap reads a
+machine through the machine's own APIs, in a process running on that machine, and
+a second way of doing it would be a second answer to the same question. See
+ADR 0007.
+
 A plugin is named after the tool it integrates, not after the slot it fills. One tool may fill several: Docker will register a provider and a transport at once, so a name like `provider-docker` would lie.
-
-```ts
-import { defineOpenStrapPlugin, type FactsBackend } from "openstrap/Plugin";
-
-const backend: FactsBackend = {
-  id: "company:osquery",
-  displayName: "Company osquery backend",
-  capabilities: {
-    scopes: ["host"],
-    sections: ["os", "cpu", "memory", "processes", "services", "paths"],
-  },
-  async collect(request) {
-    // Collect raw data through the backend, normalize it, and return FactCollection.
-  },
-};
-
-export default defineOpenStrapPlugin({
-  name: "company:osquery-plugin",
-  setup(api) {
-    api.registerFactsBackend(backend);
-  },
-});
-```
-
-The backend returns OpenStrap normalized facts. It does not change facts YAML, requirements YAML, or the `FactSnapshot` shape.
-
-A facts backend declares no transport capability. Collection varies by the operating system of the target, not by how the target is reached, so a backend is not bound to a channel. The remaining reason for a separate backend is a fundamentally different collection mechanism — osquery answering in one query instead of ten commands.
 
 Every method of every contract is asynchronous. Plugins run in-process today and out of process later; a synchronous contract would close that door for good.
 
@@ -64,47 +41,33 @@ A transport plugin registers only a transport. `@openstrap/ssh` is about SSH, no
 
 The core owns secrets. A plugin receives a `SecretReference`, never a value; the value is revealed only inside the trusted execution boundary that owns the store. A transport plugin therefore does not own a keychain and does not hold the private key.
 
-## Built-In Backend
-
-OpenStrap registers `openstrap:core` by default. That plugin provides the default facts backend:
-
-```text
-openstrap:systeminformation
-```
-
-If runtime config and CLI flags do not select another backend, OpenStrap uses this backend.
-
 ## Runtime Config
 
 `openstrap.config.mjs` is runtime configuration, not a blueprint and not a facts definition.
 
 ```js
 import { defineOpenStrapConfig } from "openstrap/Plugin";
-import osquery from "@company/openstrap-osquery-plugin";
+import utm from "@openstrap/utm";
+import ssh from "@openstrap/ssh";
 
 export default defineOpenStrapConfig({
   plugins: [
-    osquery(),
+    utm(),
+    ssh(),
   ],
-  facts: {
-    backend: "company:osquery",
-  },
 });
 ```
 
 ## CLI Runtime
 
-Both `openstrap run` and `openstrap facts collect` create an OpenStrap runtime before facts are collected.
+`openstrap create` and `openstrap connect` create an OpenStrap runtime, because both need a provider or a transport from a plugin. `openstrap run` and `openstrap facts collect` do not: they read the machine openstrap is running on, and nothing about that is pluggable.
 
 Supported runtime options:
 
 ```text
 --runtime-config path
 --plugin specifier
---facts-backend id
 ```
-
-Plugins register facts backends. CLI selects the backend from `--facts-backend`, then `openstrap.config.mjs`, then the built-in `openstrap:systeminformation` backend.
 
 ## Plugin Order
 
@@ -122,8 +85,7 @@ Inside each bucket, order is the order provided by runtime config.
 
 - `Facts` owns facts schema, domain names, and `FactCollection` invariants.
 - `Requirements` reads normalized facts only.
-- `Plugin` owns runtime extension and the registration of backends, providers, transports and secret stores.
+- `Plugin` owns runtime extension and the registration of providers, transports and secret stores.
 - `Transport` owns the ports; `Plugin` owns only the contract for opening one.
-- A facts backend may use any collector implementation internally, but it must return OpenStrap `FactCollection`.
+- A plugin cannot read a machine and cannot reach `FactSnapshot`. It provides the channel; `Facts` decides what a fact is.
 - A plugin must not add profile, provenance, metadata, raw evidence, or artifacts to `FactSnapshot`.
-- Backend-specific logs, raw evidence, and artifacts stay above facts payload.

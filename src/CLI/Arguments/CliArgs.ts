@@ -1,7 +1,6 @@
 export type RuntimeArgs = {
   runtimeConfigPath?: string;
   pluginSpecifiers: string[];
-  factsBackendId?: string;
 };
 
 export type RunArgs = {

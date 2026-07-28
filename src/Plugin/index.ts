@@ -1,8 +1,4 @@
 export {
-  FactsBackendRegistry,
-  type RegisteredFactsBackend,
-} from "./Application/FactsBackendRegistry.js";
-export {
   OpenStrapPluginContainer,
   type OpenStrapPluginContainerCreateRequest,
 } from "./Application/OpenStrapPluginContainer.js";
@@ -44,10 +40,6 @@ export type {
   SecretStore,
 } from "./Domain/Secret.js";
 export {
-  coreFactsBackendId,
-  openstrapCorePlugin,
-} from "./Core/OpenStrapCorePlugin.js";
-export {
   loadOpenStrapPlugin,
   loadOpenStrapPluginConfig,
   type LoadOpenStrapPluginConfigRequest,
@@ -58,17 +50,6 @@ export {
   type OpenStrapRuntime,
   type OpenStrapRuntimeCreateRequest,
 } from "./Application/OpenStrapRuntime.js";
-export type {
-  FactsBackend,
-  FactsBackendCollection,
-  FactsBackendCollectionItem,
-  FactsBackendCollectionRequest,
-  FactsBackendCollectionTarget,
-  FactsBackendCapabilities,
-  FactsBackendSection,
-  FactsBackendSelectorTree,
-  FactsBackendTargetCollectionRequest,
-} from "./Domain/FactsBackend.js";
 export {
   defineOpenStrapConfig,
   defineOpenStrapPlugin,

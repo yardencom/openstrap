@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../../schemas/openstrap-blueprint.schema.json
+#
+# The machine OS-100 asks for: one Ubuntu VM on UTM, reachable over ssh with a
+# key and nothing else.
+targets:
+  ubuntu-vm:
+    displayName: Ubuntu 24.04
+    transport: ssh
+    provider: utm
+    image: ubuntu:24.04
+
+requirements:
+  # The machine is what was asked for, read from the machine itself rather than
+  # from the image we chose.
+  - id: ubuntu-2404-arm64
+    target: ubuntu-vm
+    os:
+      name:
+        const: ubuntu
+      version:
+        const: "24.04"
+    arch:
+      const: arm64
+
+  # Reached over ssh, and by a key: the channel is a fact about the machine too.
+  - id: key-only-login
+    target: ubuntu-vm
+    transports:
+      ssh:
+        status: present
+        ready: true
+        authMethods:
+          const:
+            - publickey
+
+  - id: ssh-running
+    target: ubuntu-vm
+    services:
+      ssh:
+        status: present
+        running: true
+
+  - id: passwordless-sudo
+    target: ubuntu-vm
+    privileges:
+      sudo:
+        status: present
+        passwordless: true
+
+  - id: account-ready
+    target: ubuntu-vm
+    paths:
+      home:
+        status: present
+        type: directory
+        writable: true

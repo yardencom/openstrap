@@ -1,4 +1,3 @@
-import type { FactsBackend } from "./FactsBackend.js";
 import type { Provider } from "./Provider.js";
 import type { SecretStore } from "./Secret.js";
 import type { TransportConnector } from "./Transport.js";
@@ -13,7 +12,6 @@ export type OpenStrapPluginOrder = "pre" | "post";
  * transport at once.
  */
 export type OpenStrapPluginApi = {
-  registerFactsBackend(backend: FactsBackend): void;
   registerProvider(provider: Provider): void;
   registerTransport(connector: TransportConnector): void;
   registerSecretStore(store: SecretStore): void;
@@ -34,9 +32,6 @@ export type OpenStrapPluginOption =
 
 export type OpenStrapPluginConfig = {
   plugins?: readonly OpenStrapPluginOption[];
-  facts?: {
-    backend?: string;
-  };
 };
 
 export function defineOpenStrapPlugin(plugin: OpenStrapPlugin): OpenStrapPlugin {

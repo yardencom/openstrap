@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import * as tar from "tar";
 
 import type {
+  BinaryFileWriteOptions,
   FileAccess,
   FileSystemAPI,
   FileSystemWriteOptions,
@@ -111,8 +112,31 @@ export class LocalFileSystem implements FileSystemAPI {
     }
   }
 
+  async readFile(path: string): Promise<Buffer | null> {
+    try {
+      return await readFile(path);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
   async removePath(path: string, options: RemovePathOptions = {}): Promise<void> {
     await rm(path, options);
+  }
+
+  async writeFile(path: string, content: Buffer, options: BinaryFileWriteOptions = {}): Promise<void> {
+    await this.createDirectory(this.parentPath(path));
+    await writeFile(path, content);
+
+    const mode = options.access === undefined ? options.mode : fileModes[options.access];
+
+    if (mode !== undefined) {
+      await chmod(path, mode);
+    }
   }
 
   async writeTextFile(path: string, content: string, options: TextFileWriteOptions = {}): Promise<void> {

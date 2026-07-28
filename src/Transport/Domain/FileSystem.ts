@@ -14,6 +14,10 @@ export type RemovePathOptions = {
   recursive?: boolean;
 };
 
+export type BinaryFileWriteOptions = FileSystemWriteOptions & {
+  access?: FileAccess;
+};
+
 export interface FileSystemAPI {
   copyFile(source: string, destination: string): Promise<void>;
   createDirectory(path: string, options?: FileSystemWriteOptions): Promise<void>;
@@ -28,4 +32,12 @@ export interface FileSystemAPI {
   readTextFile(path: string): Promise<string | null>;
   removePath(path: string, options?: RemovePathOptions): Promise<void>;
   writeTextFile(path: string, content: string, options?: TextFileWriteOptions): Promise<void>;
+  /**
+   * The bytes of a file, or null when there is no such file.
+   *
+   * Separate from `readTextFile` because a decoding is a decision: an executable
+   * read as UTF-8 comes back corrupted, and the corruption is silent.
+   */
+  readFile(path: string): Promise<Buffer | null>;
+  writeFile(path: string, content: Buffer, options?: BinaryFileWriteOptions): Promise<void>;
 }

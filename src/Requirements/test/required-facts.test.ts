@@ -1,0 +1,87 @@
+import { describe, expect, it } from "vitest";
+
+import { RequiredFacts } from "../Application/RequiredFacts.js";
+
+describe("RequiredFacts", () => {
+  it("asks only about the sections the requirements mention", () => {
+    const declared = new RequiredFacts({
+      requirements: [
+        { id: "resources", cpu: { cores: { minimum: 1 } }, memory: { totalBytes: { minimum: 1 } } },
+      ],
+    }).declaration;
+
+    expect(declared.sections).toEqual(["cpu", "memory"]);
+  });
+
+  it("does not mistake the fields naming a requirement for fact sections", () => {
+    const declared = new RequiredFacts({
+      requirements: [{ id: "optional-check", optional: true, arch: { const: "arm64" } }],
+    }).declaration;
+
+    expect(declared.sections).toEqual(["arch"]);
+  });
+
+  it("carries the names asked about in a section into the declaration", () => {
+    const declared = new RequiredFacts({
+      requirements: [
+        { id: "ssh", services: { sshd: { running: true } }, processes: { sshd: { status: "present" } } },
+      ],
+    }).declaration;
+
+    expect(declared.services).toEqual({ sshd: { name: "sshd" } });
+    expect(declared.processes).toEqual({ sshd: { name: "sshd" } });
+  });
+
+  it("collects the names across every requirement that asks about a section", () => {
+    const declared = new RequiredFacts({
+      requirements: [
+        { id: "ssh", services: { sshd: { running: true } } },
+        { id: "cron", services: { cron: { running: true } } },
+      ],
+    }).declaration;
+
+    expect(Object.keys(declared.services)).toEqual(["sshd", "cron"]);
+    expect(declared.sections).toEqual(["services"]);
+  });
+
+  it("knows where the workspace is, because only the run does", () => {
+    const declared = new RequiredFacts({
+      requirements: [{ id: "workspace-ready", paths: { workspace: { exists: true } } }],
+      workspaceRoot: "/workspace/app",
+    }).declaration;
+
+    expect(declared.paths).toEqual({ workspace: { path: "/workspace/app" } });
+  });
+
+  it("leaves the home directory for the machine being read to expand", () => {
+    const declared = new RequiredFacts({
+      requirements: [{ id: "home-ready", paths: { home: { writable: true } } }],
+    }).declaration;
+
+    expect(declared.paths).toEqual({ home: { path: "$HOME" } });
+  });
+
+  it("takes any other path name as the path itself", () => {
+    const declared = new RequiredFacts({
+      requirements: [{ id: "ssh-config", paths: { "/etc/ssh/sshd_config": { exists: true } } }],
+    }).declaration;
+
+    expect(declared.paths).toEqual({ "/etc/ssh/sshd_config": { path: "/etc/ssh/sshd_config" } });
+  });
+
+  it("names a section that holds no named things without naming anything in it", () => {
+    const declared = new RequiredFacts({
+      requirements: [{ id: "transport", transports: { ssh: { ready: true } } }],
+    }).declaration;
+
+    expect(declared.sections).toEqual(["transports"]);
+    expect(declared.processes).toEqual({});
+    expect(declared.paths).toEqual({});
+  });
+
+  it("asks for nothing when there is nothing to check", () => {
+    const declared = new RequiredFacts({ requirements: [] }).declaration;
+
+    expect(declared.sections).toEqual([]);
+  });
+});

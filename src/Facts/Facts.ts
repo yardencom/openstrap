@@ -1,108 +1,62 @@
+import { readFileSync } from "node:fs";
+
 import type { Transport } from "../Transport/index.js";
-import { DeclaredEntities } from "./Collectors/DeclaredEntities.js";
-import { SystemInventory } from "./Collectors/SystemInventory.js";
-import { createFactCollection } from "./Domain/FactCollectionFactory.js";
-import type { FactCollectionItem } from "./Domain/Facts.js";
+import { DeclaredFacts } from "./Definition/DeclaredFacts.js";
+import { FactsDefinitionReader } from "./Definition/FactsDefinitionReader.js";
+import { createFactCollection, type FactCollection } from "./Domain/FactCollection.js";
+import type { DefinitionFactOrder, FactOrder } from "./Domain/FactOrder.js";
+import type { FactData, FactRunStatus } from "./Domain/FactSnapshot.js";
+import { LocalReading } from "./Reading/LocalReading.js";
+import { RemoteReading } from "./Reading/RemoteReading.js";
+import type { SystemReading } from "./Reading/SystemReading.js";
 
-/**
- * What the facts module needs to know about a machine.
- *
- * Deliberately a plain shape of its own rather than a blueprint target. This
- * module does not know that blueprints exist — it reads a machine and says
- * what it found, which is a thing worth having with or without openstrap.
- */
-export type FactTarget = {
-  name: string;
-  scope: string;
-  type: string;
-  displayName?: string;
-  transport: string;
-};
-
-export type FactCollectionOrder = {
-  transport: Transport;
-  target: FactTarget;
-  /** Sections to read; everything cheap is read when omitted. */
-  sections?: readonly string[];
-  tools?: readonly string[];
-  paths?: Record<string, string>;
-  now?: Date;
-  attempt?: number;
+/** What reading a machine against a definition file produces. */
+export type DefinedFacts = {
+  definition: {
+    id: string;
+    version: number;
+    description: string;
+  };
+  facts: FactCollection;
+  /** Sections the definition declared that no reading answers. */
+  unread: readonly string[];
 };
 
 /**
- * Facts about machines: both the reading of them and the result.
+ * Facts about a machine.
  *
- * One module does both. Splitting "the collector" from "the collection" would
- * give two things that are useless apart, and the reading is what makes the
- * result trustworthy.
+ * The only way into this module. Everything it can do is on an instance, and an
+ * instance is made by naming the machine to read: with no transport it reads the
+ * one it is running on, with a transport it reads the one at the other end.
  *
- * Reading is done through an API rather than a constructor, because reaching a
- * machine can mean waiting on a network and a constructor cannot wait.
+ * There is no second entry point and no way to reach a collector, a reading or a
+ * section from outside, because a fact only means anything together with how it
+ * was obtained. A caller able to assemble its own reading could produce a
+ * snapshot nothing else in openstrap would be entitled to trust.
+ *
+ * Reading is a method rather than a constructor: reaching a machine can mean
+ * waiting on a network, and a constructor cannot wait.
  */
-export class Facts extends Array<FactCollectionItem> {
-  constructor(items: readonly FactCollectionItem[] = []) {
-    super();
-
-    if (Array.isArray(items)) {
-      this.push(...createFactCollection(items));
-    }
-  }
+export class Facts {
+  private readonly reading: SystemReading;
 
   /**
-   * Answers, by name, the entities a caller declared.
-   *
-   * The inventory is keyed by identity — a pid, a unit name. A caller asks
-   * "is node running". Both are facts about the same machine, so both belong
-   * in the same snapshot, and the matching lives here rather than in every
-   * caller that needs it.
+   * @param transport How to reach the machine. Omitted for the machine openstrap
+   * is running on, which is read in process — there is no local channel to open,
+   * so there is none to pass.
    */
-  static answerDeclarations(
-    data: Record<string, any>,
-    selectors: Readonly<Record<string, unknown>>,
-  ): Record<string, any> {
-    const declared = new DeclaredEntities();
-    const answered = { ...data };
-
-    if (selectors.processes) {
-      answered.processes = { ...data.processes, ...declared.processes(selectors.processes as never, data.processes ?? {}) };
-    }
-
-    if (selectors.services) {
-      answered.services = { ...data.services, ...declared.services(selectors.services as never, data.services ?? {}) };
-    }
-
-    return answered;
+  constructor(transport?: Transport) {
+    this.reading = transport === undefined ? new LocalReading() : new RemoteReading(transport);
   }
 
-  /**
-   * Reads a machine over a transport.
-   *
-   * The host is not a special case. It is a machine reached by the local
-   * transport, and it goes through exactly this method.
-   */
-  static async read(order: FactCollectionOrder): Promise<Facts> {
-    const startedAt = (order.now ?? new Date()).toISOString();
-    const stamp = startedAt.replace(/[-:.]/g, "");
-    const data = await SystemInventory.from(order.transport).read({
-      sections: order.sections,
-      tools: order.tools,
-      paths: order.paths,
-    });
+  /** Reads the machine and returns one snapshot of it, with the run that produced it. */
+  async collect(order: FactOrder): Promise<FactCollection> {
+    const startedAt = order.now ?? new Date();
+    const stamp = startedAt.toISOString().replace(/[-:.]/g, "");
     const snapshotId = `snap_${order.target.name}_${stamp}`;
+    const data = await this.reading.read(order.declare ?? {});
 
-    // Which channel reached this machine is known by the caller, not by the
-    // commands that ran over it — so it is recorded here rather than guessed.
-    data.transports = {
-      [order.target.transport]: {
-        status: "present",
-        type: order.target.transport,
-        ready: true,
-        authMethods: order.target.transport === "ssh" ? ["publickey"] : undefined,
-      },
-    };
-
-    return new Facts([{
+    return createFactCollection([{
       snapshot: {
         id: snapshotId,
         schemaVersion: "facts.v1",
@@ -112,16 +66,93 @@ export class Facts extends Array<FactCollectionItem> {
           id: order.target.name,
           displayName: order.target.displayName,
         },
-        data,
+        data: this.withTransport(data, order),
       },
       run: {
         id: `fact_run_${order.target.name}_${stamp}`,
         snapshotId,
-        startedAt,
+        startedAt: startedAt.toISOString(),
         finishedAt: new Date().toISOString(),
-        status: "success",
+        status: this.status(data),
         attempt: order.attempt ?? 1,
       },
     }]);
+  }
+
+  /**
+   * Reads the machine, asking what a facts definition file says to ask.
+   *
+   * The definition is read here rather than by the caller because a declaration
+   * is only meaningful together with the reading it was written for: a caller
+   * that parsed the file itself would be free to ask for one thing and report
+   * another.
+   */
+  async collectFromDefinition(order: DefinitionFactOrder): Promise<DefinedFacts> {
+    const definition = new FactsDefinitionReader().parseYaml(readFileSync(order.path, "utf8"));
+    const declared = new DeclaredFacts({
+      definition,
+      overrides: order.inputs,
+      workspaceRoot: order.workspaceRoot,
+    });
+
+    return {
+      definition: {
+        id: definition.id,
+        version: definition.version,
+        description: definition.description,
+      },
+      facts: await this.collect({
+        target: order.target,
+        declare: declared.declaration,
+        now: order.now,
+        attempt: order.attempt,
+      }),
+      unread: declared.unread,
+    };
+  }
+
+  /**
+   * How the machine was reached, recorded beside what was found on it.
+   *
+   * No reading can work this out: the machine does not know how anyone got in.
+   * It matters because a requirement can be written about the channel itself —
+   * "this target is reachable over ssh with a key" — and because two snapshots
+   * are only comparable when they were taken the same way.
+   */
+  private withTransport(data: FactData, order: FactOrder): FactData {
+    return {
+      ...data,
+      transports: {
+        [order.target.transport]: {
+          status: "present",
+          type: order.target.transport,
+          ready: true,
+          authMethods: order.target.transport === "ssh" ? ["publickey"] : undefined,
+        },
+      },
+    };
+  }
+
+  /**
+   * Whether the run got everything it was asked for.
+   *
+   * A machine that could not be read at all never reaches this point — that is an
+   * exception, because there is no snapshot to report. What is left is a machine
+   * that answered, where some declared thing failed: a command that would not
+   * run, a path that failed what was required of it. The snapshot is still
+   * usable, so the run is a warning rather than a failure, and the reason sits on
+   * the section that failed.
+   */
+  private status(data: FactData): FactRunStatus {
+    const answers = [
+      ...Object.values(data.commands),
+      ...Object.values(data.artifacts),
+      ...Object.values(data.paths),
+      ...Object.values(data.processes),
+      ...Object.values(data.services),
+      ...Object.values(data.tools),
+    ];
+
+    return answers.some((answer) => answer.status === "error") ? "warning" : "success";
   }
 }

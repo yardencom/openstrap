@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -22,10 +22,11 @@ describe("Facts boundaries", () => {
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
     expect(factsEntries).toEqual(
-      expect.arrayContaining(["Application", "Collectors", "Definition", "Domain", "SchemaArtifacts"]),
+      expect.arrayContaining(["Definition", "Domain", "Reading", "SchemaArtifacts"]),
     );
     expect(publicBarrel).toBe("export {};\n");
-    expect(publicBarrel).not.toContain("CollectFactsFromDefinition");
+    expect(factsEntries).not.toContain("Application");
+    expect(factsEntries).not.toContain("Collectors");
     expect(publicBarrel).not.toContain("FactsDefinitionJsonSchema");
     expect(publicBarrel).not.toContain("FactsDefinitionReader");
   });
@@ -71,21 +72,6 @@ describe("Facts boundaries", () => {
     expect(rootEntries).not.toContain("FactsDefinition");
     expect(rootEntries).not.toContain("FactsDefinitionCollection");
     expect(rootEntries).not.toContain("SchemaArtifacts");
-  });
-
-  it("keeps obsolete application names out of the facts module", () => {
-    const factsPath = join(process.cwd(), "src/Facts");
-    const applicationPath = join(factsPath, "Application");
-
-    if (existsSync(applicationPath)) {
-      expect(readdirSync(applicationPath)).not.toEqual(
-        expect.arrayContaining([
-          "FactCollectionPlanner.ts",
-          "FactsDefinitionCollector.ts",
-          "FactsResultStore.ts",
-        ]),
-      );
-    }
   });
 
   it("does not import facts adapters outside the Facts module", () => {

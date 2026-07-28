@@ -3,7 +3,7 @@ import { connect } from "node:net";
 import type { BlueprintTarget } from "../../Blueprint/index.js";
 import { Facts } from "../../Facts/Facts.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
-import { RequirementEvaluator, type RequirementRun } from "../../Requirements/index.js";
+import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Requirements/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
@@ -48,8 +48,7 @@ export class VerifyMachine {
     });
 
     try {
-      const facts = await Facts.read({
-        transport: connection,
+      const facts = await new Facts(connection).collect({
         target: {
           name: request.target.name,
           scope: request.target.scope,
@@ -57,6 +56,7 @@ export class VerifyMachine {
           displayName: request.target.displayName,
           transport: request.target.transport,
         },
+        declare: new RequiredFacts({ requirements: request.target.requirements }).declaration,
       });
       const item = facts[0]!;
 

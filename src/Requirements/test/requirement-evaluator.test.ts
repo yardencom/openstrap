@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { Facts } from "../../Facts/Facts.js";
 import { RequirementEvaluator, type RequirementLeafCheck, type TargetlessRequirement } from "../index.js";
 
 describe("RequirementEvaluator", () => {
@@ -142,8 +141,8 @@ function evaluate(requirements: TargetlessRequirement[]) {
   });
 }
 
-function facts(): Facts {
-  return new Facts([
+function facts() {
+  return [
     {
       snapshot: {
         id: "snap_guest",
@@ -192,7 +191,7 @@ function facts(): Facts {
         attempt: 1,
       },
     },
-  ]);
+  ];
 }
 
 function leaf(node: any, path: readonly string[]): RequirementLeafCheck {

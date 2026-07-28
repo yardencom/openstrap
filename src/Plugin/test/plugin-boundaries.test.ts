@@ -24,12 +24,13 @@ describe("Plugin boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("does not bind a facts backend to a channel of access", () => {
-    const capabilities = readFileSync(join(process.cwd(), "src/Plugin/Domain/FactsBackend.ts"), "utf8");
-    const registry = readFileSync(join(process.cwd(), "src/Plugin/Application/FactsBackendRegistry.ts"), "utf8");
+  it("offers no slot for reading a machine, because openstrap owns that", () => {
+    const api = readFileSync(join(process.cwd(), "src/Plugin/Domain/OpenStrapPlugin.ts"), "utf8");
+    const contracts = readdirSync(join(process.cwd(), "src/Plugin/Domain"));
 
-    expect(capabilities).not.toMatch(/transports:/);
-    expect(registry).not.toMatch(/transport capability/);
+    expect(api).not.toMatch(/registerFactsBackend|facts\?:/);
+    expect(contracts).not.toContain("FactsBackend.ts");
+    expect(readdirSync(join(process.cwd(), "src/Plugin/Application"))).not.toContain("FactsBackendRegistry.ts");
   });
 
   it("keeps every plugin contract method asynchronous", () => {
@@ -45,11 +46,10 @@ describe("Plugin boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("does not expose the built-in backend implementation through the barrel", () => {
+  it("does not mention a facts backend anywhere in its barrel", () => {
     const barrel = readFileSync(join(process.cwd(), "src/Plugin/index.ts"), "utf8");
 
-    expect(barrel).not.toContain("SystemInformationFactsBackend");
-    expect(barrel).not.toContain("createSystemInformationFactsBackend");
+    expect(barrel).not.toContain("FactsBackend");
   });
 
   it("keeps the plugin registries out of other modules", () => {

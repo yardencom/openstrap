@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const expectedExports = [
+  "BinaryFileWriteOptions",
   "CapturedSystemCommand",
   "DetachedProcessCommand",
   "DownloadResult",

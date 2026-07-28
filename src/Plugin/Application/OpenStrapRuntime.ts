@@ -1,22 +1,23 @@
-import type { FactsBackend } from "../Domain/FactsBackend.js";
 import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "../Domain/OpenStrapPlugin.js";
-import { coreFactsBackendId, openstrapCorePlugin } from "../Core/OpenStrapCorePlugin.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
-import type { FactsBackendRegistry } from "./FactsBackendRegistry.js";
 import type { ProviderRegistry } from "./ProviderRegistry.js";
 import type { SecretStoreRegistry } from "./SecretStoreRegistry.js";
 import type { TransportRegistry } from "./TransportRegistry.js";
 
 export type OpenStrapRuntimeCreateRequest = {
   config?: OpenStrapPluginConfig;
-  factsBackendId?: string;
   plugins?: readonly OpenStrapPluginOption[];
 };
 
+/**
+ * What a run can reach.
+ *
+ * Only the things a plugin can genuinely provide another implementation of:
+ * providers that create machines, transports that reach them, stores that hold
+ * secrets. Facts are not among them — there is one way to read a machine, and it
+ * is the facts module, which openstrap owns.
+ */
 export type OpenStrapRuntime = {
-  factsBackends: FactsBackendRegistry;
-  factsBackend: FactsBackend;
-  factsBackendId: string;
   providers: ProviderRegistry;
   transports: TransportRegistry;
   secretStores: SecretStoreRegistry;
@@ -29,17 +30,12 @@ export async function createOpenStrapRuntime(
   const config = request.config ?? {};
   const container = await OpenStrapPluginContainer.create({
     plugins: [
-      openstrapCorePlugin(),
       ...(config.plugins ?? []),
       ...(request.plugins ?? []),
     ],
   });
-  const factsBackendId = request.factsBackendId ?? config.facts?.backend ?? coreFactsBackendId;
 
   return {
-    factsBackends: container.factsBackends,
-    factsBackend: container.factsBackends.require(factsBackendId),
-    factsBackendId,
     providers: container.providers,
     transports: container.transports,
     secretStores: container.secretStores,

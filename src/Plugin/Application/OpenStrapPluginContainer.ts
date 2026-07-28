@@ -1,4 +1,3 @@
-import { FactsBackendRegistry } from "./FactsBackendRegistry.js";
 import { ProviderRegistry } from "./ProviderRegistry.js";
 import { SecretStoreRegistry } from "./SecretStoreRegistry.js";
 import { TransportRegistry } from "./TransportRegistry.js";
@@ -14,7 +13,6 @@ export type OpenStrapPluginContainerCreateRequest = {
 };
 
 export class OpenStrapPluginContainer {
-  readonly factsBackends = new FactsBackendRegistry();
   readonly providers = new ProviderRegistry();
   readonly transports = new TransportRegistry();
   readonly secretStores = new SecretStoreRegistry();
@@ -53,9 +51,6 @@ export class OpenStrapPluginContainer {
 
   private createApi(pluginName: string): OpenStrapPluginApi {
     return {
-      registerFactsBackend: (backend) => {
-        this.factsBackends.register(backend, pluginName);
-      },
       registerProvider: (provider) => {
         this.providers.register(provider, pluginName);
       },

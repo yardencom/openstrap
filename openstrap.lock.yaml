@@ -1,0 +1,18 @@
+# openstrap.lock.yaml — generated, not edited by hand.
+#
+# Only what is the same for everyone who clones this repository: the resolved
+# image, its checksum, its format and the plugin versions. Anything true of one
+# machine only — reserved ports, provider resource ids, runs — lives in the
+# state store and never here.
+targets:
+  ubuntu-vm:
+    image:
+      resolved: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img
+      sha256: 2eaec7286c49fdea713dddabcf5012cafa7097a658e916acb48f4bc5fdc8e419
+      signature: verified
+      arch: arm64
+      format: qcow2
+      boot: uefi
+    plugins:
+      "@openstrap/utm": 0.1.0
+      "@openstrap/ssh": 0.1.0
