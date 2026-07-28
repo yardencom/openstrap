@@ -4,15 +4,14 @@ import type { FactTarget } from "./FactTarget.js";
 /**
  * One machine to read, and what to ask it about.
  *
- * The questions arrive one of two ways: named inline by a caller that knows them,
- * or by reference to a facts definition file that holds them. Both are the same
- * thing said differently, which is why they are one order and not two ways in.
- * Saying them twice is a caller that has not decided, and is refused.
+ * Naming nothing is a legitimate order: it means "tell me about this machine", and
+ * the reading answers with everything it can without being told a name. The
+ * sections that hold named things stay empty, because nobody asked about anything
+ * in them and inventing entries would be inventing facts.
  */
 export type FactOrder = {
   target: FactTarget;
   declare?: FactDeclaration;
-  definition?: FactDefinitionSource;
   /**
    * When the run started, for callers that need reproducible identifiers.
    *
@@ -22,19 +21,3 @@ export type FactOrder = {
   now?: Date;
   attempt?: number;
 };
-
-/** A facts definition file to take the questions from. */
-export type FactDefinitionSource = {
-  path: string;
-  /** Values for the definition's inputs, which win over its own defaults. */
-  inputs?: Record<string, string>;
-  /** What a relative path in the definition is relative to. */
-  workspaceRoot: string;
-};
-
-export class ContradictoryFactOrderError extends Error {
-  constructor() {
-    super("A fact order names its questions inline and in a definition file; it must do one or the other");
-    this.name = "ContradictoryFactOrderError";
-  }
-}

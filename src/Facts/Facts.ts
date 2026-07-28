@@ -1,36 +1,14 @@
-import { readFileSync } from "node:fs";
-
 import type { Transport } from "../Transport/index.js";
-import { DeclaredFacts } from "./Definition/DeclaredFacts.js";
-import { FactsDefinitionReader } from "./Definition/FactsDefinitionReader.js";
 import {
   createFactCollection,
   createFactCollectionItem,
   type FactCollection,
 } from "./Domain/FactCollection.js";
-import type { FactDeclaration } from "./Domain/FactDeclaration.js";
-import {
-  ContradictoryFactOrderError,
-  type FactDefinitionSource,
-  type FactOrder,
-} from "./Domain/FactOrder.js";
+import type { FactOrder } from "./Domain/FactOrder.js";
 import type { TransportFact } from "./Domain/FactSnapshot.js";
 import { LocalReading } from "./Reading/LocalReading.js";
 import { RemoteReading } from "./Reading/RemoteReading.js";
 import type { SystemReading } from "./Reading/SystemReading.js";
-
-/** What one reading produced. */
-export type CollectedFacts = {
-  facts: FactCollection;
-  /** Which definition the questions came from, when they came from one. */
-  definition?: {
-    id: string;
-    version: number;
-    description: string;
-  };
-  /** Sections the questions named that no reading answers. */
-  unread: readonly string[];
-};
 
 /**
  * Facts about a machine.
@@ -62,68 +40,17 @@ export class Facts {
   }
 
   /** Reads the machine and returns one snapshot of it, with the run that produced it. */
-  async collect(order: FactOrder): Promise<CollectedFacts> {
+  async collect(order: FactOrder): Promise<FactCollection> {
     const startedAt = order.now ?? new Date();
-    const asked = this.questions(order);
-    const data = await this.reading.read(asked.declare);
+    const data = await this.reading.read(order.declare ?? {});
 
-    return {
-      facts: createFactCollection([createFactCollectionItem({
-        target: order.target,
-        data,
-        transports: this.transports(order),
-        startedAt,
-        attempt: order.attempt,
-      })]),
-      definition: asked.definition,
-      unread: asked.unread,
-    };
-  }
-
-  /**
-   * What to ask the machine, from whichever place the order named it.
-   *
-   * A definition file is read here rather than by the caller because a declaration
-   * only means something together with the reading it was written for: a caller that
-   * parsed the file itself would be free to ask for one thing and report another.
-   */
-  private questions(order: FactOrder): {
-    declare: FactDeclaration;
-    definition?: CollectedFacts["definition"];
-    unread: readonly string[];
-  } {
-    if (order.declare !== undefined && order.definition !== undefined) {
-      throw new ContradictoryFactOrderError();
-    }
-
-    if (order.definition === undefined) {
-      return { declare: order.declare ?? {}, unread: [] };
-    }
-
-    return this.declared(order.definition);
-  }
-
-  private declared(source: FactDefinitionSource): {
-    declare: FactDeclaration;
-    definition: NonNullable<CollectedFacts["definition"]>;
-    unread: readonly string[];
-  } {
-    const definition = new FactsDefinitionReader().parseYaml(readFileSync(source.path, "utf8"));
-    const declared = new DeclaredFacts({
-      definition,
-      overrides: source.inputs,
-      workspaceRoot: source.workspaceRoot,
-    });
-
-    return {
-      declare: declared.declaration,
-      definition: {
-        id: definition.id,
-        version: definition.version,
-        description: definition.description,
-      },
-      unread: declared.unread,
-    };
+    return createFactCollection([createFactCollectionItem({
+      target: order.target,
+      data,
+      transports: this.transports(order),
+      startedAt,
+      attempt: order.attempt,
+    })]);
   }
 
   /**

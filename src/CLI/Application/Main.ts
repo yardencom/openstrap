@@ -16,7 +16,7 @@ import {
   type RequirementRun,
 } from "../../Requirements/index.js";
 import {
-  collectFactsFromDefinition,
+  collectHostFacts,
   type FactsCollectResult,
 } from "./FactsCollectCommand.js";
 import { connectToTarget } from "./ConnectCommand.js";
@@ -25,7 +25,7 @@ import type { CreatedTarget } from "./CreateCommand.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
 
-type FactCollection = Awaited<ReturnType<Facts["collect"]>>["facts"];
+type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 
 export type OpenStrapRunOutput = {
   targets: Array<{
@@ -60,7 +60,7 @@ export async function runOpenStrapFlow(params: {
   const collected: FactCollection[number][] = [];
 
   for (const target of Object.values(blueprint.targets)) {
-    collected.push(...(await host.collect({
+    collected.push(...await host.collect({
       target: {
         name: target.name,
         scope: target.scope,
@@ -73,7 +73,7 @@ export async function runOpenStrapFlow(params: {
         workspaceRoot: params.workspaceRoot,
       }).declaration,
       now: params.now,
-    })).facts);
+    }));
   }
 
   const result = await new OpenStrapRun().execute({
@@ -113,11 +113,7 @@ export async function main(argv: readonly string[], io: CliIo = {
 
   try {
     if (parsedArgs.command === "facts.collect") {
-      const output = await collectFactsFromDefinition({
-        path: parsedArgs.configPath,
-        workspaceRoot: io.cwd,
-        inputs: parsedArgs.inputs,
-      });
+      const output = await collectHostFacts({ workspaceRoot: io.cwd });
 
       io.stdout.write(parsedArgs.json
         ? `${JSON.stringify(output, null, 2)}\n`
@@ -260,31 +256,32 @@ function renderHumanOutput(output: OpenStrapRunOutput): string {
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * What was read, as a person would want to see it.
+ *
+ * The sections that answer with one value each are printed as values; the ones that
+ * are maps are printed as counts, because a machine with seven hundred processes on
+ * it is not readable as a list and the stored result has every one of them.
+ */
 function renderFactsCollectOutput(output: FactsCollectResult): string {
   const item = output.facts[0]!;
-  const data = item.snapshot.data as Record<string, Record<string, Record<string, unknown>>>;
+  const data = item.snapshot.data as FactSummary;
   const lines: string[] = [];
 
   lines.push(`OpenStrap facts collect: ${item.run.status}`);
-  lines.push(`Definition: ${output.definition!.id} v${output.definition!.version}`);
   lines.push(`Target: ${item.snapshot.target.id}`);
   lines.push(`Snapshot: ${item.snapshot.id} factRun=${item.run.id}`);
   lines.push(`Result file: ${output.storage.resultPath}`);
+  lines.push("");
+  lines.push(`${data.os.display?.pretty ?? data.os.name} ${data.arch}, kernel ${data.os.kernel ?? "unknown"}`);
+  lines.push(`cpu      ${data.cpu.cores} cores${data.cpu.model ? ` ${data.cpu.model}` : ""}`);
+  lines.push(`memory   ${gigabytes(data.memory.availableBytes)} of ${gigabytes(data.memory.totalBytes)} available`);
+  lines.push(`storage  ${gigabytes(data.storage.availableBytes)} of ${gigabytes(data.storage.totalBytes)} available`);
+  lines.push(`user     ${named(data.users)} (${data.privileges.mode ?? "unknown"})`);
+  lines.push("");
 
-  for (const section of ["processes", "services", "paths", "env", "commands", "artifacts"]) {
-    const entries = Object.entries(data[section] ?? {}).filter(([id]) => !id.startsWith("pid-"));
-
-    lines.push("");
-    lines.push(`${section} (${entries.length}):`);
-
-    for (const [id, fact] of entries) {
-      lines.push(`  - ${id}: ${String(fact.status)}${describe(fact)}`);
-    }
-  }
-
-  if (output.unread.length > 0) {
-    lines.push("");
-    lines.push(`Declared but not read: ${output.unread.join(", ")}`);
+  for (const [section, entries] of countable(data)) {
+    lines.push(`${section.padEnd(10)} ${entries}`);
   }
 
   lines.push("");
@@ -292,13 +289,28 @@ function renderFactsCollectOutput(output: FactsCollectResult): string {
   return `${lines.join("\n")}\n`;
 }
 
-/** The fields of a fact worth putting on one line beside its status. */
-function describe(fact: Record<string, unknown>): string {
-  const shown = ["name", "path", "pid", "running", "state", "manager", "type", "version", "exitCode", "reason"]
-    .filter((field) => fact[field] !== undefined)
-    .map((field) => `${field}=${String(fact[field])}`);
+type FactSummary = {
+  os: { name: string; kernel?: string; display?: { pretty?: string } };
+  arch: string;
+  cpu: { cores: number; model?: string };
+  memory: { totalBytes?: number; availableBytes?: number };
+  storage: { totalBytes?: number; availableBytes?: number };
+  privileges: { mode?: string };
+  users: Record<string, { name?: string }>;
+} & Record<string, unknown>;
 
-  return shown.length === 0 ? "" : ` ${shown.join(" ")}`;
+/** Sections that hold named things, and how many of them were found. */
+function countable(data: FactSummary): Array<[string, number]> {
+  return ["processes", "services", "users", "groups", "tools", "runtimes", "paths", "env", "commands", "artifacts"]
+    .map((section): [string, number] => [section, Object.keys((data[section] ?? {}) as object).length]);
+}
+
+function named(users: Record<string, { name?: string }>): string {
+  return Object.values(users)[0]?.name ?? "unknown";
+}
+
+function gigabytes(bytes: number | undefined): string {
+  return bytes === undefined ? "unknown" : `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
 }
 
 function flattenChecks(node: RequirementCheckNode, path: readonly string[] = []): Array<{

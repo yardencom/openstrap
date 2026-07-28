@@ -37,7 +37,7 @@ describe("Facts public API", () => {
   });
 
   it("reads a machine through a method, because reaching one means waiting", async () => {
-    const { facts } = await new Facts().collect({
+    const facts = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });

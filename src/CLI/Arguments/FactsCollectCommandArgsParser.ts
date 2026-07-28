@@ -2,6 +2,12 @@ import type { FactsCollectArgs } from "./CliArgs.js";
 import type { FactsSubcommandArgsParser } from "./FactsSubcommandArgsParser.js";
 import { RuntimeArgsParser } from "./RuntimeArgsParser.js";
 
+/**
+ * `openstrap facts collect host`.
+ *
+ * There is nothing to parameterise. The command reads the machine as it is, so it
+ * takes no file to read questions from and no values to fill one in with.
+ */
 export class FactsCollectCommandArgsParser implements FactsSubcommandArgsParser {
   readonly subcommand = "collect";
 
@@ -10,7 +16,6 @@ export class FactsCollectCommandArgsParser implements FactsSubcommandArgsParser 
   parse(args: readonly string[]): FactsCollectArgs {
     let json = false;
     const positionals: string[] = [];
-    const inputs: Record<string, string> = {};
     const runtimeArgs = this.runtimeArgs.create();
 
     for (let index = 0; index < args.length; index += 1) {
@@ -27,23 +32,6 @@ export class FactsCollectCommandArgsParser implements FactsSubcommandArgsParser 
         continue;
       }
 
-      if (arg === "--input") {
-        const value = args[index + 1];
-
-        if (!value) {
-          throw new Error("Missing value for --input");
-        }
-
-        this.readInputOverride(value, inputs);
-        index += 1;
-        continue;
-      }
-
-      if (arg.startsWith("--input=")) {
-        this.readInputOverride(arg.slice("--input=".length), inputs);
-        continue;
-      }
-
       if (arg.startsWith("-")) {
         throw new Error(`Unknown option "${arg}"`);
       }
@@ -55,27 +43,15 @@ export class FactsCollectCommandArgsParser implements FactsSubcommandArgsParser 
       throw new Error("Missing facts target. Use: openstrap facts collect host");
     }
 
-    if (positionals.length > 2) {
-      throw new Error("Only one facts definition path can be provided");
+    if (positionals.length > 1) {
+      throw new Error(`Unexpected argument "${positionals[1]}". Use: openstrap facts collect host`);
     }
 
     return {
       command: "facts.collect",
       target: "host",
-      configPath: positionals[1] ?? "examples/facts/system-inventory.yaml",
       json,
-      inputs,
       ...runtimeArgs,
     };
-  }
-
-  private readInputOverride(value: string, inputs: Record<string, string>): void {
-    const separator = value.indexOf("=");
-
-    if (separator <= 0) {
-      throw new Error(`Invalid --input "${value}". Expected key=value`);
-    }
-
-    inputs[value.slice(0, separator)] = value.slice(separator + 1);
   }
 }

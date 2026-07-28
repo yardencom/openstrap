@@ -12,9 +12,7 @@ export type RunArgs = {
 export type FactsCollectArgs = {
   command: "facts.collect";
   target: "host";
-  configPath: string;
   json: boolean;
-  inputs: Record<string, string>;
 } & RuntimeArgs;
 
 export type CreateArgs = {

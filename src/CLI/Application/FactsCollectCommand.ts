@@ -3,9 +3,10 @@ import { join } from "node:path";
 import { JsonFileExporter } from "../../Export/index.js";
 import { Facts } from "../../Facts/Facts.js";
 
-type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>;
+type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 
-export type FactsCollectResult = CollectedFacts & {
+export type FactsCollectResult = {
+  facts: FactCollection;
   storage: {
     runDirectory: string;
     resultPath: string;
@@ -13,22 +14,23 @@ export type FactsCollectResult = CollectedFacts & {
 };
 
 export type FactsCollectRequest = {
-  path: string;
   workspaceRoot: string;
-  inputs: Record<string, string>;
   now?: Date;
 };
 
 /**
- * `openstrap facts collect` — read this machine the way a definition file says to.
+ * `openstrap facts collect` — read this machine and keep what was found.
  *
- * Two steps and no logic of its own: the facts module answers an order that names
- * the definition, and the answer is written where a run keeps its artifacts. The
- * command owns the second step only because where a run's files live is a property
- * of the workspace rather than of the facts.
+ * Nothing is declared, so nothing is asked about by name: this is the machine as it
+ * is, not the machine measured against something. Requirements and everything else a
+ * blueprint intends are deliberately absent — `openstrap run` is the command that
+ * compares, and this one only looks.
+ *
+ * The command owns where the result lands because that is a property of the
+ * workspace rather than of the facts.
  */
-export async function collectFactsFromDefinition(request: FactsCollectRequest): Promise<FactsCollectResult> {
-  const collected = await new Facts().collect({
+export async function collectHostFacts(request: FactsCollectRequest): Promise<FactsCollectResult> {
+  const facts = await new Facts().collect({
     target: {
       name: "host",
       scope: "host",
@@ -36,16 +38,11 @@ export async function collectFactsFromDefinition(request: FactsCollectRequest): 
       displayName: "Local host",
       transport: "local",
     },
-    definition: {
-      path: request.path,
-      inputs: request.inputs,
-      workspaceRoot: request.workspaceRoot,
-    },
     now: request.now,
   });
-  const runDirectory = join(request.workspaceRoot, ".openstrap", "runs", "facts", collected.facts[0]!.run.id);
+  const runDirectory = join(request.workspaceRoot, ".openstrap", "runs", "facts", facts[0]!.run.id);
   const result: FactsCollectResult = {
-    ...collected,
+    facts,
     storage: {
       runDirectory,
       resultPath: join(runDirectory, "result.json"),

@@ -21,14 +21,14 @@ describe("Facts boundaries", () => {
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
-    expect(factsEntries).toEqual(
-      expect.arrayContaining(["Definition", "Domain", "Reading", "SchemaArtifacts"]),
-    );
+    expect(factsEntries).toEqual(expect.arrayContaining(["Domain", "Reading"]));
     expect(publicBarrel).toBe("export {};\n");
     expect(factsEntries).not.toContain("Application");
     expect(factsEntries).not.toContain("Collectors");
-    expect(publicBarrel).not.toContain("FactsDefinitionJsonSchema");
-    expect(publicBarrel).not.toContain("FactsDefinitionReader");
+    // A facts file of its own does not exist: what to read comes from the caller,
+    // and the only config that says it is the blueprint, which Blueprint owns.
+    expect(factsEntries).not.toContain("Definition");
+    expect(factsEntries).not.toContain("SchemaArtifacts");
   });
 
   it("keeps Facts/Facts as the only import path from other modules", () => {
