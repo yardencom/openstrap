@@ -9,7 +9,8 @@ import {
 } from "../../Modules/Requirements/index.js";
 import type { RunArgs } from "../Arguments/types.js";
 import { renderRunOutput } from "../Output/RunOutput.js";
-import { printedAs, type CliCommand, type CommandContext, type CommandOutcome } from "./CliCommand.js";
+import { asJson } from "../Output/JsonOutput.js";
+import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 
@@ -41,7 +42,7 @@ export class RunCommand implements CliCommand<RunArgs> {
     const run = await this.run(args, context);
 
     return {
-      output: printedAs(args.json, run, () => renderRunOutput(run)),
+      output: args.json ? asJson(run) : renderRunOutput(run),
       exitCode: runSucceeded(run.requirementRun.status) ? 0 : 1,
     };
   }

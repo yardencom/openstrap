@@ -4,7 +4,8 @@ import { JsonFileExporter } from "../../Export/index.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs } from "../Arguments/types.js";
 import { renderFactsOutput } from "../Output/FactsOutput.js";
-import { printedAs, type CliCommand, type CommandContext, type CommandOutcome } from "./CliCommand.js";
+import { asJson } from "../Output/JsonOutput.js";
+import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 
@@ -31,7 +32,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs> {
     const collected = await this.collect(context);
 
     return {
-      output: printedAs(args.json, collected, () => renderFactsOutput(collected)),
+      output: args.json ? asJson(collected) : renderFactsOutput(collected),
       // A machine that could not be read at all throws; a run that came back with a
       // failed section is still a result, and the caller has to be able to notice.
       exitCode: collected.facts.some((item) => item.run.status === "error") ? 1 : 0,

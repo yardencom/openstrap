@@ -32,14 +32,3 @@ export type CommandOutcome = {
 export interface CliCommand<TArgs extends ParsedArgs> {
   execute(args: TArgs, context: CommandContext): Promise<CommandOutcome>;
 }
-
-/**
- * The result as the caller asked to see it.
- *
- * `--json` prints the result itself rather than the rendered form, so anything
- * openstrap can say a person can also parse. The rendering is a callback because it
- * costs work nobody wants done when the answer is going to a program.
- */
-export function printedAs(asJson: boolean, result: unknown, render: () => string): string {
-  return asJson ? `${JSON.stringify(result, null, 2)}\n` : render();
-}

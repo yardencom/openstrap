@@ -9,7 +9,8 @@ import { RunLock } from "../../RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../Arguments/types.js";
 import { renderCreateOutput } from "../Output/CreateOutput.js";
-import { printedAs, type CliCommand, type CommandContext, type CommandOutcome } from "./CliCommand.js";
+import { asJson } from "../Output/JsonOutput.js";
+import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 export class UnknownTargetError extends Error {
   constructor(name: string, declared: readonly string[]) {
@@ -44,7 +45,7 @@ export class CreateCommand implements CliCommand<CreateArgs> {
     const created = await this.create(args, context);
 
     return {
-      output: printedAs(args.json, created, () => renderCreateOutput(args.target, created)),
+      output: args.json ? asJson(created) : renderCreateOutput(args.target, created),
       exitCode: runSucceeded(created.requirementRun?.status) ? 0 : 1,
     };
   }
