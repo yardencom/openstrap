@@ -1,5 +1,16 @@
 export type CheckStatus = "passed" | "failed" | "error" | "skipped";
 
+/**
+ * Whether a run of this status means the thing it checked is fit for use.
+ *
+ * `skipped` counts as success: nothing was required, so nothing was found wanting.
+ * A run that never happened — no requirements at all — counts the same way, which is
+ * why the status may be absent.
+ */
+export function runSucceeded(status: CheckStatus | undefined): boolean {
+  return status === undefined || status === "passed" || status === "skipped";
+}
+
 export type TargetlessRequirement = {
   id: string;
   optional?: boolean;

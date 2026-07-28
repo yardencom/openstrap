@@ -1,61 +1,60 @@
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { ConnectToTarget, type Connection } from "../../Connect/index.js";
+import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import type { ConnectArgs } from "../Arguments/types.js";
+import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-import { ConnectToTarget } from "../../Connect/index.js";
-import type { OpenStrapRuntime } from "../../Plugin/index.js";
-import { SqliteStateStore } from "../../StateStore/index.js";
-import { stateHome } from "./CreateArgs.js";
+/**
+ * `openstrap connect` — reach a machine openstrap created, and optionally run something.
+ *
+ * The only command whose output is not openstrap's own: with `--run` it hands back what
+ * the machine printed, unchanged and undecorated, and exits with the code the machine
+ * exited with. Anything added around that would be openstrap talking over the answer.
+ */
+export class ConnectCommand implements CliCommand<ConnectArgs> {
+  constructor(private readonly stateHome = new StateHome()) {}
 
-export type ConnectCommandRequest = {
-  target: string;
-  command?: string;
-  runtime: OpenStrapRuntime;
-};
-
-export type ConnectCommandResult = {
-  output: string;
-  exitCode: number;
-};
-
-export async function connectToTarget(request: ConnectCommandRequest): Promise<ConnectCommandResult> {
-  const home = stateHome();
-  mkdirSync(home, { recursive: true });
-
-  const store = new SqliteStateStore(join(home, "state.db"));
-
-  try {
-    const connection = await new ConnectToTarget().execute({
-      target: request.target,
-      runtime: request.runtime,
-      store,
-    });
+  async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome> {
+    const runtime = await context.runtime();
+    const store = new SqliteStateStore(this.stateHome.database());
 
     try {
-      if (!request.command) {
-        const endpoint = connection.access.endpoint;
+      const connection = await new ConnectToTarget().execute({
+        target: args.target,
+        runtime,
+        store,
+      });
 
-        return {
-          output: [
-            `Connected to ${request.target} over ${connection.access.transport}.`,
-            `  ${endpoint.user}@${endpoint.host}:${endpoint.port}`,
-            "",
-            "Run a command with: openstrap connect " + request.target + " --run '<command>'",
-            "",
-          ].join("\n"),
-          exitCode: 0,
-        };
+      try {
+        return args.run === undefined
+          ? this.reached(args.target, connection.access)
+          : await this.ran(connection, args.run);
+      } finally {
+        await connection.close();
       }
-
-      const result = await connection.run(request.command);
-
-      return {
-        output: `${result.stdout}${result.stderr}`,
-        exitCode: result.exitCode ?? 1,
-      };
     } finally {
-      await connection.close();
+      store.close();
     }
-  } finally {
-    store.close();
+  }
+
+  private reached(target: string, access: Connection["access"]): CommandOutcome {
+    return {
+      output: [
+        `Connected to ${target} over ${access.transport}.`,
+        `  ${access.endpoint.user}@${access.endpoint.host}:${access.endpoint.port}`,
+        "",
+        `Run a command with: openstrap connect ${target} --run '<command>'`,
+        "",
+      ].join("\n"),
+      exitCode: 0,
+    };
+  }
+
+  private async ran(connection: Connection, command: string): Promise<CommandOutcome> {
+    const result = await connection.run(command);
+
+    return {
+      output: `${result.stdout}${result.stderr}`,
+      exitCode: result.exitCode ?? 1,
+    };
   }
 }

@@ -1,3 +1,4 @@
+export { StateHome } from "./StateHome.js";
 export { SqliteStateStore } from "./Adapters/Sqlite/SqliteStateStore.js";
 export type {
   AllocatedPortRecord,

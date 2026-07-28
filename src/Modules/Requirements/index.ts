@@ -4,6 +4,7 @@ export {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
 } from "./Application/MergeRequirementRuns.js";
+export { runSucceeded } from "./Domain/Requirements.js";
 export type {
   CheckStatus,
   RequirementCheckNode,
