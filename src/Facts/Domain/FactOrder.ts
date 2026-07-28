@@ -1,10 +1,18 @@
 import type { FactDeclaration } from "./FactDeclaration.js";
 import type { FactTarget } from "./FactTarget.js";
 
-/** One machine to read, and what to ask it about. */
+/**
+ * One machine to read, and what to ask it about.
+ *
+ * The questions arrive one of two ways: named inline by a caller that knows them,
+ * or by reference to a facts definition file that holds them. Both are the same
+ * thing said differently, which is why they are one order and not two ways in.
+ * Saying them twice is a caller that has not decided, and is refused.
+ */
 export type FactOrder = {
   target: FactTarget;
   declare?: FactDeclaration;
+  definition?: FactDefinitionSource;
   /**
    * When the run started, for callers that need reproducible identifiers.
    *
@@ -15,22 +23,18 @@ export type FactOrder = {
   attempt?: number;
 };
 
-/**
- * One machine to read, with the questions taken from a facts definition file.
- *
- * A separate order because a definition brings more than a declaration: it has an
- * identity and a version worth reporting, its inputs can be overridden, and its
- * relative paths mean something only next to the workspace it was found in.
- */
-export type DefinitionFactOrder = {
-  target: FactTarget;
-  /** Path to the definition file. */
+/** A facts definition file to take the questions from. */
+export type FactDefinitionSource = {
   path: string;
   /** Values for the definition's inputs, which win over its own defaults. */
   inputs?: Record<string, string>;
   /** What a relative path in the definition is relative to. */
   workspaceRoot: string;
-  now?: Date;
-  attempt?: number;
 };
 
+export class ContradictoryFactOrderError extends Error {
+  constructor() {
+    super("A fact order names its questions inline and in a definition file; it must do one or the other");
+    this.name = "ContradictoryFactOrderError";
+  }
+}

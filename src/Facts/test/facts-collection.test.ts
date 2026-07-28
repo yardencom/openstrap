@@ -60,7 +60,7 @@ describe("fact collections", () => {
 
 describe("reading a machine", () => {
   it("stamps the target it read and pairs the run with the snapshot", async () => {
-    const facts = await new Facts().collect({
+    const { facts } = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os", "arch"] },
     });
@@ -73,7 +73,7 @@ describe("reading a machine", () => {
   });
 
   it("names no channel when it opened none", async () => {
-    const facts = await new Facts().collect({
+    const { facts } = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });
@@ -86,7 +86,7 @@ describe("reading a machine", () => {
   });
 
   it("reads the machine it is running on when given no transport", async () => {
-    const facts = await new Facts().collect({
+    const { facts } = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os", "arch", "cpu", "memory"] },
     });
@@ -106,7 +106,7 @@ describe("reading a machine", () => {
   });
 
   it("does not read a section nobody asked about", async () => {
-    const facts = await new Facts().collect({
+    const { facts } = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });
@@ -124,11 +124,41 @@ describe("reading a machine", () => {
       target,
       declare: { users: { superuser: { name: "root", uid: 1234 } } },
     });
-    const data = failed[0]!.snapshot.data as { users: Record<string, { status: string }> };
+    const data = failed.facts[0]!.snapshot.data as { users: Record<string, { status: string }> };
 
-    expect(clean[0]!.run.status).toBe("success");
+    expect(clean.facts[0]!.run.status).toBe("success");
     expect(data.users.superuser!.status).toBe("error");
-    expect(failed[0]!.run.status).toBe("warning");
+    expect(failed.facts[0]!.run.status).toBe("warning");
+  });
+
+  it("refuses an order that names its questions twice", async () => {
+    await expect(new Facts().collect({
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      declare: { sections: ["os"] },
+      definition: { path: "examples/facts/minimal.yaml", workspaceRoot: process.cwd() },
+    })).rejects.toThrow(/one or the other/);
+  });
+
+  it("takes the questions from a definition file when the order names one", async () => {
+    const collected = await new Facts().collect({
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      definition: { path: "examples/facts/system-inventory.yaml", workspaceRoot: process.cwd() },
+    });
+    const data = collected.facts[0]!.snapshot.data as { processes: Record<string, unknown> };
+
+    expect(collected.definition).toMatchObject({ id: "system-inventory", version: 1 });
+    expect(data.processes).toHaveProperty("node-process");
+    expect(collected.unread).toEqual([]);
+  });
+
+  it("names no definition and nothing unread when the questions came inline", async () => {
+    const collected = await new Facts().collect({
+      target: { name: "host", scope: "host", type: "host", transport: "local" },
+      declare: { sections: ["os"] },
+    });
+
+    expect(collected.definition).toBeUndefined();
+    expect(collected.unread).toEqual([]);
   });
 
   it("gives every snapshot a name of its own", async () => {
@@ -137,7 +167,7 @@ describe("reading a machine", () => {
     const first = await facts.collect({ target, declare: { sections: ["os"] }, now: new Date("2026-01-01T00:00:00Z") });
     const second = await facts.collect({ target, declare: { sections: ["os"] }, now: new Date("2026-01-02T00:00:00Z") });
 
-    expect(first[0]!.snapshot.id).not.toBe(second[0]!.snapshot.id);
+    expect(first.facts[0]!.snapshot.id).not.toBe(second.facts[0]!.snapshot.id);
   });
 });
 

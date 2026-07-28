@@ -20,11 +20,11 @@ describe("Facts public API", () => {
     expect(statics).toEqual([]);
   });
 
-  it("offers reading a machine, and reading it against a definition file", () => {
-    const facts = new Facts();
+  it("offers one way to read a machine and no other", () => {
+    const methods = Object.getOwnPropertyNames(Facts.prototype).filter((name) => name !== "constructor");
+    const publicMethods = methods.filter((name) => /^(collect|read|inspect|gather)/.test(name));
 
-    expect(typeof facts.collect).toBe("function");
-    expect(typeof facts.collectFromDefinition).toBe("function");
+    expect(publicMethods).toEqual(["collect"]);
   });
 
   it("exports one class and no other value", () => {
@@ -37,7 +37,7 @@ describe("Facts public API", () => {
   });
 
   it("reads a machine through a method, because reaching one means waiting", async () => {
-    const facts = await new Facts().collect({
+    const { facts } = await new Facts().collect({
       target: { name: "host", scope: "host", type: "host", transport: "local" },
       declare: { sections: ["os"] },
     });

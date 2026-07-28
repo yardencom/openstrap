@@ -25,7 +25,7 @@ import type { CreatedTarget } from "./CreateCommand.js";
 import { CliArgsParser, type ParsedArgs, type RuntimeArgs } from "../Arguments/index.js";
 import { CliErrors } from "./Errors.js";
 
-type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>;
+type FactCollection = Awaited<ReturnType<Facts["collect"]>>["facts"];
 
 export type OpenStrapRunOutput = {
   targets: Array<{
@@ -34,7 +34,7 @@ export type OpenStrapRunOutput = {
     type: string;
     transport: string;
   }>;
-  facts: CollectedFacts;
+  facts: FactCollection;
   requirementRun: RequirementRun;
 };
 
@@ -57,10 +57,10 @@ export async function runOpenStrapFlow(params: {
   // target of a plain run is the machine openstrap is on, so every one of them is
   // read in process.
   const host = new Facts();
-  const collected: CollectedFacts[number][] = [];
+  const collected: FactCollection[number][] = [];
 
   for (const target of Object.values(blueprint.targets)) {
-    collected.push(...await host.collect({
+    collected.push(...(await host.collect({
       target: {
         name: target.name,
         scope: target.scope,
@@ -73,7 +73,7 @@ export async function runOpenStrapFlow(params: {
         workspaceRoot: params.workspaceRoot,
       }).declaration,
       now: params.now,
-    }));
+    })).facts);
   }
 
   const result = await new OpenStrapRun().execute({
@@ -266,7 +266,7 @@ function renderFactsCollectOutput(output: FactsCollectResult): string {
   const lines: string[] = [];
 
   lines.push(`OpenStrap facts collect: ${item.run.status}`);
-  lines.push(`Definition: ${output.definition.id} v${output.definition.version}`);
+  lines.push(`Definition: ${output.definition!.id} v${output.definition!.version}`);
   lines.push(`Target: ${item.snapshot.target.id}`);
   lines.push(`Snapshot: ${item.snapshot.id} factRun=${item.run.id}`);
   lines.push(`Result file: ${output.storage.resultPath}`);

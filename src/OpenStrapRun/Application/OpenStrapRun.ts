@@ -13,7 +13,7 @@ import { mergeRequirementRuns } from "./MergeRequirementRuns.js";
  * a fact collection only exists as the result of a reading, and nothing outside
  * that module is allowed to name its parts.
  */
-type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>;
+type CollectedFacts = Awaited<ReturnType<Facts["collect"]>>["facts"];
 
 export type OpenStrapRunRequest = {
   blueprint: Blueprint;
