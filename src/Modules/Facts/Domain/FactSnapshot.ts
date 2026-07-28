@@ -10,6 +10,10 @@ export type ReadingStatus = "success" | "warning" | "error";
 /**
  * How the snapshot came to be: when it was taken, and whether the taking went cleanly.
  *
+ * Named for the snapshot and not just `Reading`, because `Reading/` next door is the act of reading a
+ * machine — `LocalReading`, `RemoteReading` — and one word cannot mean both the doing and the record
+ * of what was done.
+ *
  * Kept apart from the machine's own facts rather than mixed in with them, because neither is a thing
  * about the machine and a requirement comparing two snapshots must not trip over them.
  *
@@ -18,7 +22,7 @@ export type ReadingStatus = "success" | "warning" | "error";
  * time. How long the reading took is nobody's question yet, and if it becomes one it is a duration
  * and not two stamps to subtract.
  */
-export type Reading = {
+export type SnapshotReading = {
   takenAt: string;
   status: ReadingStatus;
 };
@@ -49,7 +53,7 @@ export class FactSnapshot {
   readonly scope: string;
   readonly target: { type: string; id: string; displayName?: string };
   readonly data: FactData;
-  readonly reading: Reading;
+  readonly reading: SnapshotReading;
 
   /**
    * @param takenAt When the machine was read. Given rather than read from the clock here, because
