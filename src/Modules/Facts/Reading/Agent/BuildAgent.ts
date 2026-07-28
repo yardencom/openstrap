@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -69,6 +70,11 @@ async function buildAgents(): Promise<void> {
       ],
       { stdio: "inherit" },
     );
+
+    // Written now, because what a built file's contents hash to is settled the moment it is built.
+    // Working it out again at every reading meant reading 63 MiB and hashing it — 70 ms — to
+    // rediscover the name of a file that was very often already on the target.
+    writeFileSync(`${binary}.sha256`, createHash("sha256").update(readFileSync(binary)).digest("hex"));
   }
 
   rmSync(bundle, { force: true });

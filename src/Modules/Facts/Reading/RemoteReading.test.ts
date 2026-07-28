@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ let built: string;
 beforeAll(() => {
   built = mkdtempSync(join(tmpdir(), "openstrap-remote-"));
   writeFileSync(join(built, "openstrap-facts-linux-arm64"), Buffer.from("agent"));
+  writeFileSync(join(built, "openstrap-facts-linux-arm64.sha256"), createHash("sha256").update("agent").digest("hex"));
   process.env.OPENSTRAP_FACTS_AGENT_DIR = built;
 });
 

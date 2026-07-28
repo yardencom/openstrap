@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,9 +48,12 @@ export class MissingAgentError extends Error {
  * reading a machine never installs anything on it: no runtime, no package
  * manager, nothing left behind but a file in `/tmp`.
  *
- * The file is named after the digest of its own contents. A target therefore
- * keeps whichever versions it has been sent, an unchanged agent is never sent
- * twice, and a changed one can never be mistaken for the old one.
+ * The file is named after the digest of its own contents, so an unchanged agent
+ * is never sent twice and a changed one can never be mistaken for the old one.
+ * The digest is read from the build rather than worked out here: what a built
+ * file hashes to was settled when it was built, and rediscovering it cost 63 MiB
+ * of reading and 70 ms of hashing on every reading, usually to name a file that
+ * was already on the target.
  */
 export class AgentBinary {
   private readonly path: string;
@@ -61,13 +63,25 @@ export class AgentBinary {
     this.path = join(directory, `openstrap-facts-${platform.id}`);
 
     try {
-      this.digest = createHash("sha256").update(readFileSync(this.path)).digest("hex");
+      this.digest = readFileSync(`${this.path}.sha256`, "utf8").trim();
     } catch {
       throw new MissingAgentError(platform.id, this.path);
     }
   }
 
-  /** Puts the agent on the target if it is not already there, and says where it is. */
+  /**
+   * Puts the agent on the target if it is not already there, and says where it is.
+   *
+   * The one it replaces is deleted as the new one lands. A target used to keep every
+   * version it had ever been sent — five of them, 315 MB of `/tmp`, on the machine
+   * this was developed against — because a content-addressed name means a rebuilt
+   * agent is a new file and nothing ever went back for the old one. What a machine
+   * should hold is the agent it is being read with.
+   *
+   * Which one to delete is remembered on the target instead of found by listing the
+   * directory: listing is not something a transport can be asked to do today, and
+   * teaching every transport to do it to tidy up one file is the wrong trade.
+   */
   async deliverTo(files: FileSystemAPI): Promise<string> {
     const delivered = files.joinPath(targetDirectory, `facts-agent-${this.digest.slice(0, 12)}`);
 
@@ -77,7 +91,20 @@ export class AgentBinary {
 
     await files.createDirectory(targetDirectory);
     await files.writeFile(delivered, readFileSync(this.path), { access: "executable" });
+    await this.replace(files, delivered);
 
     return delivered;
+  }
+
+  /** Deletes the agent this one supersedes, and records that this one is now the agent here. */
+  private async replace(files: FileSystemAPI, delivered: string): Promise<void> {
+    const record = files.joinPath(targetDirectory, "facts-agent.delivered");
+    const superseded = (await files.readTextFile(record))?.trim();
+
+    if (superseded && superseded !== delivered) {
+      await files.removePath(superseded, { force: true });
+    }
+
+    await files.writeTextFile(record, delivered);
   }
 }
