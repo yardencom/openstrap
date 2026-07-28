@@ -46,31 +46,6 @@ export type FactRun = {
 export type Display = Record<string, string>;
 
 /**
- * What a run that produced this snapshot has to report.
- *
- * A machine that could not be read at all never gets a snapshot — that is an
- * exception. What is left is a machine that answered, where some declared thing
- * failed: a command that would not run, a path that failed what was required of
- * it, a user found under another id. The snapshot is still usable, so the run is a
- * warning rather than a failure, and the reason sits on the section that failed.
- *
- * Found by walking the snapshot rather than by a list of sections to look in. A
- * list is a thing to forget: `users` was added to the model and not to the list,
- * and a snapshot holding a failed user fact reported a clean run.
- */
-export function factRunStatus(value: unknown): FactRunStatus {
-  if (!value || typeof value !== "object") {
-    return "success";
-  }
-
-  if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
-    return "warning";
-  }
-
-  return Object.values(value).some((property) => factRunStatus(property) === "warning") ? "warning" : "success";
-}
-
-/**
  * One machine, section by section.
  *
  * The sections a requirement compares against a single value — memory, cpu,

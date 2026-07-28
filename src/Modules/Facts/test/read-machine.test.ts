@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createFactCollectionItem,
-  FactCollectionValidationError,
+  InvalidSnapshotError,
+  ReadMachine,
   type FactReading,
-} from "../Domain/FactCollection.js";
+} from "../Domain/ReadMachine.js";
 import { Facts } from "../Facts.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
 describe("a machine that was read", () => {
   it("pairs the run with the snapshot it produced", () => {
-    const machine = createFactCollectionItem(reading());
+    const machine = new ReadMachine(reading());
 
     expect(machine.run.snapshotId).toBe(machine.snapshot.id);
     expect(machine.snapshot.schemaVersion).toBe("facts.v1");
   });
 
   it("names the snapshot and the run after the machine and the moment", () => {
-    const machine = createFactCollectionItem(reading());
+    const machine = new ReadMachine(reading());
 
     expect(machine.snapshot.id).toBe("snap_host_20260608T100000000Z");
     expect(machine.run.id).toBe("fact_run_host_20260608T100000000Z");
   });
 
   it("cannot be edited after it is made", () => {
-    const machine = createFactCollectionItem(reading());
+    const machine = new ReadMachine(reading());
 
     expect(Object.isFrozen(machine)).toBe(true);
     expect(Object.isFrozen(machine.snapshot)).toBe(true);
@@ -33,14 +33,14 @@ describe("a machine that was read", () => {
   });
 
   it("keeps failures on the section that failed rather than in one bag", () => {
-    expect(() => createFactCollectionItem(reading({ errors: ["something went wrong"] })))
-      .toThrow(FactCollectionValidationError);
-    expect(() => createFactCollectionItem(reading({ errors: [] })))
+    expect(() => new ReadMachine(reading({ errors: ["something went wrong"] })))
+      .toThrow(InvalidSnapshotError);
+    expect(() => new ReadMachine(reading({ errors: [] })))
       .toThrow(/must not contain top-level errors/);
   });
 
   it("records the channel it was read through", () => {
-    const machine = createFactCollectionItem({
+    const machine = new ReadMachine({
       ...reading(),
       transports: { ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } },
     });

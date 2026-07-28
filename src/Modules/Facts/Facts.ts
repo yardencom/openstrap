@@ -1,5 +1,5 @@
 import type { Transport } from "../../Transport/index.js";
-import { createFactCollectionItem, type FactCollectionItem } from "./Domain/FactCollection.js";
+import { ReadMachine } from "./Domain/ReadMachine.js";
 import type { FactOrder } from "./Domain/FactOrder.js";
 import type { TransportFact } from "./Domain/FactSnapshot.js";
 import { LocalReading } from "./Reading/LocalReading.js";
@@ -36,11 +36,11 @@ export class Facts {
   }
 
   /** Reads the machine and returns one snapshot of it, with the run that produced it. */
-  async collect(order: FactOrder): Promise<FactCollectionItem> {
+  async collect(order: FactOrder): Promise<ReadMachine> {
     const startedAt = order.now ?? new Date();
     const data = await this.reading.read(order.declare ?? {});
 
-    return createFactCollectionItem({
+    return new ReadMachine({
       target: order.target,
       data,
       transports: this.transports(order),
