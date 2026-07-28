@@ -1,4 +1,4 @@
-import type { ParsedArgs } from "../Arguments/index.js";
+import type { ParsedArgs } from "../arguments/index.js";
 
 /**
  * What a command's result is turned into.

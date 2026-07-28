@@ -7,7 +7,7 @@ import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { runSucceeded, type RequirementRun } from "../../Modules/Requirements/index.js";
 import { RunLock } from "../../RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
-import type { CreateArgs } from "../Arguments/types.js";
+import type { CreateArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 export class UnknownTargetError extends Error {

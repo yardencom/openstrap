@@ -1,6 +1,6 @@
 import { ConnectToTarget, type Connection } from "../../Connect/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
-import type { ConnectArgs } from "../Arguments/types.js";
+import type { ConnectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 /**

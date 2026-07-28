@@ -1,5 +1,5 @@
 import { OpenStrapPluginError } from "../Plugin/index.js";
-import { CliUsageError } from "./Arguments/index.js";
+import { CliUsageError } from "./arguments/index.js";
 
 export class CliErrors {
   /**

@@ -1,5 +1,5 @@
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
-import type { ParsedArgs } from "../Arguments/types.js";
+import type { ParsedArgs } from "../arguments/types.js";
 
 /** What a command is told about the invocation, beyond its own arguments. */
 export type CommandContext = {

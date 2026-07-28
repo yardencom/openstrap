@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CliArgsParser } from "../Arguments/index.js";
-import { CommandArguments } from "../Arguments/CommandArguments.js";
+import { CliArgsParser } from "../arguments/index.js";
+import { CommandArguments } from "../arguments/CommandArguments.js";
 
 const parse = (...args: string[]) => new CliArgsParser().parse(["node", "openstrap", ...args]);
 

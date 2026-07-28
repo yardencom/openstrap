@@ -7,7 +7,7 @@ import {
   runSucceeded,
   type RequirementRun,
 } from "../../Modules/Requirements/index.js";
-import type { RunArgs } from "../Arguments/types.js";
+import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;

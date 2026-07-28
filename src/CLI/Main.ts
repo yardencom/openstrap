@@ -1,5 +1,5 @@
 import { loadOpenStrapRuntime } from "../Plugin/index.js";
-import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
+import { CliArgsParser, type ParsedArgs } from "./arguments/index.js";
 import { CliErrors } from "./Errors.js";
 import { output } from "./output/index.js";
 import type { CommandContext, CommandOutcome } from "./application/CliCommand.js";

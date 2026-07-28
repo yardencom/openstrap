@@ -1,4 +1,4 @@
-import type { ParsedArgs } from "../Arguments/index.js";
+import type { ParsedArgs } from "../arguments/index.js";
 import { JsonOutput } from "./json/JsonOutput.js";
 import { TextOutput } from "./text/TextOutput.js";
 import type { Output } from "./types.js";

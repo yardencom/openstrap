@@ -1,4 +1,4 @@
-import type { ParsedArgs } from "../../Arguments/index.js";
+import type { ParsedArgs } from "../../arguments/index.js";
 import type { CommandText, Output } from "../types.js";
 import { ConnectText } from "./ConnectText.js";
 import { CreateText } from "./CreateText.js";

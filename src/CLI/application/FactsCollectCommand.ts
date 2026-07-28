@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { JsonFileExporter } from "../../Export/index.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
-import type { FactsCollectArgs } from "../Arguments/types.js";
+import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
