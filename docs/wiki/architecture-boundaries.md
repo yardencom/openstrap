@@ -250,7 +250,7 @@ Product domain and schema do not import adapters. Если concrete library по
 | **Reporting** | Превращает результаты во внешний вид | stored или collected data | report/export |
 | **Plugin** | Отдельный extension mechanism, не обычный facts collection path | plugin objects | runtime registry |
 
-`Facts/Application` может подготовить request для collector на основе facts definition. `OpenStrapRun` может подготовить request для collector на основе requirements. В обоих случаях внешний top-level module не должен появляться только ради частного facts use case.
+Заказ для чтения готовит `RequiredFacts` в `Requirements` - из требований, форму которых знают требования. Отдельный top-level module не должен появляться только ради того, чтобы вызвать два других по очереди: `OpenStrapRun` был именно таким и удалён.
 
 ## Transport Boundary
 

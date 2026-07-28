@@ -7,7 +7,7 @@ describe("State store boundaries", () => {
   it("keeps the state store unaware that openstrap exists", () => {
     const offenders = storeSourceFiles().filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
-      return /from\s+["'][^"']*(Blueprint|Facts|Plugin|Requirements|ConfigCore|OpenStrapRun|Transport)/.test(source);
+      return /from\s+["'][^"']*(Blueprint|Facts|Plugin|Requirements|ConfigCore|Transport)/.test(source);
     });
 
     expect(offenders).toEqual([]);

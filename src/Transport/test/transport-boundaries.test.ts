@@ -7,7 +7,7 @@ describe("Transport boundaries", () => {
   it("keeps Transport unaware that openstrap exists", () => {
     const offenders = transportSourceFiles().filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
-      return /from\s+["'][^"']*(Blueprint|Facts|Plugin|Requirements|ConfigCore|OpenStrapRun)/.test(source);
+      return /from\s+["'][^"']*(Blueprint|Facts|Plugin|Requirements|ConfigCore)/.test(source);
     });
 
     expect(offenders).toEqual([]);

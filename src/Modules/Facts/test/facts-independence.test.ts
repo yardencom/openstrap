@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
  */
 const openstrapModules = [
   "Blueprint", "Plugin", "Requirements", "ConfigCore",
-  "OpenStrapRun", "StateStore", "Create", "Connect", "LockFile", "Secrets", "RunLock", "CLI", "Export",
+  "StateStore", "Create", "Connect", "LockFile", "Secrets", "RunLock", "CLI", "Export",
 ];
 
 describe("Facts is a module of its own", () => {

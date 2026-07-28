@@ -1,18 +1,28 @@
-import type { CheckStatus, RequirementRun } from "../../Modules/Requirements/index.js";
+import type { CheckStatus, RequirementRun } from "../Domain/Requirements.js";
 
 /**
- * Folds one evaluation per target into the single run a blueprint produces.
+ * Folds one evaluation per target into a single run.
  *
  * A run already describes several targets — it carries a target map and every
- * result names its own target — so nothing new is modelled here. Only the
- * order of evaluation is decided: each target is judged on its own, and the
- * run as a whole is as bad as its worst target.
+ * result names its own target — so nothing new is modelled here. Only the outcome
+ * is decided: each target is judged on its own, and the whole is as bad as its
+ * worst target.
+ *
+ * Merging zero runs is refused rather than answered with an empty one: a run has an
+ * identity and a start, and neither can be made out of nothing.
  */
+export class MergedRunWithoutTargetsError extends Error {
+  constructor() {
+    super("A requirement run needs at least one target to merge");
+    this.name = "MergedRunWithoutTargetsError";
+  }
+}
+
 export function mergeRequirementRuns(runs: readonly RequirementRun[]): RequirementRun {
   const [first] = runs;
 
   if (!first) {
-    throw new Error("A blueprint run needs at least one target");
+    throw new MergedRunWithoutTargetsError();
   }
 
   if (runs.length === 1) {

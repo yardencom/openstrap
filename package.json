@@ -27,10 +27,6 @@
       "types": "./dist/Modules/Requirements/index.d.ts",
       "import": "./dist/Modules/Requirements/index.js"
     },
-    "./OpenStrapRun": {
-      "types": "./dist/OpenStrapRun/index.d.ts",
-      "import": "./dist/OpenStrapRun/index.js"
-    },
     "./Plugin": {
       "types": "./dist/Plugin/index.d.ts",
       "import": "./dist/Plugin/index.js"

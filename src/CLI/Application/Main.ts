@@ -2,7 +2,6 @@ import {
   Blueprints,
 } from "../../Modules/Blueprint/index.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
-import { OpenStrapRun } from "../../OpenStrapRun/index.js";
 import {
   createOpenStrapRuntime,
   loadOpenStrapPlugin,
@@ -10,7 +9,9 @@ import {
   type OpenStrapRuntime,
 } from "../../Plugin/index.js";
 import {
+  mergeRequirementRuns,
   RequiredFacts,
+  RequirementEvaluator,
   type RequirementCheckNode,
   type RequirementLeafCheck,
   type RequirementRun,
@@ -57,10 +58,15 @@ export async function runOpenStrapFlow(params: {
   // target of a plain run is the machine openstrap is on, so every one of them is
   // read in process.
   const host = new Facts();
+  const evaluator = new RequirementEvaluator();
   const collected: FactCollection[number][] = [];
+  const runs: RequirementRun[] = [];
 
+  // Each target is read and then judged, in that order and against its own facts:
+  // a requirement about one machine can never be answered by another machine's
+  // snapshot if it never sees one.
   for (const target of Object.values(blueprint.targets)) {
-    collected.push(...await host.collect({
+    const facts = await host.collect({
       target: {
         name: target.name,
         scope: target.scope,
@@ -73,15 +79,19 @@ export async function runOpenStrapFlow(params: {
         workspaceRoot: params.workspaceRoot,
       }).declaration,
       now: params.now,
+    });
+
+    collected.push(...facts);
+    runs.push(evaluator.evaluate({
+      target,
+      requirements: target.requirements,
+      factCollection: facts,
+      now: params.now,
+      trigger: "manual",
+      profile: "local-run",
+      purpose: "preflight",
     }));
   }
-
-  const result = await new OpenStrapRun().execute({
-    blueprint,
-    facts: collected,
-    workspaceRoot: params.workspaceRoot,
-    now: params.now,
-  });
 
   return {
     targets: Object.values(blueprint.targets).map((target) => ({
@@ -91,7 +101,7 @@ export async function runOpenStrapFlow(params: {
       transport: target.transport,
     })),
     facts: collected,
-    requirementRun: result.requirementRun,
+    requirementRun: mergeRequirementRuns(runs),
   };
 }
 
