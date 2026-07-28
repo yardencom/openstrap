@@ -23,6 +23,10 @@ export type CliIo = {
  * shares: bad arguments print the usage and exit 2, a thrown error prints and exits 2,
  * and `--json` prints the result verbatim instead of the rendered form, so anything
  * openstrap can say a person can also parse.
+ *
+ * A switch over the discriminated command rather than a chain of conditions: with no
+ * fall-through, a command that is added and not handled here is a compile error. It
+ * used to fall into `run`.
  */
 export async function main(argv: readonly string[], io: CliIo = {
   stdout: process.stdout,
@@ -41,48 +45,52 @@ export async function main(argv: readonly string[], io: CliIo = {
   }
 
   try {
-    if (parsedArgs.command === "facts.collect") {
-      const collected = await collectHostFacts({ workspaceRoot: io.cwd });
+    switch (parsedArgs.command) {
+      case "run": {
+        const run = await runOpenStrapFlow({
+          configPath: parsedArgs.configPath,
+          workspaceRoot: io.cwd,
+        });
 
-      io.stdout.write(printed(parsedArgs.json, collected, () => renderFactsOutput(collected)));
+        io.stdout.write(printed(parsedArgs.json, run, () => renderRunOutput(run)));
 
-      return collected.facts.some((item) => item.run.status === "error") ? 1 : 0;
+        return exitCodeFor(run.requirementRun.status);
+      }
+
+      case "facts.collect": {
+        const collected = await collectHostFacts({ workspaceRoot: io.cwd });
+
+        io.stdout.write(printed(parsedArgs.json, collected, () => renderFactsOutput(collected)));
+
+        return collected.facts.some((item) => item.run.status === "error") ? 1 : 0;
+      }
+
+      case "create": {
+        const created = await createTarget({
+          target: parsedArgs.target,
+          configPath: parsedArgs.configPath,
+          hostPort: parsedArgs.hostPort,
+          runtime: await createCliRuntime(parsedArgs, io.cwd),
+          workspaceRoot: io.cwd,
+        });
+
+        io.stdout.write(printed(parsedArgs.json, created, () => renderCreateOutput(parsedArgs.target, created)));
+
+        return exitCodeFor(created.requirementRun?.status);
+      }
+
+      case "connect": {
+        const connected = await connectToTarget({
+          target: parsedArgs.target,
+          command: parsedArgs.run,
+          runtime: await createCliRuntime(parsedArgs, io.cwd),
+        });
+
+        io.stdout.write(connected.output);
+
+        return connected.exitCode;
+      }
     }
-
-    if (parsedArgs.command === "create") {
-      const created = await createTarget({
-        target: parsedArgs.target,
-        configPath: parsedArgs.configPath,
-        hostPort: parsedArgs.hostPort,
-        runtime: await createCliRuntime(parsedArgs, io.cwd),
-        workspaceRoot: io.cwd,
-      });
-
-      io.stdout.write(printed(parsedArgs.json, created, () => renderCreateOutput(parsedArgs.target, created)));
-
-      return exitCodeFor(created.requirementRun?.status);
-    }
-
-    if (parsedArgs.command === "connect") {
-      const connected = await connectToTarget({
-        target: parsedArgs.target,
-        command: parsedArgs.run,
-        runtime: await createCliRuntime(parsedArgs, io.cwd),
-      });
-
-      io.stdout.write(connected.output);
-
-      return connected.exitCode;
-    }
-
-    const run = await runOpenStrapFlow({
-      configPath: parsedArgs.configPath,
-      workspaceRoot: io.cwd,
-    });
-
-    io.stdout.write(printed(parsedArgs.json, run, () => renderRunOutput(run)));
-
-    return exitCodeFor(run.requirementRun.status);
   } catch (error) {
     io.stderr.write(`${errors.format(error)}\n`);
 
