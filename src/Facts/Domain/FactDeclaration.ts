@@ -27,6 +27,8 @@ export type FactDeclaration = {
   commands?: Record<string, CommandDeclaration>;
   artifacts?: Record<string, ArtifactDeclaration>;
   packages?: Record<string, PackageDeclaration>;
+  users?: Record<string, UserDeclaration>;
+  groups?: Record<string, GroupDeclaration>;
 };
 
 export type ProcessDeclaration = {
@@ -87,6 +89,19 @@ export type ArtifactDeclaration = {
   capture?: "metadata" | "hash" | "content";
   platforms?: readonly string[];
   redaction?: FactRedaction;
+};
+
+export type UserDeclaration = {
+  name?: string;
+  /** Asserted rather than looked up: a user found under another id is an error, not a different user. */
+  uid?: number | string;
+  platforms?: readonly string[];
+};
+
+export type GroupDeclaration = {
+  name?: string;
+  gid?: number | string;
+  platforms?: readonly string[];
 };
 
 export type PackageDeclaration = {

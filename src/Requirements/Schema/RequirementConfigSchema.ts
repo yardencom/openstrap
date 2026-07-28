@@ -10,6 +10,7 @@ const factBlockNames = [
   "virtualization",
   "network",
   "users",
+  "groups",
   "packages",
   "processes",
   "services",
@@ -111,7 +112,6 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["firewall"] },
       )),
-      users: schema.optional(schema.unknown()),
       packages: schema.optional(schema.strictObject(
         {
           managers: schema.optional(namedObservedMap(schema)),
@@ -177,6 +177,27 @@ export class RequirementConfigSchema {
           sizeBytes: schema.optional(numberCondition(schema)),
         },
         { requireAtLeastOneField: ["status", "path", "type", "exists", "readable", "writable", "executable", "sizeBytes"] },
+      ))),
+      users: schema.optional(schema.record(identifier(schema), schema.strictObject(
+        {
+          status: schema.optional(observedStatus(schema)),
+          name: schema.optional(stringCondition(schema)),
+          uid: schema.optional(numberCondition(schema)),
+          gid: schema.optional(numberCondition(schema)),
+          home: schema.optional(stringCondition(schema)),
+          shell: schema.optional(stringCondition(schema)),
+          groups: schema.optional(stringListCondition(schema)),
+        },
+        { requireAtLeastOneField: ["status", "name", "uid", "gid", "home", "shell", "groups"] },
+      ))),
+      groups: schema.optional(schema.record(identifier(schema), schema.strictObject(
+        {
+          status: schema.optional(observedStatus(schema)),
+          name: schema.optional(stringCondition(schema)),
+          gid: schema.optional(numberCondition(schema)),
+          members: schema.optional(stringListCondition(schema)),
+        },
+        { requireAtLeastOneField: ["status", "name", "gid", "members"] },
       ))),
       tools: schema.optional(schema.record(identifier(schema), schema.strictObject(
         {

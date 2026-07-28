@@ -129,17 +129,34 @@ describe("a facts definition read as an order", () => {
     expect(declared.declaration.commands!.masked!.redaction).toEqual({ strategy: "mask", patterns: ["token=\\S+"] });
   });
 
+  it("carries declared users and groups, with the identity asserted about them", () => {
+    const declared = new DeclaredFacts({
+      workspaceRoot,
+      definition: definition({
+        users: [{ id: "root-user", name: "root", uid: 0, importance: FactImportance.Evidence }],
+        groups: [{ id: "admin-group", name: "sudo", gid: 27, importance: FactImportance.Optional }],
+      }),
+    });
+
+    expect(declared.declaration.users).toEqual({
+      "root-user": { name: "root", uid: 0, platforms: undefined },
+    });
+    expect(declared.declaration.groups).toEqual({
+      "admin-group": { name: "sudo", gid: 27, platforms: undefined },
+    });
+    expect(declared.declaration.sections).toEqual(["users", "groups"]);
+  });
+
   it("names the sections it declared that openstrap does not read", () => {
     const declared = new DeclaredFacts({
       workspaceRoot,
       definition: definition({
+        sessions: [{ id: "interactive-session", importance: FactImportance.Evidence }],
         users: [{ id: "root-user", name: "root", importance: FactImportance.Evidence }],
-        groups: [{ id: "admin-group", name: "admin", importance: FactImportance.Optional }],
-        processes: [{ id: "node-process", name: "node", importance: FactImportance.Evidence }],
       }),
     });
 
-    expect(declared.unread).toEqual(["users", "groups"]);
+    expect(declared.unread).toEqual(["sessions"]);
   });
 
   it("names nothing when every declared section is read", () => {

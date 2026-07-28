@@ -54,3 +54,24 @@ requirements:
         status: present
         type: directory
         writable: true
+
+  # The account cloud-init was told to make.
+  #
+  # Membership of `sudo` is deliberately not asserted: cloud-init grants sudo with
+  # a rule in /etc/sudoers.d, not with a group, and the facts say so — `id` on the
+  # machine reports `groups=1000(openstrap)` and `getent group sudo` is empty. What
+  # matters is that sudo works, which `passwordless-sudo` checks directly.
+  - id: openstrap-account
+    target: ubuntu-vm
+    users:
+      openstrap:
+        status: present
+        uid: 1000
+        shell:
+          const: /bin/bash
+        groups:
+          contains: openstrap
+    groups:
+      sudo:
+        status: present
+        gid: 27

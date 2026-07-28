@@ -97,11 +97,16 @@ export type FactData = {
     reason?: string;
   };
   network: Network;
-  users: {
-    current?: Record<string, unknown>;
-    managed?: Record<string, unknown>;
-    entries?: Record<string, unknown>;
-  };
+  /**
+   * The users the caller named, plus the account the reading ran as.
+   *
+   * Keyed by name like every other section asked about by name, because that is
+   * how the question is put: "is there a user `openstrap`". The reading account is
+   * always in here under its own name, so a snapshot always says who read it —
+   * two snapshots taken as different accounts are not comparable.
+   */
+  users: Record<string, UserFact>;
+  groups: Record<string, GroupFact>;
   packages: {
     managers: Record<string, Observed & Record<string, unknown>>;
     installed?: Record<string, PackageFact>;
@@ -187,6 +192,23 @@ export type ServiceFact = Observed & {
   pid?: number;
   pids?: number[];
   version?: string;
+};
+
+export type UserFact = Observed & {
+  name: string;
+  uid?: number;
+  gid?: number;
+  home?: string;
+  shell?: string;
+  /** Every group the account belongs to, primary group included. */
+  groups?: string[];
+  gecos?: string;
+};
+
+export type GroupFact = Observed & {
+  name: string;
+  gid?: number;
+  members?: string[];
 };
 
 export type PackageFact = Observed & {

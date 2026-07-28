@@ -130,6 +130,17 @@ describe("RequirementEvaluator", () => {
     expect(leaf(run.results[0]!.checks, ["runtimes", "badVersion", "version"]).status).toBe("error");
     expect(run.status).toBe("error");
   });
+  it("checks a list for membership rather than for equality", () => {
+    const passing = evaluate([{ id: "in-sudo", users: { openstrap: { groups: { contains: "sudo" } } } }]);
+    const failing = evaluate([{ id: "in-docker", users: { openstrap: { groups: { contains: "docker" } } } }]);
+    const notAList = evaluate([{ id: "in-shell", users: { openstrap: { shell: { contains: "bash" } } } }]);
+
+    expect(passing.results[0]!.status).toBe("passed");
+    expect(failing.results[0]!.status).toBe("failed");
+    expect(leaf(failing.results[0]!.checks, ["users", "openstrap", "groups"]).details?.message)
+      .toContain("expected contains");
+    expect(notAList.results[0]!.status).toBe("error");
+  });
 });
 
 function evaluate(requirements: TargetlessRequirement[]) {
@@ -153,6 +164,15 @@ function facts() {
           id: "guest",
         },
         data: {
+          users: {
+            openstrap: {
+              status: "present",
+              name: "openstrap",
+              uid: 1000,
+              shell: "/bin/bash",
+              groups: ["openstrap", "sudo"],
+            },
+          },
           runtimes: {
             docker: {
               status: "present",

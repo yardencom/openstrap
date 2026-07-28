@@ -1,5 +1,6 @@
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
 import type { FactData, ToolFact } from "../Domain/FactSnapshot.js";
+import { AccountFacts } from "./Local/AccountFacts.js";
 import { CommandFacts } from "./Local/CommandFacts.js";
 import { EntityFacts } from "./Local/EntityFacts.js";
 import { PathFacts } from "./Local/PathFacts.js";
@@ -28,6 +29,7 @@ export class LocalReading implements SystemReading {
   private readonly entities = new EntityFacts(this.platform);
   private readonly paths = new PathFacts(this.platform);
   private readonly commands = new CommandFacts(this.platform);
+  private readonly accounts = new AccountFacts(this.platform);
 
   async read(declaration: FactDeclaration = {}): Promise<FactData> {
     const scalars = await this.system.read();
@@ -39,6 +41,8 @@ export class LocalReading implements SystemReading {
         ...scalars.packages,
         installed: this.entities.packages(this.wanted(declaration, "packages") ? declaration.packages ?? {} : {}),
       },
+      users: this.accounts.accounts(this.wanted(declaration, "users") ? declaration.users ?? {} : {}),
+      groups: this.wanted(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
       processes: this.wanted(declaration, "processes")
         ? await this.entities.processes(declaration.processes ?? {})
         : {},

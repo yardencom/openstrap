@@ -4,7 +4,7 @@ import type { TargetlessRequirement } from "../Domain/Requirements.js";
 const metaFields = new Set(["id", "optional"]);
 
 /** Sections whose entries a caller has to name for the reading to find them. */
-const namedSections = new Set(["processes", "services", "tools", "paths", "env", "commands", "artifacts", "packages"]);
+const namedSections = new Set(["processes", "services", "tools", "paths", "env", "commands", "artifacts", "packages", "users", "groups"]);
 
 export type RequiredFactsRequest = {
   requirements: readonly TargetlessRequirement[];
@@ -32,6 +32,8 @@ export class RequiredFacts {
     processes: Record<string, { name: string }>;
     services: Record<string, { name: string }>;
     tools: Record<string, { name: string }>;
+    users: Record<string, { name: string }>;
+    groups: Record<string, { name: string }>;
     paths: Record<string, { path: string }>;
   } {
     const asked = this.askedSections();
@@ -41,6 +43,8 @@ export class RequiredFacts {
       processes: named(asked.get("processes"), (name) => ({ name })),
       services: named(asked.get("services"), (name) => ({ name })),
       tools: named(asked.get("tools"), (name) => ({ name })),
+      users: named(asked.get("users"), (name) => ({ name })),
+      groups: named(asked.get("groups"), (name) => ({ name })),
       paths: named(asked.get("paths"), (name) => ({ path: this.pathOf(name) })),
     };
   }

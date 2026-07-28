@@ -34,14 +34,13 @@ const packageManagers: readonly { name: string; executable: string }[] = [
 export class SystemFacts {
   constructor(private readonly platform: Platform) {}
 
-  async read(): Promise<Omit<FactData, "processes" | "services" | "transports" | "runtimes" | "paths" | "tools" | "env" | "commands" | "artifacts">> {
-    const [operatingSystem, cpu, memory, filesystems, interfaces, sessions, connections] = await Promise.all([
+  async read(): Promise<Omit<FactData, "processes" | "services" | "transports" | "runtimes" | "paths" | "tools" | "env" | "commands" | "artifacts" | "users" | "groups">> {
+    const [operatingSystem, cpu, memory, filesystems, interfaces, connections] = await Promise.all([
       si.osInfo(),
       si.cpu(),
       si.mem(),
       si.fsSize(),
       si.networkInterfaces(),
-      si.users(),
       si.networkConnections(),
     ]);
 
@@ -67,15 +66,6 @@ export class SystemFacts {
       storage: this.storage(filesystems),
       virtualization: this.virtualization(),
       network: this.network(interfaces, connections),
-      users: {
-        current: this.currentUser(),
-        entries: Object.fromEntries(sessions.map((session) => [session.user, {
-          status: "present",
-          name: session.user,
-          tty: session.tty,
-          since: `${session.date} ${session.time}`.trim(),
-        }])),
-      },
       packages: { managers: await this.packageManagers() },
       privileges: this.privileges(),
     };
@@ -273,19 +263,6 @@ export class SystemFacts {
     }
 
     return { resolvers, search, domain };
-  }
-
-  private currentUser(): Record<string, unknown> {
-    const user = userInfo();
-
-    return {
-      status: "present",
-      name: user.username,
-      home: user.homedir,
-      shell: user.shell ?? undefined,
-      uid: user.uid,
-      gid: user.gid,
-    };
   }
 
   /**

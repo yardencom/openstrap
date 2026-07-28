@@ -47,6 +47,7 @@ const assertionKeys = new Set([
   "minLength",
   "maxLength",
   "pattern",
+  "contains",
 ]);
 const terminalObservedStatuses = new Set<ObservedStatus>(["unknown", "unsupported", "error"]);
 
@@ -266,6 +267,21 @@ function evaluateAssertions(expected: Record<string, unknown>, actual: unknown):
 
     if (typeof expected.multipleOf === "number" && actual % expected.multipleOf !== 0) {
       failures.push(`expected multipleOf ${expected.multipleOf}`);
+    }
+  }
+
+  // A list is checked for membership, not for equality: a requirement says the
+  // account is in `sudo`, and which other groups it is in is not the question.
+  if ("contains" in expected) {
+    if (!Array.isArray(actual)) {
+      return {
+        status: "error",
+        message: `contains assertion expected a list, got ${typeof actual}`,
+      };
+    }
+
+    if (!actual.some((value) => isDeepStrictEqual(value, expected.contains))) {
+      failures.push(`expected contains ${formatValue(expected.contains)}`);
     }
   }
 

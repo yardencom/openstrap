@@ -6,11 +6,13 @@ import type {
   EnvDeclaration,
   FactDeclaration,
   FactRedaction,
+  GroupDeclaration,
   PackageDeclaration,
   PathDeclaration,
   PathRequirement,
   ProcessDeclaration,
   ServiceDeclaration,
+  UserDeclaration,
 } from "../Domain/FactDeclaration.js";
 import type { FactsDefinition } from "./Domain/Entities/FactsDefinition.js";
 import { FactDeclarationSection } from "./Domain/ValueObjects/FactDeclarationSection.js";
@@ -24,8 +26,6 @@ import type { Redaction } from "./Domain/ValueObjects/Redaction.js";
  * eight of its ten sections is worse than one that collects eight and says so.
  */
 const unreadSections: readonly string[] = [
-  FactDeclarationSection.Users,
-  FactDeclarationSection.Groups,
   FactDeclarationSection.Sessions,
 ];
 
@@ -66,6 +66,8 @@ export class DeclaredFacts {
       commands: this.commands(),
       artifacts: this.artifacts(),
       packages: this.packages(),
+      users: this.users(),
+      groups: this.groups(),
       // Only what the definition actually mentions is read. A definition that
       // says nothing about processes should not pay for a process table.
       sections: Object.values(FactDeclarationSection)
@@ -130,6 +132,22 @@ export class DeclaredFacts {
       capture: artifact.capture,
       platforms: artifact.platforms,
       redaction: redactionOf(artifact.redaction),
+    }]));
+  }
+
+  private users(): Record<string, UserDeclaration> {
+    return Object.fromEntries((this.request.definition.users ?? []).map((user) => [user.id, {
+      name: user.name,
+      uid: user.uid,
+      platforms: user.platforms,
+    }]));
+  }
+
+  private groups(): Record<string, GroupDeclaration> {
+    return Object.fromEntries((this.request.definition.groups ?? []).map((group) => [group.id, {
+      name: group.name,
+      gid: group.gid,
+      platforms: group.platforms,
     }]));
   }
 
