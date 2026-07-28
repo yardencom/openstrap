@@ -113,6 +113,21 @@ describe("reading a machine", () => {
     expect(data.commands).toEqual({});
   });
 
+  it("marks the run a warning when any section reports a failure, whichever section it is", async () => {
+    const target = { name: "host", scope: "host", type: "host", transport: "local" } as const;
+    const clean = await new Facts().collect({ target, declare: { sections: ["os"] } });
+    // root exists, but the declaration asserts a uid it does not have.
+    const failed = await new Facts().collect({
+      target,
+      declare: { users: { superuser: { name: "root", uid: 1234 } } },
+    });
+    const data = failed[0]!.snapshot.data as { users: Record<string, { status: string }> };
+
+    expect(clean[0]!.run.status).toBe("success");
+    expect(data.users.superuser!.status).toBe("error");
+    expect(failed[0]!.run.status).toBe("warning");
+  });
+
   it("gives every snapshot a name of its own", async () => {
     const facts = new Facts();
     const target = { name: "host", scope: "host", type: "host", transport: "local" } as const;

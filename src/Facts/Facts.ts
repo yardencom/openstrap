@@ -139,20 +139,28 @@ export class Facts {
    * A machine that could not be read at all never reaches this point — that is an
    * exception, because there is no snapshot to report. What is left is a machine
    * that answered, where some declared thing failed: a command that would not
-   * run, a path that failed what was required of it. The snapshot is still
-   * usable, so the run is a warning rather than a failure, and the reason sits on
-   * the section that failed.
+   * run, a path that failed what was required of it, a user found under another
+   * id. The snapshot is still usable, so the run is a warning rather than a
+   * failure, and the reason sits on the section that failed.
+   *
+   * Found by looking, not by a list of sections to look in. A list is a thing to
+   * forget: `users` was added to the model and not to the list, and a snapshot
+   * with a failed user fact in it reported a clean run.
    */
   private status(data: FactData): FactRunStatus {
-    const answers = [
-      ...Object.values(data.commands),
-      ...Object.values(data.artifacts),
-      ...Object.values(data.paths),
-      ...Object.values(data.processes),
-      ...Object.values(data.services),
-      ...Object.values(data.tools),
-    ];
-
-    return answers.some((answer) => answer.status === "error") ? "warning" : "success";
+    return reportsAnError(data) ? "warning" : "success";
   }
+}
+
+/** Whether anything anywhere in a snapshot says it failed. */
+function reportsAnError(value: unknown): boolean {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
+    return true;
+  }
+
+  return Object.values(value).some((property) => reportsAnError(property));
 }
