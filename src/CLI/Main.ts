@@ -2,7 +2,7 @@ import { loadOpenStrapRuntime } from "../Plugin/index.js";
 import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
 import { CliErrors } from "./Errors.js";
 import { JsonOutput, TextOutput, type CommandOutput } from "./Output/CommandOutput.js";
-import type { CommandContext } from "./application/CliCommand.js";
+import type { CliCommand, CommandContext } from "./application/CliCommand.js";
 import { ConnectCommand } from "./application/ConnectCommand.js";
 import { CreateCommand } from "./application/CreateCommand.js";
 import { FactsCollectCommand } from "./application/FactsCollectCommand.js";
@@ -39,19 +39,22 @@ export async function main(argv: readonly string[], io: CliIo = {
     return 2;
   }
 
+  const output = "json" in args && args.json ? new JsonOutput() : new TextOutput();
+  const context: CommandContext = {
+    workspaceRoot: io.cwd,
+    runtime: () => loadOpenStrapRuntime({
+      cwd: io.cwd,
+      configPath: args.runtimeConfigPath,
+      specifiers: args.pluginSpecifiers,
+    }),
+  };
+
   try {
-    const presented = await run(args, {
-      workspaceRoot: io.cwd,
-      runtime: () => loadOpenStrapRuntime({
-        cwd: io.cwd,
-        configPath: args.runtimeConfigPath,
-        specifiers: args.pluginSpecifiers,
-      }),
-    }, outputFor(args));
+    const answer = await dispatch(args, context, output);
 
-    io.stdout.write(presented.output);
+    io.stdout.write(answer.output);
 
-    return presented.exitCode;
+    return answer.exitCode;
   } catch (error) {
     io.stderr.write(`${errors.format(error)}\n`);
 
@@ -59,53 +62,47 @@ export async function main(argv: readonly string[], io: CliIo = {
   }
 }
 
+/** What a command line answers with: something to print, and how the process should end. */
+type Presented = {
+  output: string;
+  exitCode: number;
+};
+
 /**
- * Which command answers to these arguments, and its result put into words.
+ * Which command answers to these arguments, and how its result is presented.
  *
+ * Selection and nothing else: each branch names a command and the way that command's
+ * result reads, and the work of running one and presenting the other happens once, below.
  * Each branch hands its command arguments the compiler has already narrowed to that
- * command's own type, and hands the result to the method of the output that takes that
- * type — so a command can neither be given another's arguments nor presented as another
- * command. One that is added and not handled will not compile.
+ * command's own type, and a presenter that takes that command's own result — so a
+ * command can neither be given another's arguments nor presented as another command, and
+ * one that is added and not handled will not compile.
  */
-async function run(
+function dispatch(
   args: ParsedArgs,
   context: CommandContext,
   output: CommandOutput,
-): Promise<{ output: string; exitCode: number }> {
+): Promise<Presented> {
   switch (args.command) {
-    case "run": {
-      const { result, exitCode } = await new RunCommand().execute(args, context);
-
-      return { output: output.run(result), exitCode };
-    }
-
-    case "create": {
-      const { result, exitCode } = await new CreateCommand().execute(args, context);
-
-      return { output: output.create(result), exitCode };
-    }
-
-    case "connect": {
-      const { result, exitCode } = await new ConnectCommand().execute(args, context);
-
-      return { output: output.connect(result), exitCode };
-    }
-
-    case "facts.collect": {
-      const { result, exitCode } = await new FactsCollectCommand().execute(args, context);
-
-      return { output: output.factsCollect(result), exitCode };
-    }
+    case "run":
+      return presented(new RunCommand(), args, context, (result) => output.run(result));
+    case "create":
+      return presented(new CreateCommand(), args, context, (result) => output.create(result));
+    case "connect":
+      return presented(new ConnectCommand(), args, context, (result) => output.connect(result));
+    case "facts.collect":
+      return presented(new FactsCollectCommand(), args, context, (result) => output.factsCollect(result));
   }
 }
 
-/**
- * How the caller asked to be answered.
- *
- * Chosen once, from the arguments, and handed to whichever command runs. `connect` has
- * no `--json`, because what it hands back is the machine's own output and openstrap has
- * no business reformatting that.
- */
-function outputFor(args: ParsedArgs): CommandOutput {
-  return "json" in args && args.json ? new JsonOutput() : new TextOutput();
+/** Run the command, put its result into words, keep its exit code. */
+async function presented<TArgs extends ParsedArgs, TResult>(
+  command: CliCommand<TArgs, TResult>,
+  args: TArgs,
+  context: CommandContext,
+  render: (result: TResult) => string,
+): Promise<Presented> {
+  const { result, exitCode } = await command.execute(args, context);
+
+  return { output: render(result), exitCode };
 }
