@@ -1,5 +1,5 @@
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
-import type { FactData } from "../Domain/FactSnapshot.js";
+import type { FactData } from "../Domain/FactModel.js";
 
 /**
  * Reading one machine.

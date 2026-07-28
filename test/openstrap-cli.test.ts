@@ -21,7 +21,7 @@ describe("openstrap CLI", () => {
 
     expect(output.exitCode).toBe(0);
     expect(json.requirementRun.status).toBe("passed");
-    expect(json.facts).toHaveLength(1);
+    expect(json.snapshots).toHaveLength(1);
   });
 
   it("does not let a plugin replace how a machine is read", async () => {
@@ -68,7 +68,7 @@ targets:
   it("collects host facts with nothing declared, and keeps the result", async () => {
     const output = await captureCli(["facts", "collect", "host", "--json"]);
     const json = JSON.parse(output.stdout);
-    const data = json.facts.snapshot.data;
+    const data = json.snapshot.data;
 
     expect(output.exitCode).toBe(0);
     expect(data.os.name).not.toBe("");
@@ -78,8 +78,8 @@ targets:
     expect(data.paths).toEqual({});
     expect(json.storage.resultPath).toContain("/.openstrap/runs/facts/");
     expect(existsSync(json.storage.resultPath)).toBe(true);
-    expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).facts.snapshot.id)
-      .toBe(json.facts.snapshot.id);
+    expect(JSON.parse(readFileSync(json.storage.resultPath, "utf8")).snapshot.id)
+      .toBe(json.snapshot.id);
   });
 
   it("prints what it read", async () => {

@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import type { CommandDeclaration, EnvDeclaration } from "../../Domain/FactDeclaration.js";
-import type { CommandFact, EnvVarFact } from "../../Domain/FactSnapshot.js";
+import type { CommandFact, EnvVarFact } from "../../Domain/FactModel.js";
 import type { Platform } from "./Platform.js";
 import { Redaction } from "./Redaction.js";
 

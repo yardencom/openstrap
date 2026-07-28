@@ -1,5 +1,5 @@
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
-import type { FactData, ToolFact } from "../Domain/FactSnapshot.js";
+import type { FactData, ToolFact } from "../Domain/FactModel.js";
 import { AccountFacts } from "./Local/AccountFacts.js";
 import { CommandFacts } from "./Local/CommandFacts.js";
 import { EntityFacts } from "./Local/EntityFacts.js";

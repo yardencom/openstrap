@@ -19,10 +19,9 @@ export class RunText implements CommandText<RunResult> {
     lines.push("");
     lines.push("Targets:");
 
-    for (const item of result.facts) {
+    for (const snapshot of result.snapshots) {
       lines.push(
-        `  - ${item.snapshot.target.id} (${item.snapshot.scope}/${item.snapshot.target.type}) ` +
-        `snapshot=${item.snapshot.id} factRun=${item.run.id}`,
+        `  - ${snapshot.target.id} (${snapshot.scope}/${snapshot.target.type}) snapshot=${snapshot.id}`,
       );
     }
 

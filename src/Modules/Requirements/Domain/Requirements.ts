@@ -44,10 +44,8 @@ export type RequirementCheckNode = RequirementLeafCheck | {
 export type RequirementResult = {
   requirementId: string;
   target: string;
-  facts: {
-    snapshotId: string | null;
-    factRunId: string | null;
-  };
+  /** Which snapshot the requirement was checked against, or nothing when none was collected. */
+  snapshotId: string | null;
   status: CheckStatus;
   checks: RequirementCheckNode;
 };

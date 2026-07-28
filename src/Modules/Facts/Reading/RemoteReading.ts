@@ -1,6 +1,6 @@
 import type { Transport } from "../../../Transport/index.js";
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
-import type { FactData } from "../Domain/FactSnapshot.js";
+import type { FactData } from "../Domain/FactModel.js";
 import { AgentBinary } from "./Remote/AgentBinary.js";
 import { TargetPlatform } from "./Remote/TargetPlatform.js";
 import type { SystemReading } from "./SystemReading.js";

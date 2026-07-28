@@ -1,7 +1,7 @@
 import type { Transport } from "../../Transport/index.js";
-import { ReadMachine } from "./Domain/ReadMachine.js";
+import { FactSnapshot } from "./Domain/FactSnapshot.js";
 import type { FactOrder } from "./Domain/FactOrder.js";
-import type { TransportFact } from "./Domain/FactSnapshot.js";
+import type { TransportFact } from "./Domain/FactModel.js";
 import { LocalReading } from "./Reading/LocalReading.js";
 import { RemoteReading } from "./Reading/RemoteReading.js";
 import type { SystemReading } from "./Reading/SystemReading.js";
@@ -35,12 +35,12 @@ export class Facts {
     this.reading = transport === undefined ? new LocalReading() : new RemoteReading(transport);
   }
 
-  /** Reads the machine and returns one snapshot of it, with the run that produced it. */
-  async collect(order: FactOrder): Promise<ReadMachine> {
+  /** Reads the machine and returns one snapshot of it. */
+  async collect(order: FactOrder): Promise<FactSnapshot> {
     const startedAt = order.now ?? new Date();
     const data = await this.reading.read(order.declare ?? {});
 
-    return new ReadMachine({
+    return new FactSnapshot({
       target: order.target,
       data,
       transports: this.transports(order),

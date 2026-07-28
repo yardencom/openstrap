@@ -20,20 +20,17 @@ type Observed = {
   message?: string;
 };
 
-type FactCollectionItem = {
-  snapshot: {
-    id: string;
-    target: {
-      id: string;
-    };
-    data: unknown;
-  };
-  run: {
-    id: string;
-  };
+/**
+ * A snapshot as this module needs to read one.
+ *
+ * Spelled here rather than imported, so a requirement check depends on the shape it compares
+ * against and not on the module that produces it.
+ */
+type FactSnapshot = {
+  id: string;
+  target: { id: string };
+  data: unknown;
 };
-
-type FactCollection = readonly FactCollectionItem[];
 
 const requirementMetaFields = new Set(["id", "optional"]);
 const assertionKeys = new Set([
@@ -55,7 +52,7 @@ export class RequirementEvaluator {
   evaluate(params: {
     target: RequirementTarget;
     requirements: readonly TargetlessRequirement[];
-    factCollection: FactCollection;
+    snapshots: readonly FactSnapshot[];
     now?: Date;
     attempt?: number;
     trigger?: string;
@@ -64,7 +61,7 @@ export class RequirementEvaluator {
   }): RequirementRun {
     const startedAt = params.now ?? new Date();
     const finishedAt = new Date(startedAt.getTime());
-    const snapshotsByTarget = indexFactsByTarget(params.factCollection);
+    const snapshotsByTarget = byTarget(params.snapshots);
     const results = params.requirements.map((requirement) =>
       this.evaluateRequirement(requirement, params.target.name, snapshotsByTarget.get(params.target.name)),
     );
@@ -93,20 +90,17 @@ export class RequirementEvaluator {
   private evaluateRequirement(
     requirement: TargetlessRequirement,
     targetName: string,
-    factItem: FactCollectionItem | undefined,
+    snapshot: FactSnapshot | undefined,
   ): RequirementResult {
     const checkBlocks = extractCheckBlocks(requirement);
 
-    if (!factItem) {
+    if (!snapshot) {
       const checks = buildLeafChecks(checkBlocks, "error", "No FactSnapshot was collected for requirement target");
 
       return {
         requirementId: requirement.id,
         target: targetName,
-        facts: {
-          snapshotId: null,
-          factRunId: null,
-        },
+        snapshotId: null,
         status: "error",
         checks,
       };
@@ -114,7 +108,7 @@ export class RequirementEvaluator {
 
     const checks = evaluateNode({
       expected: checkBlocks,
-      actual: factItem.snapshot.data,
+      actual: snapshot.data,
       path: [],
       observedAncestor: undefined,
     });
@@ -122,10 +116,7 @@ export class RequirementEvaluator {
     return {
       requirementId: requirement.id,
       target: targetName,
-      facts: {
-        snapshotId: factItem.snapshot.id,
-        factRunId: factItem.run.id,
-      },
+      snapshotId: snapshot.id,
       status: aggregateCheckNode(checks),
       checks,
     };
@@ -380,11 +371,11 @@ function extractCheckBlocks(requirement: TargetlessRequirement): Record<string, 
   );
 }
 
-function indexFactsByTarget(collection: FactCollection): Map<string, FactCollectionItem> {
-  const index = new Map<string, FactCollectionItem>();
+function byTarget(snapshots: readonly FactSnapshot[]): Map<string, FactSnapshot> {
+  const index = new Map<string, FactSnapshot>();
 
-  for (const item of collection) {
-    index.set(item.snapshot.target.id, item);
+  for (const snapshot of snapshots) {
+    index.set(snapshot.target.id, snapshot);
   }
 
   return index;

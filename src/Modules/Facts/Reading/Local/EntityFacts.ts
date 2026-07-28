@@ -13,7 +13,7 @@ import type {
   RuntimeFact,
   ServiceFact,
   ToolFact,
-} from "../../Domain/FactSnapshot.js";
+} from "../../Domain/FactModel.js";
 import type { Platform } from "./Platform.js";
 
 /**

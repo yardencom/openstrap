@@ -42,7 +42,7 @@ describe("Facts public API", () => {
       declare: { sections: ["os"] },
     });
 
-    expect(machine.snapshot.target.id).toBe("host");
+    expect(machine.target.id).toBe("host");
   });
 
   it("hands back what it read rather than being it", () => {

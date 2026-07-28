@@ -5,10 +5,10 @@ import { Facts } from "../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-type ReadMachine = Awaited<ReturnType<Facts["collect"]>>;
+type FactSnapshot = Awaited<ReturnType<Facts["collect"]>>;
 
 export type FactsCollectResult = {
-  facts: ReadMachine;
+  snapshot: FactSnapshot;
   storage: {
     runDirectory: string;
     resultPath: string;
@@ -33,7 +33,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       result: collected,
       // A machine that could not be read at all throws; a run that came back with a
       // failed section is still a result, and the caller has to be able to notice.
-      exitCode: collected.facts.run.status === "error" ? 1 : 0,
+      exitCode: collected.snapshot.reading.status === "error" ? 1 : 0,
     };
   }
 
@@ -44,7 +44,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
    * command owns this step and the facts module does not.
    */
   private async collect(context: CommandContext): Promise<FactsCollectResult> {
-    const machine = await new Facts().collect({
+    const snapshot = await new Facts().collect({
       target: {
         name: "host",
         scope: "host",
@@ -54,9 +54,9 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       },
       now: context.now,
     });
-    const runDirectory = join(context.workspaceRoot, ".openstrap", "runs", "facts", machine.run.id);
+    const runDirectory = join(context.workspaceRoot, ".openstrap", "runs", "facts", snapshot.id);
     const result: FactsCollectResult = {
-      facts: machine,
+      snapshot,
       storage: {
         runDirectory,
         resultPath: join(runDirectory, "result.json"),

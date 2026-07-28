@@ -5,7 +5,7 @@ import { loadavg, userInfo } from "node:os";
 import si from "systeminformation";
 import which from "which";
 
-import type { FactData, Network, NetworkInterface, PortFact } from "../../Domain/FactSnapshot.js";
+import type { FactData, Network, NetworkInterface, PortFact } from "../../Domain/FactModel.js";
 import type { Platform } from "./Platform.js";
 
 /** A package manager is recognised by the executable that drives it. */

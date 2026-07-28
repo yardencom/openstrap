@@ -51,15 +51,12 @@ describe("RequirementEvaluator", () => {
         },
       ],
       target: { name: "host", type: "machine" },
-      factCollection: facts(),
+      snapshots: snapshots(),
       now: new Date("2026-06-08T10:00:00.000Z"),
     });
 
     expect(run.status).toBe("error");
-    expect(run.results[0]!.facts).toEqual({
-      snapshotId: null,
-      factRunId: null,
-    });
+    expect(run.results[0]!.snapshotId).toBeNull();
   });
 
   it("treats absent observed selectors as failed when the checked field is missing", () => {
@@ -147,68 +144,36 @@ function evaluate(requirements: TargetlessRequirement[]) {
   return new RequirementEvaluator().evaluate({
     requirements,
     target: { name: "guest", type: "vm" },
-    factCollection: facts(),
+    snapshots: snapshots(),
     now: new Date("2026-06-08T10:00:00.000Z"),
   });
 }
 
-function facts() {
+function snapshots() {
   return [
     {
-      snapshot: {
-        id: "snap_guest",
-        schemaVersion: "facts.v1",
-        scope: "guest",
-        target: {
-          type: "vm",
-          id: "guest",
+      id: "snap_guest",
+      target: { id: "guest" },
+      data: {
+        users: {
+          openstrap: {
+            status: "present",
+            name: "openstrap",
+            uid: 1000,
+            shell: "/bin/bash",
+            groups: ["openstrap", "sudo"],
+          },
         },
-        data: {
-          users: {
-            openstrap: {
-              status: "present",
-              name: "openstrap",
-              uid: 1000,
-              shell: "/bin/bash",
-              groups: ["openstrap", "sudo"],
-            },
-          },
-          runtimes: {
-            docker: {
-              status: "present",
-              type: "docker",
-              ready: true,
-              version: "24.0.1",
-            },
-            badVersion: {
-              status: "present",
-              type: "example",
-              version: "not-a-version",
-            },
-          },
-          services: {
-            ssh: {
-              status: "absent",
-            },
-            unknown: {
-              status: "unknown",
-            },
-            unsupported: {
-              status: "unsupported",
-            },
-            error: {
-              status: "error",
-            },
-          },
-        } as any,
-      },
-      run: {
-        id: "fact_run_guest",
-        snapshotId: "snap_guest",
-        startedAt: "2026-06-08T10:00:00.000Z",
-        finishedAt: "2026-06-08T10:00:00.000Z",
-        status: "success",
-        attempt: 1,
+        runtimes: {
+          docker: { status: "present", type: "docker", ready: true, version: "24.0.1" },
+          badVersion: { status: "present", type: "example", version: "not-a-version" },
+        },
+        services: {
+          ssh: { status: "absent" },
+          unknown: { status: "unknown" },
+          unsupported: { status: "unsupported" },
+          error: { status: "error" },
+        },
       },
     },
   ];

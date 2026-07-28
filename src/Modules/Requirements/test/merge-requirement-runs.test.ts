@@ -84,7 +84,7 @@ function run(status: CheckStatus, result: { target: string; requirementId: strin
     results: [{
       requirementId: result.requirementId,
       target: result.target,
-      facts: { snapshotId: `snap_${result.target}`, factRunId: `fact_run_${result.target}` },
+      snapshotId: `snap_${result.target}`,
       status,
       checks: { status, expected: { passed: status === "passed", value: true }, actual: true },
     }],

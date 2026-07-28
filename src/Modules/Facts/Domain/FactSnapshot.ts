@@ -1,283 +1,172 @@
+import type { FactData, TransportFact } from "./FactModel.js";
+import type { FactTarget } from "./FactTarget.js";
+
+/** Which shape of snapshot this is. Every reader compares against it before trusting one. */
+const schemaVersion = "facts.v1";
+
 /**
- * What openstrap can observe about a machine, and how it says so.
+ * Keys a snapshot may never carry.
  *
- * Every named thing carries a status rather than being present or missing from
- * the snapshot: a caller asked about `sshd`, so "we looked and it is not there"
- * and "nobody looked" are different answers and have to read differently.
+ * A snapshot says what a machine is. Why it was read, how confident anyone is about it and where it
+ * came from are properties of the reading, and letting them in is how a snapshot stops being
+ * comparable to the next one.
  */
-export type ObservedStatus = "present" | "absent" | "unknown" | "unsupported" | "error";
+const forbiddenKeys = new Set([
+  "profile",
+  "purpose",
+  "provenance",
+  "metadata",
+  "sources",
+  "confidence",
+]);
 
-export type Observed = {
-  status: ObservedStatus;
-  reason?: string;
-  message?: string;
-};
-
-export type FactScope = string;
-
-/** Which machine a snapshot is about, as the snapshot records it. */
-export type SnapshotTarget = {
-  type: string;
-  id: string;
-  displayName?: string;
-};
-
-export type FactSnapshot<TData = FactData> = {
-  id: string;
-  schemaVersion: string;
-  scope: FactScope;
-  target: SnapshotTarget;
-  data: TData;
-};
-
-export type FactRunStatus = "success" | "warning" | "error";
-
-export type FactRun = {
-  id: string;
-  snapshotId: string;
-  startedAt: string;
-  finishedAt: string;
-  status: FactRunStatus;
-  validUntil?: string;
-  ttl?: string;
+/** What a reading came back with, before it is anything anyone can refer to. */
+export type FactReading = {
+  target: FactTarget;
+  data: FactData;
+  /** The channel it was read through; empty when it was read in openstrap's own process. */
+  transports: Record<string, TransportFact>;
+  startedAt: Date;
   attempt?: number;
 };
 
-export type Display = Record<string, string>;
+/** Whether the reading that produced a snapshot got everything it asked for. */
+export type ReadingStatus = "success" | "warning" | "error";
 
 /**
- * One machine, section by section.
+ * How the snapshot came to be.
  *
- * The sections a requirement compares against a single value — memory, cpu,
- * architecture — are plain. The sections a requirement asks about by name are
- * maps keyed by that name, never lists: "is `sshd` running" is a question only
- * a map can answer.
+ * Kept apart from the machine's own facts rather than mixed in with them: when a snapshot was taken
+ * and whether the taking went cleanly are not things about the machine, and a requirement comparing
+ * two snapshots must not trip over them.
  */
-export type FactData = {
-  os: {
-    family: string;
-    name: string;
-    version: string;
-    codename?: string;
-    kernel?: string;
-    edition?: string;
-    display?: Display;
-  };
-  arch: string;
-  cpu: {
-    cores: number;
-    threads?: number;
-    model?: string;
-    vendor?: string;
-    features?: string[];
-    load?: number[];
-    display?: Display;
-  };
-  memory: {
-    totalBytes: number;
-    availableBytes?: number;
-    swapTotalBytes?: number;
-    swapUsedBytes?: number;
-    pressure?: string;
-    display?: Display;
-  };
-  storage: {
-    disks?: Record<string, unknown>;
-    filesystems?: Record<string, unknown>;
-    mounts: Record<string, unknown>;
-    totalBytes?: number;
-    availableBytes?: number;
-    display?: Display;
-  };
-  virtualization?: {
-    supported: boolean;
-    enabled?: boolean;
-    type?: string;
-    nested?: boolean;
-    reason?: string;
-  };
-  network: Network;
+export type Reading = {
+  startedAt: string;
+  finishedAt: string;
+  status: ReadingStatus;
+  attempt: number;
+};
+
+export class InvalidSnapshotError extends Error {
+  readonly issues: string[];
+
+  constructor(issues: string[]) {
+    super(`Invalid fact snapshot: ${issues.join("; ")}`);
+    this.name = "InvalidSnapshotError";
+    this.issues = issues;
+  }
+}
+
+/**
+ * A machine as it was read, once.
+ *
+ * Sections of data on their own are not something anyone can act on: two readings of the same
+ * machine look alike, nothing says which shape they are in, and nothing says whether the reading
+ * that produced them got everything it asked for. This is what makes them usable —
+ *
+ * - an identity, so it can be stored, referred to by a requirement result and named in a report;
+ * - the schema it claims, so a reader can tell whether it understands the shape before trusting it;
+ * - the reading that produced it: when it started and finished, which attempt it was, and whether
+ *   anything it asked for failed;
+ * - the channel it came through, which no reading can know because a machine does not know how
+ *   anyone got in.
+ *
+ * Then it is checked and frozen, so it cannot exist in an invalid state and cannot be edited into
+ * one afterwards — everything downstream reads it without checking again.
+ *
+ * A constructor rather than a method, because nothing here waits: the machine has already answered
+ * and this only turns the answer into something that can be trusted.
+ */
+export class FactSnapshot {
+  readonly id: string;
+  readonly schemaVersion = schemaVersion;
+  readonly scope: string;
+  readonly target: { type: string; id: string; displayName?: string };
+  readonly data: FactData;
+  readonly reading: Reading;
+
+  constructor(reading: FactReading) {
+    // Named from the start of the reading, so the same machine read twice at the same instant is the
+    // same snapshot and two readings never collide.
+    const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
+
+    this.id = `snap_${reading.target.name}_${stamp}`;
+    this.scope = reading.target.scope;
+    this.target = {
+      type: reading.target.type,
+      id: reading.target.name,
+      displayName: reading.target.displayName,
+    };
+    this.data = { ...reading.data, transports: reading.transports };
+    this.reading = {
+      startedAt: reading.startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: this.statusOf(this.data),
+      attempt: reading.attempt ?? 1,
+    };
+
+    this.verify();
+    deepFreeze(this);
+  }
+
   /**
-   * The users the caller named, plus the account the reading ran as.
+   * Whether the reading got everything it was asked for.
    *
-   * Keyed by name like every other section asked about by name, because that is
-   * how the question is put: "is there a user `openstrap`". The reading account is
-   * always in here under its own name, so a snapshot always says who read it —
-   * two snapshots taken as different accounts are not comparable.
+   * A machine that could not be read at all never gets this far — that is an exception. What is left
+   * is a machine that answered, where some declared thing failed: a command that would not run, a
+   * path that failed what was required of it, a user found under another id. The snapshot is still
+   * usable, so the reading is a warning rather than a failure, and the reason sits on the section
+   * that failed.
+   *
+   * Found by walking the data rather than by a list of sections to look in. A list is a thing to
+   * forget: `users` was added to the model and not to the list, and a snapshot holding a failed user
+   * fact reported a clean reading.
    */
-  users: Record<string, UserFact>;
-  groups: Record<string, GroupFact>;
-  packages: {
-    managers: Record<string, Observed & Record<string, unknown>>;
-    installed?: Record<string, PackageFact>;
-  };
-  privileges: {
-    mode?: string;
-    sudo?: Observed & Record<string, unknown>;
-    become?: Observed & Record<string, unknown>;
-    admin?: Observed & Record<string, unknown>;
-  };
-  processes: Record<string, ProcessFact>;
-  services: Record<string, ServiceFact>;
-  transports: Record<string, TransportFact>;
-  runtimes: Record<string, RuntimeFact>;
-  paths: Record<string, PathFact>;
-  tools: Record<string, ToolFact>;
-  env: Record<string, EnvVarFact>;
-  commands: Record<string, CommandFact>;
-  artifacts: Record<string, ArtifactFact>;
-};
+  private statusOf(value: unknown): ReadingStatus {
+    if (!value || typeof value !== "object") {
+      return "success";
+    }
 
-export type Network = {
-  interfaces: Record<string, NetworkInterface>;
-  dns: {
-    resolvers?: string[];
-    search?: string[];
-    domain?: string;
-  };
-  ports: Record<string, PortFact>;
-  firewall: Observed & Record<string, unknown>;
-  reachability: Record<string, Observed & Record<string, unknown>>;
-};
+    if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
+      return "warning";
+    }
 
-export type NetworkInterface = {
-  name: string;
-  type?: string;
-  mac?: string;
-  state?: string;
-  mtu?: number;
-  addresses?: Array<{
-    ip: string;
-    family: string;
-    prefix?: number;
-    scope?: string;
-  }>;
-};
+    return Object.values(value).some((property) => this.statusOf(property) === "warning")
+      ? "warning"
+      : "success";
+  }
 
-export type TransportFact = Observed & {
-  type: string;
-  endpoint?: string;
-  authMethods?: string[];
-  ready?: boolean;
-  version?: string;
-};
+  private verify(): void {
+    const issues = [...forbiddenKeys]
+      .filter((key) => hasOwn(this, key))
+      .map((key) => `a snapshot must not carry ${key}`);
 
-export type RuntimeFact = Observed & {
-  type: string;
-  version?: string;
-  ready?: boolean;
-  endpoint?: string;
-  capabilities?: string[];
-};
+    // An error belongs to the section that failed, so that the sections which answered stay usable.
+    // A top-level bag of errors loses that.
+    if (hasOwn(this.data, "errors")) {
+      issues.push("data must not contain top-level errors");
+    }
 
-export type ProcessFact = Observed & {
-  pid?: number;
-  pids?: number[];
-  ppid?: number;
-  name?: string;
-  user?: string;
-  command?: string;
-  args?: string;
-  state?: string;
-  startedAt?: string;
-  uptimeSeconds?: number;
-};
+    if (issues.length > 0) {
+      throw new InvalidSnapshotError(issues);
+    }
+  }
+}
 
-export type ServiceFact = Observed & {
-  manager?: string;
-  name?: string;
-  enabled?: boolean;
-  running?: boolean;
-  state?: string;
-  pid?: number;
-  pids?: number[];
-  version?: string;
-};
+function hasOwn(value: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
 
-export type UserFact = Observed & {
-  name: string;
-  uid?: number;
-  gid?: number;
-  home?: string;
-  shell?: string;
-  /** Every group the account belongs to, primary group included. */
-  groups?: string[];
-  gecos?: string;
-};
+function deepFreeze<TValue>(value: TValue): TValue {
+  if (!value || typeof value !== "object") {
+    return value;
+  }
 
-export type GroupFact = Observed & {
-  name: string;
-  gid?: number;
-  members?: string[];
-};
+  Object.freeze(value);
 
-export type PackageFact = Observed & {
-  name: string;
-  manager?: string;
-  version?: string;
-};
+  for (const property of Object.values(value)) {
+    deepFreeze(property);
+  }
 
-export type PortFact = Observed & {
-  protocol: string;
-  port: number;
-  state?: string;
-  bind?: string;
-  process?: string;
-  service?: string;
-  forward?: {
-    from?: string;
-    to?: string;
-  };
-};
-
-export type PathFact = Observed & {
-  path: string;
-  type?: string;
-  exists?: boolean;
-  owner?: string;
-  group?: string;
-  mode?: string;
-  readable?: boolean;
-  writable?: boolean;
-  executable?: boolean;
-  sizeBytes?: number;
-};
-
-export type ToolFact = Observed & {
-  name: string;
-  path?: string;
-  version?: string;
-  executable?: boolean;
-  capabilities?: string[];
-};
-
-export type EnvVarFact = Observed & {
-  name: string;
-  value?: string;
-  redacted?: boolean;
-  sensitive?: boolean;
-};
-
-/**
- * What a command the caller declared actually printed.
- *
- * This is a fact section like any other rather than a separate kind of
- * "evidence": the caller asked what `sshd -T` says on this machine, and the
- * answer is as much a fact about the machine as its memory size.
- */
-export type CommandFact = Observed & {
-  name: string;
-  args?: string[];
-  stdout?: string;
-  stderr?: string;
-  exitCode?: number;
-};
-
-export type ArtifactFact = Observed & {
-  path: string;
-  kind?: string;
-  type?: string;
-  sizeBytes?: number;
-  sha256?: string;
-  content?: string;
-};
+  return value;
+}
