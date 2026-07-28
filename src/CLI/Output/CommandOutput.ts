@@ -1,54 +1,44 @@
-import type { NamedOutcome } from "../application/NamedOutcome.js";
-import { renderCreateOutput } from "./CreateOutput.js";
-import { renderFactsOutput } from "./FactsOutput.js";
-import { renderRunOutput } from "./RunOutput.js";
+import type { CommandOutcome } from "../application/CliCommand.js";
+import type { CommandText } from "./CommandText.js";
+
+/** What a command line answers with: something to print, and how the process should end. */
+export type Answer = {
+  output: string;
+  exitCode: number;
+};
 
 /**
  * How a command's result is presented.
  *
- * One question — what does this result look like — and one method to answer it. It used
- * to have a method per command, which is four operations wearing one name and an
- * interface that grows with the command list.
- *
- * The outcome carries the name of the command that produced it, so an implementation that
- * needs to tell them apart can, and one that does not can ignore it.
+ * One question — what does this result look like — and one method to answer it. Both
+ * implementations are handed the outcome and the words that result reads by, and which of
+ * the two matters is the entire difference between them. Adding a command touches neither.
  */
 export interface CommandOutput {
-  present(outcome: NamedOutcome): string;
+  present<TResult>(outcome: CommandOutcome<TResult>, text: CommandText<TResult>): Answer;
 }
 
 /**
  * The result as a program reads it: the thing itself, indented, one trailing newline.
  *
- * The same for every command, because JSON of a result is the result. Nothing here needs
- * to know which command answered.
+ * The same for every command, because JSON of a result is the result — which is why the
+ * words are ignored here.
  */
 export class JsonOutput implements CommandOutput {
-  present(outcome: NamedOutcome): string {
-    return `${JSON.stringify(outcome.result, null, 2)}\n`;
+  present<TResult>(outcome: CommandOutcome<TResult>): Answer {
+    return {
+      output: `${JSON.stringify(outcome.result, null, 2)}\n`,
+      exitCode: outcome.exitCode,
+    };
   }
 }
 
-/**
- * The result as a person reads it, each command in its own words.
- *
- * This is the one place that knows which words belong to which result, and it knows it by
- * the name the outcome carries — so every branch has the right type without a cast, and a
- * command added to the union will not compile until it reads as something.
- */
+/** The result as a person reads it, in the command's own words. */
 export class TextOutput implements CommandOutput {
-  present(outcome: NamedOutcome): string {
-    switch (outcome.command) {
-      case "run":
-        return renderRunOutput(outcome.result);
-      case "create":
-        return renderCreateOutput(outcome.result);
-      case "connect":
-        // What the machine said, unchanged: openstrap adding anything around it would be
-        // talking over the answer.
-        return outcome.result.output;
-      case "facts.collect":
-        return renderFactsOutput(outcome.result);
-    }
+  present<TResult>(outcome: CommandOutcome<TResult>, text: CommandText<TResult>): Answer {
+    return {
+      output: text.of(outcome.result),
+      exitCode: outcome.exitCode,
+    };
   }
 }
