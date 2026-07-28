@@ -59,8 +59,7 @@ export class RequirementEvaluator {
     profile?: string;
     purpose?: string;
   }): RequirementRun {
-    const startedAt = params.now ?? new Date();
-    const finishedAt = new Date(startedAt.getTime());
+    const evaluatedAt = params.now ?? new Date();
     const snapshotsByTarget = byTarget(params.snapshots);
     const results = params.requirements.map((requirement) =>
       this.evaluateRequirement(requirement, params.target.name, snapshotsByTarget.get(params.target.name)),
@@ -68,11 +67,9 @@ export class RequirementEvaluator {
     const status = aggregateStatuses(results.map((result) => result.status));
 
     return {
-      id: stableId("req_run", startedAt.toISOString()),
+      id: stableId("req_run", evaluatedAt.toISOString()),
       status,
-      startedAt: startedAt.toISOString(),
-      finishedAt: finishedAt.toISOString(),
-      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      evaluatedAt: evaluatedAt.toISOString(),
       attempt: params.attempt ?? 1,
       trigger: params.trigger ?? "manual",
       profile: params.profile ?? "local-vm-preflight",

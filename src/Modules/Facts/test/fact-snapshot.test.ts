@@ -7,7 +7,7 @@ import { Facts } from "../Facts.js";
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
 describe("making a snapshot", () => {
-  it("names it after the machine and the moment the reading started", () => {
+  it("names it after the machine and the moment it was taken", () => {
     const snapshot = snapshotOf();
 
     expect(snapshot.id).toBe("snap_host_20260608T100000000Z");
@@ -20,7 +20,7 @@ describe("making a snapshot", () => {
     expect(snapshot.scope).toBe("host");
     expect(snapshot.target).toEqual({ type: "host", id: "host", displayName: undefined });
     expect(snapshot.reading).toEqual({
-      takenAt: "2026-06-08T10:00:02.000Z",
+      takenAt: "2026-06-08T10:00:00.000Z",
       status: "success",
     });
   });
@@ -113,8 +113,5 @@ describe("reading a machine", () => {
 });
 
 function snapshotOf(data: Record<string, unknown> = { arch: "x64" }): FactSnapshot {
-  return new FactSnapshot(host, data as unknown as FactData, {
-    startedAt: new Date("2026-06-08T10:00:00.000Z"),
-    finishedAt: new Date("2026-06-08T10:00:02.000Z"),
-  });
+  return new FactSnapshot(host, data as unknown as FactData, new Date("2026-06-08T10:00:00.000Z"));
 }

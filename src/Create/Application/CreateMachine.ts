@@ -19,6 +19,15 @@ export type CreateStep = {
   name: string;
   status: "succeeded" | "skipped";
   detail?: string;
+  /**
+   * When the step finished.
+   *
+   * Taken as it happens, because the steps are written to the store only once the run is over and
+   * nothing about a finished step says when it ran. Every step used to be recorded as having started
+   * and finished at the instant the run began — one stamp copied over a whole run of work. They run
+   * one after another, so a step started when the one before it finished and one stamp each says when.
+   */
+  finishedAt: string;
 };
 
 export type CreateMachineResult = {
@@ -64,6 +73,8 @@ export class CreateMachine {
     const timestamp = now.toISOString();
     const user = request.user ?? "openstrap";
     const steps: CreateStep[] = [];
+    const done = (step: Omit<CreateStep, "finishedAt">) =>
+      steps.push({ ...step, finishedAt: new Date().toISOString() });
 
     const availability = await request.provider.detect();
 
@@ -71,7 +82,7 @@ export class CreateMachine {
       throw new ProviderUnavailableError(request.provider.id, availability);
     }
 
-    steps.push({ name: "detect provider", status: "succeeded", detail: availability.version });
+    done({ name: "detect provider", status: "succeeded", detail: availability.version });
 
     request.store.saveTarget({
       name: target.name,
@@ -90,7 +101,7 @@ export class CreateMachine {
         name: target.image ?? "ubuntu:24.04",
         architecture: process.arch,
       });
-      steps.push({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
+      done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
 
       request.lockFile?.record(target.name, {
         image: {
@@ -103,13 +114,13 @@ export class CreateMachine {
         },
         plugins: request.pluginVersions ?? {},
       });
-      steps.push({ name: "write lock file", status: "succeeded" });
+      done({ name: "write lock file", status: "succeeded" });
 
       const existing = await request.provider.find(target.name);
 
       if (existing) {
-        steps.push({ name: "create machine", status: "skipped", detail: "a machine with this name already exists" });
-        steps.push(await this.ensureRunning(request.provider, existing));
+        done({ name: "create machine", status: "skipped", detail: "a machine with this name already exists" });
+        done(await this.ensureRunning(request.provider, existing));
 
         const access = await request.provider.access(existing);
         this.recordSteps(request.store, runId, steps, timestamp);
@@ -127,7 +138,7 @@ export class CreateMachine {
         store: reference.store,
         name: reference.name,
       }, timestamp);
-      steps.push({ name: "generate identity", status: "succeeded", detail: `${reference.store}:${reference.name}` });
+      done({ name: "generate identity", status: "succeeded", detail: `${reference.store}:${reference.name}` });
 
       request.store.allocatePort({
         hostPort: request.hostPort,
@@ -135,7 +146,7 @@ export class CreateMachine {
         guestPort: 22,
         protocol: "tcp",
       }, timestamp);
-      steps.push({ name: "reserve host port", status: "succeeded", detail: String(request.hostPort) });
+      done({ name: "reserve host port", status: "succeeded", detail: String(request.hostPort) });
 
       const handle = await request.provider.create({
         name: target.name,
@@ -151,10 +162,10 @@ export class CreateMachine {
         provider: request.provider.id,
         resourceId: handle.id,
       }, timestamp);
-      steps.push({ name: "create machine", status: "succeeded", detail: handle.id });
+      done({ name: "create machine", status: "succeeded", detail: handle.id });
 
       await request.provider.start(handle);
-      steps.push({ name: "start machine", status: "succeeded" });
+      done({ name: "start machine", status: "succeeded" });
 
       const access = await request.provider.access(handle);
       this.recordSteps(request.store, runId, steps, timestamp);
@@ -168,7 +179,7 @@ export class CreateMachine {
         ordinal: steps.length + 1,
         name: "failed",
         status: "failed",
-        startedAt: timestamp,
+        startedAt: steps[steps.length - 1]?.finishedAt ?? timestamp,
         finishedAt: new Date().toISOString(),
         detail: error instanceof Error ? error.message : String(error),
       });
@@ -187,7 +198,7 @@ export class CreateMachine {
    * step that follows — verifying it, connecting to it — is waiting on a machine
    * that is never going to answer.
    */
-  private async ensureRunning(provider: Provider, machine: MachineHandle): Promise<CreateStep> {
+  private async ensureRunning(provider: Provider, machine: MachineHandle): Promise<Omit<CreateStep, "finishedAt">> {
     const state = await provider.inspect(machine);
 
     if (state.status === "running") {
@@ -199,15 +210,16 @@ export class CreateMachine {
     return { name: "start machine", status: "succeeded", detail: `was ${state.status}` };
   }
 
-  private recordSteps(store: SqliteStateStore, runId: string, steps: readonly CreateStep[], startedAt: string): void {
+  /** @param runStartedAt When the run began, which is when its first step began. */
+  private recordSteps(store: SqliteStateStore, runId: string, steps: readonly CreateStep[], runStartedAt: string): void {
     steps.forEach((step, index) => {
       store.recordStep({
         runId,
         ordinal: index + 1,
         name: step.name,
         status: step.status === "skipped" ? "skipped" : "succeeded",
-        startedAt,
-        finishedAt: startedAt,
+        startedAt: steps[index - 1]?.finishedAt ?? runStartedAt,
+        finishedAt: step.finishedAt,
         detail: step.detail,
       });
     });

@@ -13,10 +13,11 @@ export type FactOrder = {
   target: FactTarget;
   declare?: FactDeclaration;
   /**
-   * When the run started, for callers that need reproducible identifiers.
+   * What to stamp the snapshot with, for callers that need a reproducible name.
    *
-   * Snapshot and run ids are stamped from it, so a test can ask for the same
-   * snapshot twice and get the same name for it.
+   * The snapshot's time and its id are both taken from it, so a test can ask for
+   * the same snapshot twice and get the same name for it. Left out, the clock is
+   * read once the machine has answered.
    */
   now?: Date;
 };

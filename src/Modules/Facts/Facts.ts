@@ -37,15 +37,14 @@ export class Facts {
 
   /** Reads the machine and returns one snapshot of it. */
   async collect(order: FactOrder): Promise<FactSnapshot> {
-    const startedAt = order.now ?? new Date();
     const data = await this.reading.read(order.declare ?? {});
 
-    // Both ends of the reading are measured here, because this is what waited for it, and the
+    // The moment is taken here, because this is what waited for the machine to answer, and the
     // channel is recorded here because this is what opened it.
     return new FactSnapshot(
       order.target,
       { ...data, transports: this.transports(order) },
-      { startedAt, finishedAt: new Date() },
+      order.now ?? new Date(),
     );
   }
 

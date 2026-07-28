@@ -73,9 +73,7 @@ function run(status: CheckStatus, result: { target: string; requirementId: strin
   return {
     id: `req_run_${result.target}`,
     status,
-    startedAt: "2026-06-08T10:00:00.000Z",
-    finishedAt: "2026-06-08T10:00:00.000Z",
-    durationMs: 0,
+    evaluatedAt: "2026-06-08T10:00:00.000Z",
     attempt: 1,
     trigger: "manual",
     profile: "local-run",

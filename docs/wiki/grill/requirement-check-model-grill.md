@@ -160,9 +160,9 @@
 
 77. **No RequirementRun warning status.** Решение: `RequirementRun.status = warning` is not used. Optional failed/error requirements remain failed/error in `RequirementRun`; warning/non-blocking meaning belongs to workflow/gate above it.
 
-78. **RequirementRun timing fields.** Решение: `RequirementRun` stores `startedAt` and `finishedAt`.
+78. **RequirementRun timing fields.** Решение: superseded. `RequirementRun` stores one moment, `evaluatedAt`. Оценка требований ничего не читает и никого не ждёт — снимки уже сняты, — поэтому начало и конец были одним и тем же мгновением, записанным дважды.
 
-79. **RequirementRun duration.** Решение: `RequirementRun` stores `durationMs` explicitly.
+79. **RequirementRun duration.** Решение: superseded by decision 78. `durationMs` не хранится: он вычислялся из двух копий одного мгновения и всегда был 0.
 
 80. **RequirementRun attempt.** Решение: `RequirementRun` stores `attempt`.
 

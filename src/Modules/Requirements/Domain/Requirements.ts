@@ -53,9 +53,14 @@ export type RequirementResult = {
 export type RequirementRun = {
   id: string;
   status: CheckStatus;
-  startedAt: string;
-  finishedAt: string;
-  durationMs: number;
+  /**
+   * When the requirements were checked.
+   *
+   * One moment and not a pair: nothing is read or waited for here — the snapshots have already
+   * been taken and this only compares them — so a start and a finish would be the same instant
+   * written twice, which is what they were, along with a `durationMs` that was always 0.
+   */
+  evaluatedAt: string;
   attempt: number;
   trigger: string;
   profile: string;

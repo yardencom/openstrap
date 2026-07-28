@@ -13,9 +13,10 @@ export type ReadingStatus = "success" | "warning" | "error";
  * Kept apart from the machine's own facts rather than mixed in with them, because neither is a thing
  * about the machine and a requirement comparing two snapshots must not trip over them.
  *
- * Taken, not started: the moment the reading began is already the snapshot's name, and the same
- * instant written twice is one of them waiting to disagree with the other. How long the reading took
- * is nobody's question yet, and if it becomes one it is a duration and not two stamps to subtract.
+ * One moment and not a pair. A start and a finish look like an interval, but no interval is kept
+ * anywhere: the finish was `takenAt` and the start only spelled out the snapshot's own name a second
+ * time. How long the reading took is nobody's question yet, and if it becomes one it is a duration
+ * and not two stamps to subtract.
  */
 export type Reading = {
   takenAt: string;
@@ -51,27 +52,19 @@ export class FactSnapshot {
   readonly reading: Reading;
 
   /**
-   * @param reading When the reading began, which names the snapshot, and when it finished, which is
-   * when the snapshot was taken. Both are given rather than read from the clock here: a snapshot is
-   * made after the reading has finished, so it could observe the end and never the beginning. The
-   * outcome is not given, because it follows from the data and nobody should be able to disagree with
-   * it.
+   * @param takenAt When the machine was read. Given rather than read from the clock here, because
+   * what waited for the reading knows when it came back and a constructor that stamped itself would
+   * be dating the paperwork instead. It also names the snapshot, so the name and the time can never
+   * disagree. The outcome is not given, because it follows from the data and nobody should be able to
+   * disagree with it.
    */
-  constructor(
-    target: FactTarget,
-    data: FactData,
-    reading: { startedAt: Date; finishedAt: Date },
-  ) {
-    // Named from the start of the reading, so the same machine read twice at the same instant is the
-    // same snapshot and two readings never collide.
-    const stamp = reading.startedAt.toISOString().replace(/[-:.]/g, "");
-
-    this.id = `snap_${target.name}_${stamp}`;
+  constructor(target: FactTarget, data: FactData, takenAt: Date) {
+    this.id = `snap_${target.name}_${takenAt.toISOString().replace(/[-:.]/g, "")}`;
     this.scope = target.scope;
     this.target = { type: target.type, id: target.name, displayName: target.displayName };
     this.data = data;
     this.reading = {
-      takenAt: reading.finishedAt.toISOString(),
+      takenAt: takenAt.toISOString(),
       status: this.status(data),
     };
 
