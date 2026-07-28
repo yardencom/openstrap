@@ -1,4 +1,5 @@
 import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "../Domain/OpenStrapPlugin.js";
+import { loadOpenStrapPlugin, loadOpenStrapPluginConfig } from "./OpenStrapPluginLoader.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
 import type { ProviderRegistry } from "./ProviderRegistry.js";
 import type { SecretStoreRegistry } from "./SecretStoreRegistry.js";
@@ -41,4 +42,35 @@ export async function createOpenStrapRuntime(
     secretStores: container.secretStores,
     pluginNames: container.listPluginNames(),
   };
+}
+
+export type LoadOpenStrapRuntimeRequest = {
+  cwd: string;
+  /** Where the runtime config is, when it was not left to be discovered. */
+  configPath?: string;
+  /** Plugin modules named on the command line, applied after the config's own. */
+  specifiers?: readonly string[];
+};
+
+/**
+ * A runtime built from what a command line can give: a directory, a path and some
+ * module specifiers.
+ *
+ * The order is the only sensible one — the config decides which plugins a project
+ * always has, and the specifiers add to it — so it is settled here rather than left
+ * for every caller to get right. `createOpenStrapRuntime` still takes already-loaded
+ * objects, because a test that had to write plugin modules to disk to check the
+ * registry would be testing the loader instead.
+ */
+export async function loadOpenStrapRuntime(request: LoadOpenStrapRuntimeRequest): Promise<OpenStrapRuntime> {
+  const config = await loadOpenStrapPluginConfig({
+    cwd: request.cwd,
+    configPath: request.configPath,
+  });
+  const plugins = await Promise.all((request.specifiers ?? []).map((specifier) => loadOpenStrapPlugin({
+    cwd: request.cwd,
+    specifier,
+  })));
+
+  return createOpenStrapRuntime({ config, plugins });
 }

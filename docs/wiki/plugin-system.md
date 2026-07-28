@@ -62,6 +62,11 @@ export default defineOpenStrapConfig({
 
 `openstrap create` and `openstrap connect` create an OpenStrap runtime, because both need a provider or a transport from a plugin. `openstrap run` and `openstrap facts collect` do not: they read the machine openstrap is running on, and nothing about that is pluggable.
 
+A runtime is built with `loadOpenStrapRuntime({ cwd, configPath, specifiers })`, which
+loads the config, then the plugins named on the command line, and applies them in that
+order. `createOpenStrapRuntime` takes already-loaded objects instead, for callers that
+have them and for tests.
+
 Supported runtime options:
 
 ```text

@@ -47,6 +47,8 @@ export {
 } from "./Application/OpenStrapPluginLoader.js";
 export {
   createOpenStrapRuntime,
+  loadOpenStrapRuntime,
+  type LoadOpenStrapRuntimeRequest,
   type OpenStrapRuntime,
   type OpenStrapRuntimeCreateRequest,
 } from "./Application/OpenStrapRuntime.js";

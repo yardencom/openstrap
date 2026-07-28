@@ -1,5 +1,5 @@
+import { loadOpenStrapRuntime } from "../Plugin/index.js";
 import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
-import { createCliRuntime } from "./CliRuntime.js";
 import { CliErrors } from "./Errors.js";
 import type { CommandContext, CommandOutcome } from "./application/CliCommand.js";
 import { ConnectCommand } from "./application/ConnectCommand.js";
@@ -43,7 +43,11 @@ export async function main(argv: readonly string[], io: CliIo = {
   try {
     const outcome = await run(args, {
       workspaceRoot: io.cwd,
-      runtime: () => createCliRuntime(args, io.cwd),
+      runtime: () => loadOpenStrapRuntime({
+        cwd: io.cwd,
+        configPath: args.runtimeConfigPath,
+        specifiers: args.pluginSpecifiers,
+      }),
     });
 
     io.stdout.write(outcome.output);
