@@ -2,10 +2,10 @@ import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
 import { createCliRuntime } from "./CliRuntime.js";
 import { CliErrors } from "./Errors.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./application/CliCommand.js";
-import { ConnectCommand } from "./application/ConnectArgs.js";
-import { CreateCommand } from "./application/CreateArgs.js";
-import { FactsCollectCommand } from "./application/FactsCollectArgs.js";
-import { RunCommand } from "./application/RunArgs.js";
+import { ConnectCommand } from "./application/ConnectCommand.js";
+import { CreateCommand } from "./application/CreateCommand.js";
+import { FactsCollectCommand } from "./application/FactsCollectCommand.js";
+import { RunCommand } from "./application/RunCommand.js";
 
 export type CliIo = {
   stdout: Pick<NodeJS.WriteStream, "write">;

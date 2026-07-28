@@ -1,4 +1,4 @@
-import type { FactsCollectResult } from "../application/FactsCollectArgs.js";
+import type { FactsCollectResult } from "../application/FactsCollectCommand.js";
 
 /** Sections that hold things asked about by name, printed as counts. */
 const namedSections = [
