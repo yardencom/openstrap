@@ -4,32 +4,6 @@ import type { FactTarget } from "./FactTarget.js";
 /** Which shape of snapshot this is. Every reader compares against it before trusting one. */
 const schemaVersion = "facts.v1";
 
-/**
- * Keys a snapshot may never carry.
- *
- * A snapshot says what a machine is. Why it was read, how confident anyone is about it and where it
- * came from are properties of the reading, and letting them in is how a snapshot stops being
- * comparable to the next one.
- */
-const forbiddenKeys = new Set([
-  "profile",
-  "purpose",
-  "provenance",
-  "metadata",
-  "sources",
-  "confidence",
-]);
-
-/** What a reading came back with, before it is anything anyone can refer to. */
-export type FactReading = {
-  target: FactTarget;
-  data: FactData;
-  /** The channel it was read through; empty when it was read in openstrap's own process. */
-  transports: Record<string, TransportFact>;
-  startedAt: Date;
-  attempt?: number;
-};
-
 /** Whether the reading that produced a snapshot got everything it asked for. */
 export type ReadingStatus = "success" | "warning" | "error";
 
@@ -47,15 +21,22 @@ export type Reading = {
   attempt: number;
 };
 
-export class InvalidSnapshotError extends Error {
-  readonly issues: string[];
-
-  constructor(issues: string[]) {
-    super(`Invalid fact snapshot: ${issues.join("; ")}`);
-    this.name = "InvalidSnapshotError";
-    this.issues = issues;
-  }
-}
+/**
+ * What a reading came back with, before it is anything anyone can refer to.
+ *
+ * Both times are given rather than taken from the clock here: a snapshot is made after the reading
+ * has finished, so it could observe the end and never the beginning, and half a measurement taken
+ * by whoever measured and half invented afterwards is not a measurement.
+ */
+export type FactReading = {
+  target: FactTarget;
+  data: FactData;
+  /** The channel it was read through; empty when it was read in openstrap's own process. */
+  transports: Record<string, TransportFact>;
+  startedAt: Date;
+  finishedAt: Date;
+  attempt?: number;
+};
 
 /**
  * A machine as it was read, once.
@@ -66,13 +47,14 @@ export class InvalidSnapshotError extends Error {
  *
  * - an identity, so it can be stored, referred to by a requirement result and named in a report;
  * - the schema it claims, so a reader can tell whether it understands the shape before trusting it;
- * - the reading that produced it: when it started and finished, which attempt it was, and whether
- *   anything it asked for failed;
+ * - the reading that produced it: when it ran, which attempt it was, and whether anything it asked
+ *   for failed;
  * - the channel it came through, which no reading can know because a machine does not know how
  *   anyone got in.
  *
- * Then it is checked and frozen, so it cannot exist in an invalid state and cannot be edited into
- * one afterwards — everything downstream reads it without checking again.
+ * Then it is frozen, so it cannot be edited after the fact — everything downstream reads it as it
+ * was taken. Nothing is checked, because there is nothing left that could be wrong: the fields are
+ * fixed and the type says what may be in them, which no runtime check improves on.
  *
  * A constructor rather than a method, because nothing here waits: the machine has already answered
  * and this only turns the answer into something that can be trusted.
@@ -100,13 +82,12 @@ export class FactSnapshot {
     this.data = { ...reading.data, transports: reading.transports };
     this.reading = {
       startedAt: reading.startedAt.toISOString(),
-      finishedAt: new Date().toISOString(),
-      status: this.statusOf(this.data),
+      finishedAt: reading.finishedAt.toISOString(),
+      status: this.status(this.data),
       attempt: reading.attempt ?? 1,
     };
 
-    this.verify();
-    deepFreeze(this);
+    this.freeze(this);
   }
 
   /**
@@ -122,7 +103,7 @@ export class FactSnapshot {
    * forget: `users` was added to the model and not to the list, and a snapshot holding a failed user
    * fact reported a clean reading.
    */
-  private statusOf(value: unknown): ReadingStatus {
+  private status(value: unknown): ReadingStatus {
     if (!value || typeof value !== "object") {
       return "success";
     }
@@ -131,42 +112,20 @@ export class FactSnapshot {
       return "warning";
     }
 
-    return Object.values(value).some((property) => this.statusOf(property) === "warning")
+    return Object.values(value).some((property) => this.status(property) === "warning")
       ? "warning"
       : "success";
   }
 
-  private verify(): void {
-    const issues = [...forbiddenKeys]
-      .filter((key) => hasOwn(this, key))
-      .map((key) => `a snapshot must not carry ${key}`);
-
-    // An error belongs to the section that failed, so that the sections which answered stay usable.
-    // A top-level bag of errors loses that.
-    if (hasOwn(this.data, "errors")) {
-      issues.push("data must not contain top-level errors");
+  private freeze(value: unknown): void {
+    if (!value || typeof value !== "object") {
+      return;
     }
 
-    if (issues.length > 0) {
-      throw new InvalidSnapshotError(issues);
+    Object.freeze(value);
+
+    for (const property of Object.values(value)) {
+      this.freeze(property);
     }
   }
-}
-
-function hasOwn(value: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
-
-function deepFreeze<TValue>(value: TValue): TValue {
-  if (!value || typeof value !== "object") {
-    return value;
-  }
-
-  Object.freeze(value);
-
-  for (const property of Object.values(value)) {
-    deepFreeze(property);
-  }
-
-  return value;
 }

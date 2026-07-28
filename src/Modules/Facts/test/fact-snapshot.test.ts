@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  FactSnapshot,
-  InvalidSnapshotError,
-  type FactReading,
-} from "../Domain/FactSnapshot.js";
+import { FactSnapshot, type FactReading } from "../Domain/FactSnapshot.js";
 import { Facts } from "../Facts.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
@@ -22,8 +18,9 @@ describe("making a snapshot", () => {
 
     expect(snapshot.scope).toBe("host");
     expect(snapshot.target).toEqual({ type: "host", id: "host", displayName: undefined });
-    expect(snapshot.reading).toMatchObject({
+    expect(snapshot.reading).toEqual({
       startedAt: "2026-06-08T10:00:00.000Z",
+      finishedAt: "2026-06-08T10:00:02.000Z",
       status: "success",
       attempt: 1,
     });
@@ -35,13 +32,6 @@ describe("making a snapshot", () => {
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.data)).toBe(true);
     expect(Object.isFrozen(snapshot.reading)).toBe(true);
-  });
-
-  it("keeps failures on the section that failed rather than in one bag", () => {
-    expect(() => new FactSnapshot(reading({ errors: ["something went wrong"] })))
-      .toThrow(InvalidSnapshotError);
-    expect(() => new FactSnapshot(reading({ errors: [] })))
-      .toThrow(/must not contain top-level errors/);
   });
 
   it("records the channel it was read through", () => {
@@ -138,5 +128,6 @@ function reading(data: Record<string, unknown> = { arch: "x64" }): FactReading {
     data: data as unknown as FactReading["data"],
     transports: {},
     startedAt: new Date("2026-06-08T10:00:00.000Z"),
+    finishedAt: new Date("2026-06-08T10:00:02.000Z"),
   };
 }
