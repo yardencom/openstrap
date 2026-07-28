@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { CapturedSystemCommand, ProcessOutput, Transport } from "../../Transport/index.js";
+import type { CapturedSystemCommand, ProcessOutput, Transport } from "../../../Transport/index.js";
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
 import { RemoteReading, RemoteReadingError } from "./RemoteReading.js";
 

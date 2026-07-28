@@ -1,4 +1,4 @@
-import type { Transport } from "../../Transport/index.js";
+import type { Transport } from "../../../Transport/index.js";
 import type { FactDeclaration } from "../Domain/FactDeclaration.js";
 import type { FactData } from "../Domain/FactSnapshot.js";
 import { AgentBinary } from "./Remote/AgentBinary.js";

@@ -7,7 +7,7 @@ import { Facts } from "../Facts.js";
 
 describe("Facts public API", () => {
   it("does not expose a public barrel", () => {
-    const publicBarrel = readFileSync(join(process.cwd(), "src/Facts/index.ts"), "utf8");
+    const publicBarrel = readFileSync(join(process.cwd(), "src/Modules/Facts/index.ts"), "utf8");
 
     expect(publicBarrel).toBe("export {};\n");
   });
@@ -28,7 +28,7 @@ describe("Facts public API", () => {
   });
 
   it("exports one class and no other value", () => {
-    const source = readFileSync(join(process.cwd(), "src/Facts/Facts.ts"), "utf8");
+    const source = readFileSync(join(process.cwd(), "src/Modules/Facts/Facts.ts"), "utf8");
     const exported = [...source.matchAll(/^export\s+(class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
       .map((match) => ({ kind: match[1], name: match[2] }));
 

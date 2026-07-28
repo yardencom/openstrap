@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { FileSystemAPI } from "../../../Transport/index.js";
+import type { FileSystemAPI } from "../../../../Transport/index.js";
 import type { TargetPlatform } from "./TargetPlatform.js";
 
 /**
@@ -26,7 +26,7 @@ function builtAgentsDirectory(): string {
   return process.env.OPENSTRAP_FACTS_AGENT_DIR
     // Four levels up from `Facts/Reading/Remote` is the package root, whether
     // this file is being run from `src` or from `dist`.
-    ?? resolve(dirname(fileURLToPath(import.meta.url)), "../../../..", "dist", "agent");
+    ?? resolve(dirname(fileURLToPath(import.meta.url)), "../../../../..", "dist", "agent");
 }
 
 export class MissingAgentError extends Error {

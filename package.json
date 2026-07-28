@@ -8,24 +8,24 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/Facts/Facts.d.ts",
-      "import": "./dist/Facts/Facts.js"
+      "types": "./dist/Modules/Facts/Facts.d.ts",
+      "import": "./dist/Modules/Facts/Facts.js"
     },
     "./Blueprint": {
-      "types": "./dist/Blueprint/index.d.ts",
-      "import": "./dist/Blueprint/index.js"
+      "types": "./dist/Modules/Blueprint/index.d.ts",
+      "import": "./dist/Modules/Blueprint/index.js"
     },
     "./ConfigCore": {
       "types": "./dist/ConfigCore/index.d.ts",
       "import": "./dist/ConfigCore/index.js"
     },
     "./Facts/Facts": {
-      "types": "./dist/Facts/Facts.d.ts",
-      "import": "./dist/Facts/Facts.js"
+      "types": "./dist/Modules/Facts/Facts.d.ts",
+      "import": "./dist/Modules/Facts/Facts.js"
     },
     "./Requirements": {
-      "types": "./dist/Requirements/index.d.ts",
-      "import": "./dist/Requirements/index.js"
+      "types": "./dist/Modules/Requirements/index.d.ts",
+      "import": "./dist/Modules/Requirements/index.js"
     },
     "./OpenStrapRun": {
       "types": "./dist/OpenStrapRun/index.d.ts",
@@ -49,9 +49,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "agent:build": "tsx src/Facts/Reading/Agent/BuildAgent.ts",
-    "schema:generate": "tsx src/Blueprint/Schema/index.ts",
+    "build": "find dist -mindepth 1 -maxdepth 1 ! -name agent -exec rm -rf {} + 2>/dev/null; tsc -p tsconfig.build.json",
+    "agent:build": "tsx src/Modules/Facts/Reading/Agent/BuildAgent.ts",
+    "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

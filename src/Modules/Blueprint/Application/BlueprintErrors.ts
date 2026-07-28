@@ -2,7 +2,7 @@ import {
   ConfigParseError,
   ConfigValidationError,
   type ConfigIssue,
-} from "../../ConfigCore/index.js";
+} from "../../../ConfigCore/index.js";
 
 abstract class BlueprintError<TIssue extends ConfigIssue> extends Error {
   readonly issues: string[];

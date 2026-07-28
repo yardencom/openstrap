@@ -1,4 +1,4 @@
-import type { Transport } from "../Transport/index.js";
+import type { Transport } from "../../Transport/index.js";
 import {
   createFactCollection,
   createFactCollectionItem,

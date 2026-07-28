@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ConfigCore } from "../../ConfigCore/index.js";
+import { ConfigCore } from "../../../ConfigCore/index.js";
 import { BlueprintSchema } from "../Schema/BlueprintSchema.js";
 
 describe("Blueprint JSON Schema", () => {

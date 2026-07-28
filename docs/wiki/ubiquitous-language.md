@@ -32,13 +32,12 @@
 
 | Термин | Описание | Пример |
 |------|------------|---------|
-| **Config Module** | Область продуктового модуля, которая описывает и обслуживает один вид конфигурации через ConfigCore. | `src/Facts/Definition` |
+| **Config Module** | Область продуктового модуля, которая описывает и обслуживает один вид конфигурации через ConfigCore. | `src/Modules/Blueprint/Schema` |
 | **ConfigCore** | Общий слой для парсинга, описания схем, валидации, ошибок и генерации внешних схем. | `src/ConfigCore` |
-| **Facts Definition Area** | Внутренняя область `Facts`, которая обслуживает конфигурацию facts definition. | `src/Facts/Definition` |
-| **Facts** | Product module для facts language: definitions, normalized facts, collection, facts-specific artifacts/use cases. | `src/Facts` |
+| **Facts** | Product module, который читает машину и представляет прочитанное как `FactCollection`. Формата файла не содержит. | `src/Modules/Facts` |
 | **WorkflowConfig** | Будущий config module для конфигурации workflow. | `src/WorkflowConfig` |
 | **StorageConfig** | Будущий config module для конфигурации storage. | `src/StorageConfig` |
-| **Public Facade** | Основной публичный класс модуля, который представляет уже собранные facts. | `new Facts(items)` |
+| **Public Facade** | Единственный вход в модуль: инстанс называет машину, `collect` её читает. | `new Facts(transport?).collect(order)` |
 | **Module Barrel** | `index.ts`, который экспортирует только намеренные публичные entrypoints модуля. | `export { Facts } ...` |
 | **Boundary Test** | Тест, который проверяет архитектурные границы: импорты, публичный API, расположение файлов. | `facts-boundaries.test.ts` |
 
@@ -130,12 +129,12 @@
 
 | Термин | Описание | Пример |
 |------|------------|---------|
-| **Domain** | Предметная модель модуля: имена, типы и инварианты, которые не меняются при замене YAML, Zod, storage или transport. Если термин нужен только конкретной библиотеке, он не domain. | `src/Facts/Domain` |
+| **Domain** | Предметная модель модуля: имена, типы и инварианты, которые не меняются при замене YAML, Zod, storage или transport. Если термин нужен только конкретной библиотеке, он не domain. | `src/Modules/Facts/Domain` |
 | **Entity** | Доменный объект, который система различает по identity. Поля могут измениться, но объект с тем же id остается тем же объектом. | fact с `id: git` |
 | **Value Object** | Доменное значение без identity и lifecycle. Его не ищут по id и не обновляют как объект; его заменяют целиком, а равенство определяется значением. | `FactImportance.Optional` |
 | **DTO** | Форма данных на границе слоя, порта или внешнего формата. DTO описывает контракт обмена, не решает доменные правила и не получает identity только потому, что в нем есть поле `id`. | `ConfigIssueDto` |
-| **Application Layer** | Слой use cases. Здесь происходит последовательность действий: принять вход, вызвать core/domain services, перевести ошибки, вернуть результат. Если код только описывает поля config, это не application. | `CollectFactsFromDefinition.collect()` |
-| **Schema Layer** | Контракт допустимого config. Здесь находятся поля, типы, required/default/unique rules; здесь не должно быть IO, запуска команд, workflow или transport. | `src/Facts/Definition/Schema` |
+| **Application Layer** | Слой use cases. Здесь происходит последовательность действий: принять вход, вызвать core/domain services, перевести ошибки, вернуть результат. Если код только описывает поля config, это не application. | `Facts.collect()` |
+| **Schema Layer** | Контракт допустимого config. Здесь находятся поля, типы, required/default/unique rules; здесь не должно быть IO, запуска команд, workflow или transport. | `src/Modules/Blueprint/Schema` |
 | **Adapter** | Внешняя техническая реализация port. Adapter может импортировать Zod, YAML parser, filesystem или network library; domain и config module не должны зависеть от него. | `ZodConfigValidator` |
 | **Port** | Интерфейс потребности системы, названный по capability, а не по технологии. Port существует, когда потребителю важно "что сделать", а реализацию можно заменить. | `JsonSchemaEmitter` |
 | **Composition Root** | Единственное место, где concrete adapters соединяются с ports для создания готового объекта. Если файл только прячет один `new`, это не composition root. | bootstrap приложения |
@@ -169,10 +168,9 @@
 ### Config Module Chain
 
 - **Config Module** использует **ConfigCore** для чтения, проверки и экспорта config.
-- `src/Facts/Definition` является **Config Module** для **Facts Definition** внутри product module `Facts`.
-- **FactsDefinitionReader** является внутренним reader внутри `Facts/Definition`; внешний сбор по definition идет через **CollectFactsFromDefinition**.
-- **Facts** является public result object: принимает собранные **FactCollectionItem** и представляет **FactCollection** как instance.
-- `src/Facts/SchemaArtifacts` возвращает facts-specific JSON Schema artifacts.
+- `src/Modules/Blueprint/Schema` является **Config Module** для блuprint - единственного формата конфигурации, который читает openstrap.
+- **Facts** формата файла не содержит: что читать, говорит вызывающий, а из требований заказ выводит **RequiredFacts** в `Requirements`.
+- **Facts** является единственным входом в чтение машины: `collect` возвращает **FactCollection** из **FactCollectionItem**.
 
 ### ConfigCore Chain
 

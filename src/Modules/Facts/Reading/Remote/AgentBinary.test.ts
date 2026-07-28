@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { BinaryFileWriteOptions, FileSystemAPI } from "../../../Transport/index.js";
+import type { BinaryFileWriteOptions, FileSystemAPI } from "../../../../Transport/index.js";
 import { AgentBinary, MissingAgentError } from "./AgentBinary.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 

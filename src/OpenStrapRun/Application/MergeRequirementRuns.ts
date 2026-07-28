@@ -1,4 +1,4 @@
-import type { CheckStatus, RequirementRun } from "../../Requirements/index.js";
+import type { CheckStatus, RequirementRun } from "../../Modules/Requirements/index.js";
 
 /**
  * Folds one evaluation per target into the single run a blueprint produces.

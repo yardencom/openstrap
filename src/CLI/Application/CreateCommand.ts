@@ -2,9 +2,9 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { Blueprints, type BlueprintTarget } from "../../Blueprint/index.js";
+import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import { CreateMachine, VerifyMachine, type CreateMachineResult } from "../../Create/index.js";
-import type { RequirementRun } from "../../Requirements/index.js";
+import type { RequirementRun } from "../../Modules/Requirements/index.js";
 import { LockFile } from "../../LockFile/index.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { RunLock } from "../../RunLock/RunLock.js";

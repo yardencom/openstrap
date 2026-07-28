@@ -1,9 +1,9 @@
 import { connect } from "node:net";
 
-import type { BlueprintTarget } from "../../Blueprint/index.js";
-import { Facts } from "../../Facts/Facts.js";
+import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
+import { Facts } from "../../Modules/Facts/Facts.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
-import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Requirements/index.js";
+import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Modules/Requirements/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 

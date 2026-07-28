@@ -1,9 +1,9 @@
-import type { Blueprint } from "../../Blueprint/index.js";
-import type { Facts } from "../../Facts/Facts.js";
+import type { Blueprint } from "../../Modules/Blueprint/index.js";
+import type { Facts } from "../../Modules/Facts/Facts.js";
 import {
   RequirementEvaluator,
   type RequirementRun,
-} from "../../Requirements/index.js";
+} from "../../Modules/Requirements/index.js";
 import { mergeRequirementRuns } from "./MergeRequirementRuns.js";
 
 /**

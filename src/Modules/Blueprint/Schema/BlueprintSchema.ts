@@ -2,7 +2,7 @@ import {
   type ConfigDefinition,
   type ConfigSchema,
   type ConfigSchemaNode,
-} from "../../ConfigCore/index.js";
+} from "../../../ConfigCore/index.js";
 import { RequirementConfigSchema } from "../../Requirements/Schema/RequirementConfigSchema.js";
 import type { BlueprintConfig, BlueprintTargetConfig } from "./BlueprintConfig.js";
 

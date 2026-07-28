@@ -18,7 +18,7 @@ const targets: readonly { id: string; pkgTarget: string }[] = [
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(here, "../../../..");
+const repositoryRoot = resolve(here, "../../../../..");
 const output = join(repositoryRoot, "dist", "agent");
 
 /**

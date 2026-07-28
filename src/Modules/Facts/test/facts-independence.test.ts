@@ -31,7 +31,7 @@ describe("Facts is a module of its own", () => {
   });
 
   it("reaches outside itself only for the transport ports", () => {
-    const factsRoot = join(process.cwd(), "src/Facts");
+    const factsRoot = join(process.cwd(), "src/Modules/Facts");
     const offenders = collectionSources().filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
 
@@ -46,7 +46,7 @@ describe("Facts is a module of its own", () => {
 
   it("is reached from other modules only through its facade", () => {
     const outside = listSources(join(process.cwd(), "src")).filter(
-      (filePath: string) => !filePath.includes("/src/Facts/"),
+      (filePath: string) => !filePath.includes("/src/Modules/Facts/"),
     );
     const offenders = outside.filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
@@ -98,7 +98,7 @@ describe("Reading a machine", () => {
   });
 
   it("has the agent run the same reading the host runs", () => {
-    const agent = readFileSync(join(process.cwd(), "src/Facts/Reading/Agent/AgentMain.ts"), "utf8");
+    const agent = readFileSync(join(process.cwd(), "src/Modules/Facts/Reading/Agent/AgentMain.ts"), "utf8");
 
     expect(agent).toMatch(/import\s+\{\s*LocalReading\s*\}/);
     expect(agent).not.toMatch(/systeminformation|node:os|Transport/);
@@ -181,14 +181,14 @@ function constructorBodyIn(source: string): string {
 /** The facade, the model and the readings — everything that produces a fact. */
 function collectionSources(): string[] {
   return [
-    join(process.cwd(), "src/Facts/Facts.ts"),
-    ...listSources(join(process.cwd(), "src/Facts/Domain")),
+    join(process.cwd(), "src/Modules/Facts/Facts.ts"),
+    ...listSources(join(process.cwd(), "src/Modules/Facts/Domain")),
     ...readingSources(),
   ].filter((filePath: string) => !filePath.includes(".test."));
 }
 
 function readingSources(): string[] {
-  return listSources(join(process.cwd(), "src/Facts/Reading")).filter((filePath: string) => !filePath.includes(".test."));
+  return listSources(join(process.cwd(), "src/Modules/Facts/Reading")).filter((filePath: string) => !filePath.includes(".test."));
 }
 
 /** What runs on the machine being read. */

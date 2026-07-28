@@ -1,7 +1,7 @@
 import {
   Blueprints,
-} from "../../Blueprint/index.js";
-import { Facts } from "../../Facts/Facts.js";
+} from "../../Modules/Blueprint/index.js";
+import { Facts } from "../../Modules/Facts/Facts.js";
 import { OpenStrapRun } from "../../OpenStrapRun/index.js";
 import {
   createOpenStrapRuntime,
@@ -14,7 +14,7 @@ import {
   type RequirementCheckNode,
   type RequirementLeafCheck,
   type RequirementRun,
-} from "../../Requirements/index.js";
+} from "../../Modules/Requirements/index.js";
 import {
   collectHostFacts,
   type FactsCollectResult,

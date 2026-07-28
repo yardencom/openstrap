@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { JsonFileExporter } from "../../Export/index.js";
-import { Facts } from "../../Facts/Facts.js";
+import { Facts } from "../../Modules/Facts/Facts.js";
 
 type FactCollection = Awaited<ReturnType<Facts["collect"]>>;
 

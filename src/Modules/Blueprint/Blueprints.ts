@@ -1,7 +1,7 @@
 import {
   ConfigCore,
   type ConfigLoadRequest,
-} from "../ConfigCore/index.js";
+} from "../../ConfigCore/index.js";
 import type { Blueprint } from "./Domain/Blueprint.js";
 import { BlueprintReadError } from "./Application/BlueprintErrors.js";
 import { declaredTargets } from "./Application/DeclaredTargets.js";

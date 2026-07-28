@@ -67,7 +67,7 @@ const facts = new Facts(collectedFactItems);
 const jsonSchema = new FactsDefinitionJsonSchema().emit();
 ```
 
-Facade скрывает implementation details своего bounded context. Если внешний код вынужден импортировать `Facts/Definition` или `Facts/Adapters`, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
+Facade скрывает implementation details своего bounded context. Если внешний код вынужден импортировать `Facts/Reading` или `Facts/Domain`, значит public boundary не закрывает нужный use case или consumer лезет внутрь модуля.
 
 ### Product Module To ConfigCore
 
@@ -189,22 +189,23 @@ Schema layer не должен содержать:
 
 Product module отвечает за один bounded context.
 
+Продуктовые модули лежат в `src/Modules`: `Blueprint`, `Requirements`, `Facts`.
+
 `Facts` - один product module. Внутри него есть разные области, но это не отдельные top-level bounded contexts.
 
-| Область внутри `src/Facts` | Ответственность |
+| Область внутри `src/Modules/Facts` | Ответственность |
 |--------|-----------------|
-| `Domain` | normalized observed facts, `FactCollection`, `FactRun`, target/request/result contracts |
-| `Definition` | reusable facts definition YAML contract: sections, value objects, validation, schema classes |
-| `Application` | facts-specific use cases: collect from definition, evidence collection, facts result persistence |
-| `Adapters` | concrete fact sources such as local host facts, local system snapshot, process/service inventory |
-| `SchemaArtifacts` | facts-specific external artifacts such as facts definition JSON Schema |
+| `Domain` | normalized observed facts, `FactCollection`, `FactRun`, target/order contracts |
+| `Reading` | чтение машины: `LocalReading` через API машины, `RemoteReading` через доставку агента |
+| `Reading/Local` | секции снимка: system, entities, accounts, paths, commands |
+| `Reading/Remote` | определение платформы цели и доставка агента |
+| `Reading/Agent` | точка входа агента и его сборка |
 
 `Facts` не отвечает за:
 
 - CLI rendering;
-- building collection requests from requirements.
-
-Если code path одновременно читает definition YAML, собирает facts, исполняет evidence commands и пишет result-файл, это application orchestration, а не `Facts` domain.
+- формат конфигурации - его не существует, что читать говорит вызывающий;
+- построение заказа из требований - это `Requirements`.
 
 ## Public API Boundary
 

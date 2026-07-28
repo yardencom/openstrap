@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { ConfigCore } from "../../ConfigCore/index.js";
+import { ConfigCore } from "../../../ConfigCore/index.js";
 import { BlueprintSchema } from "./BlueprintSchema.js";
 
 export default function generateBlueprintSchema(): void {

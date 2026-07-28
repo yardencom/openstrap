@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 describe("Facts boundaries", () => {
   it("keeps Facts independent from Zod and concrete adapters", () => {
-    const factsSourcePaths = listSourceFiles(join(process.cwd(), "src/Facts")).filter(
+    const factsSourcePaths = listSourceFiles(join(process.cwd(), "src/Modules/Facts")).filter(
       (filePath: string) => !filePath.includes("/test/"),
     );
     const offenders = factsSourcePaths.filter((filePath: string) => {
@@ -17,7 +17,7 @@ describe("Facts boundaries", () => {
   });
 
   it("keeps facts-specific concepts inside one Facts module", () => {
-    const factsPath = join(process.cwd(), "src/Facts");
+    const factsPath = join(process.cwd(), "src/Modules/Facts");
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
@@ -33,7 +33,7 @@ describe("Facts boundaries", () => {
 
   it("keeps Facts/Facts as the only import path from other modules", () => {
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
-      (filePath: string) => !filePath.includes("/src/Facts/"),
+      (filePath: string) => !filePath.includes("/src/Modules/Facts/"),
     );
     const offenders = nonFactsSourcePaths.filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
@@ -47,7 +47,7 @@ describe("Facts boundaries", () => {
 
   it("allows consumers to import only the Facts class from Facts/Facts", () => {
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
-      (filePath: string) => !filePath.includes("/src/Facts/"),
+      (filePath: string) => !filePath.includes("/src/Modules/Facts/"),
     );
     const offenders = nonFactsSourcePaths.filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
@@ -76,7 +76,7 @@ describe("Facts boundaries", () => {
 
   it("does not import facts adapters outside the Facts module", () => {
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
-      (filePath: string) => !filePath.includes("/src/Facts/"),
+      (filePath: string) => !filePath.includes("/src/Modules/Facts/"),
     );
     const offenders = nonFactsSourcePaths.filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");

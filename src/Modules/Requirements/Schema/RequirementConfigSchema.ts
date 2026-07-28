@@ -1,4 +1,4 @@
-import type { ConfigSchema, ConfigSchemaNode } from "../../ConfigCore/index.js";
+import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
 import type { TargetlessRequirement } from "../Domain/Requirements.js";
 
 const factBlockNames = [

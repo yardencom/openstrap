@@ -1,4 +1,4 @@
-import type { BlueprintTarget } from "../../Blueprint/index.js";
+import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineHandle, Provider, ProviderAvailability } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";
 import { LockFile } from "../../LockFile/index.js";
