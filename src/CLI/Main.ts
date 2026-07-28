@@ -1,8 +1,11 @@
 import { loadOpenStrapRuntime } from "../Plugin/index.js";
 import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
+import { CommandLine, type Answer } from "./CommandLine.js";
 import { CliErrors } from "./Errors.js";
-import { JsonOutput, TextOutput, type CommandOutput } from "./Output/CommandOutput.js";
-import type { CliCommand, CommandContext } from "./application/CliCommand.js";
+import { JsonOutput, TextOutput } from "./Output/CommandOutput.js";
+import { renderCreateOutput } from "./Output/CreateOutput.js";
+import { renderFactsOutput } from "./Output/FactsOutput.js";
+import { renderRunOutput } from "./Output/RunOutput.js";
 import { ConnectCommand } from "./application/ConnectCommand.js";
 import { CreateCommand } from "./application/CreateCommand.js";
 import { FactsCollectCommand } from "./application/FactsCollectCommand.js";
@@ -15,8 +18,7 @@ export type CliIo = {
 };
 
 /**
- * The command line: read the arguments, run the command they name, present what came of
- * it.
+ * The command line: read the arguments, run the command they name, present what came of it.
  *
  * Nothing here decides what a command does or what its outcome means — the command owns
  * both — and nothing here decides how a result reads, which is the output's job. What is
@@ -39,18 +41,17 @@ export async function main(argv: readonly string[], io: CliIo = {
     return 2;
   }
 
-  const output = "json" in args && args.json ? new JsonOutput() : new TextOutput();
-  const context: CommandContext = {
+  const line = new CommandLine({
     workspaceRoot: io.cwd,
     runtime: () => loadOpenStrapRuntime({
       cwd: io.cwd,
       configPath: args.runtimeConfigPath,
       specifiers: args.pluginSpecifiers,
     }),
-  };
+  }, "json" in args && args.json ? new JsonOutput() : new TextOutput());
 
   try {
-    const answer = await dispatch(args, context, output);
+    const answer = await dispatch(args, line);
 
     io.stdout.write(answer.output);
 
@@ -62,47 +63,25 @@ export async function main(argv: readonly string[], io: CliIo = {
   }
 }
 
-/** What a command line answers with: something to print, and how the process should end. */
-type Presented = {
-  output: string;
-  exitCode: number;
-};
-
 /**
- * Which command answers to these arguments, and how its result is presented.
+ * Which command answers to these arguments, and how its result reads.
  *
- * Selection and nothing else: each branch names a command and the way that command's
- * result reads, and the work of running one and presenting the other happens once, below.
- * Each branch hands its command arguments the compiler has already narrowed to that
- * command's own type, and a presenter that takes that command's own result — so a
- * command can neither be given another's arguments nor presented as another command, and
- * one that is added and not handled will not compile.
+ * Selection and nothing else. Each branch is handed arguments the compiler has already
+ * narrowed to that command's own type and a rendering that takes that command's own
+ * result, so a command can neither be given another's arguments nor presented as another
+ * command, and one that is added and not handled will not compile.
  */
-function dispatch(
-  args: ParsedArgs,
-  context: CommandContext,
-  output: CommandOutput,
-): Promise<Presented> {
+function dispatch(args: ParsedArgs, line: CommandLine): Promise<Answer> {
   switch (args.command) {
     case "run":
-      return presented(new RunCommand(), args, context, (result) => output.run(result));
+      return line.answer(new RunCommand(), args, renderRunOutput);
     case "create":
-      return presented(new CreateCommand(), args, context, (result) => output.create(result));
+      return line.answer(new CreateCommand(), args, renderCreateOutput);
     case "connect":
-      return presented(new ConnectCommand(), args, context, (result) => output.connect(result));
+      // What the machine said, unchanged: openstrap adding anything around it would be
+      // talking over the answer.
+      return line.answer(new ConnectCommand(), args, (result) => result.output);
     case "facts.collect":
-      return presented(new FactsCollectCommand(), args, context, (result) => output.factsCollect(result));
+      return line.answer(new FactsCollectCommand(), args, renderFactsOutput);
   }
-}
-
-/** Run the command, put its result into words, keep its exit code. */
-async function presented<TArgs extends ParsedArgs, TResult>(
-  command: CliCommand<TArgs, TResult>,
-  args: TArgs,
-  context: CommandContext,
-  render: (result: TResult) => string,
-): Promise<Presented> {
-  const { result, exitCode } = await command.execute(args, context);
-
-  return { output: render(result), exitCode };
 }
