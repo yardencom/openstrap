@@ -1,14 +1,12 @@
 import { loadOpenStrapRuntime } from "../Plugin/index.js";
 import { CliArgsParser, type ParsedArgs } from "./Arguments/index.js";
-import { CommandLine, type Answer } from "./CommandLine.js";
 import { CliErrors } from "./Errors.js";
 import { JsonOutput, TextOutput } from "./Output/CommandOutput.js";
-import { renderCreateOutput } from "./Output/CreateOutput.js";
-import { renderFactsOutput } from "./Output/FactsOutput.js";
-import { renderRunOutput } from "./Output/RunOutput.js";
+import type { CommandContext } from "./application/CliCommand.js";
 import { ConnectCommand } from "./application/ConnectCommand.js";
 import { CreateCommand } from "./application/CreateCommand.js";
 import { FactsCollectCommand } from "./application/FactsCollectCommand.js";
+import type { NamedOutcome } from "./application/NamedOutcome.js";
 import { RunCommand } from "./application/RunCommand.js";
 
 export type CliIo = {
@@ -41,21 +39,21 @@ export async function main(argv: readonly string[], io: CliIo = {
     return 2;
   }
 
-  const line = new CommandLine({
-    workspaceRoot: io.cwd,
-    runtime: () => loadOpenStrapRuntime({
-      cwd: io.cwd,
-      configPath: args.runtimeConfigPath,
-      specifiers: args.pluginSpecifiers,
-    }),
-  }, "json" in args && args.json ? new JsonOutput() : new TextOutput());
+  const output = "json" in args && args.json ? new JsonOutput() : new TextOutput();
 
   try {
-    const answer = await dispatch(args, line);
+    const outcome = await run(args, {
+      workspaceRoot: io.cwd,
+      runtime: () => loadOpenStrapRuntime({
+        cwd: io.cwd,
+        configPath: args.runtimeConfigPath,
+        specifiers: args.pluginSpecifiers,
+      }),
+    });
 
-    io.stdout.write(answer.output);
+    io.stdout.write(output.present(outcome));
 
-    return answer.exitCode;
+    return outcome.exitCode;
   } catch (error) {
     io.stderr.write(`${errors.format(error)}\n`);
 
@@ -64,24 +62,21 @@ export async function main(argv: readonly string[], io: CliIo = {
 }
 
 /**
- * Which command answers to these arguments, and how its result reads.
+ * Which command answers to these arguments.
  *
- * Selection and nothing else. Each branch is handed arguments the compiler has already
- * narrowed to that command's own type and a rendering that takes that command's own
- * result, so a command can neither be given another's arguments nor presented as another
- * command, and one that is added and not handled will not compile.
+ * Selection, and naming what came back. Each branch is handed arguments the compiler has
+ * already narrowed to that command's own type, so a command can never be given another's,
+ * and one that is added and not handled will not compile.
  */
-function dispatch(args: ParsedArgs, line: CommandLine): Promise<Answer> {
+async function run(args: ParsedArgs, context: CommandContext): Promise<NamedOutcome> {
   switch (args.command) {
     case "run":
-      return line.answer(new RunCommand(), args, renderRunOutput);
+      return { command: args.command, ...await new RunCommand().execute(args, context) };
     case "create":
-      return line.answer(new CreateCommand(), args, renderCreateOutput);
+      return { command: args.command, ...await new CreateCommand().execute(args, context) };
     case "connect":
-      // What the machine said, unchanged: openstrap adding anything around it would be
-      // talking over the answer.
-      return line.answer(new ConnectCommand(), args, (result) => result.output);
+      return { command: args.command, ...await new ConnectCommand().execute(args, context) };
     case "facts.collect":
-      return line.answer(new FactsCollectCommand(), args, renderFactsOutput);
+      return { command: args.command, ...await new FactsCollectCommand().execute(args, context) };
   }
 }
