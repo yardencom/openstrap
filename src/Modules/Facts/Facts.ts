@@ -44,7 +44,18 @@ export class Facts {
   private constructor(sections: FactSections) {
     Object.assign(this, sections);
 
-    freeze(this);
+    // All the way down, because `Object.freeze` leaves `facts.os` editable, which is most of the
+    // facts. Walked rather than recursed: the same walk twice would be two ways to miss a section.
+    const pending: unknown[] = [this];
+
+    while (pending.length > 0) {
+      const value = pending.pop();
+
+      if (value && typeof value === "object") {
+        Object.freeze(value);
+        pending.push(...Object.values(value));
+      }
+    }
   }
 
   /**
@@ -67,16 +78,45 @@ export class Facts {
   }
 
   /**
-   * A snapshot openstrap took on another machine and printed, read back into these types.
+   * A snapshot openstrap took on another machine, read back into these types.
    *
-   * The other way facts reach this openstrap, and it is the same module's job: openstrap delivers
-   * itself to a machine it cannot read from here, and what comes back over the channel is text. Text
-   * is not a snapshot — the id that knows how it is spelled, the moment with both of its spellings,
-   * the facts that can say whether they are complete are all lost in it — so it is put back together
-   * rather than passed on as a lookalike.
+   * The other way facts reach this openstrap: it delivers itself to a machine it cannot read from
+   * here, and what comes back over the channel is text. Text is not a snapshot — the id that knows
+   * how it is spelled, the moment with both of its spellings, the facts that can say whether they
+   * are complete are all lost in it.
+   *
+   * Checked only where a reader could otherwise be wrong: the shape it claims, that the pieces a
+   * snapshot cannot exist without are there, and that its name is the name this machine and this
+   * moment produce — a snapshot whose name does not follow from its own contents is one the state
+   * store and a requirement result would disagree about. The facts are not judged again: openstrap
+   * collected them, and a second opinion here would be a second implementation.
    */
   static printed(output: unknown): FactSnapshot {
-    const printed = shapeOf(output);
+    if (!output || typeof output !== "object" || Array.isArray(output)) {
+      throw new TypeError("Not a snapshot");
+    }
+
+    const printed = output as {
+      schemaVersion?: unknown;
+      id?: unknown;
+      scope?: unknown;
+      target?: { type?: unknown; id?: unknown; displayName?: unknown };
+      facts?: unknown;
+      reading?: { takenAt?: unknown };
+    };
+
+    if (printed.schemaVersion !== schemaVersion) {
+      throw new TypeError(`A snapshot in ${JSON.stringify(printed.schemaVersion)}, which this openstrap does not read`);
+    }
+
+    if (typeof printed.id !== "string" || typeof printed.reading?.takenAt !== "string") {
+      throw new TypeError("A snapshot with no name, or none of the moment it was taken");
+    }
+
+    if (!printed.facts || typeof printed.facts !== "object" || Array.isArray(printed.facts)) {
+      throw new TypeError("A snapshot with no facts in it");
+    }
+
     const snapshot = new FactSnapshot(
       {
         name: String(printed.target?.id),
@@ -84,14 +124,10 @@ export class Facts {
         type: String(printed.target?.type),
         displayName: printed.target?.displayName === undefined ? undefined : String(printed.target.displayName),
       },
-      // Made facts again, and not judged again: openstrap collected them, and a second opinion here
-      // would be a second implementation.
-      new Facts(printed.facts),
-      Moment.of(printed.takenAt),
+      new Facts(printed.facts as FactSections),
+      Moment.of(printed.reading.takenAt),
     );
 
-    // A snapshot whose name does not follow from its own contents is one the state store and a
-    // requirement result would disagree about.
     if (String(snapshot.id) !== printed.id) {
       throw new TypeError(`A snapshot called ${JSON.stringify(printed.id)}, which is not what ${snapshot.id} is called`);
     }
@@ -112,77 +148,22 @@ export class Facts {
    * as a clean collection.
    */
   status(): FactsStatus {
-    return statusOf({ ...this });
-  }
-}
+    const pending: unknown[] = [{ ...this }];
 
-function statusOf(value: unknown): FactsStatus {
-  if (!value || typeof value !== "object") {
+    while (pending.length > 0) {
+      const value = pending.pop();
+
+      if (!value || typeof value !== "object") {
+        continue;
+      }
+
+      if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
+        return "warning";
+      }
+
+      pending.push(...Object.values(value));
+    }
+
     return "success";
   }
-
-  if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
-    return "warning";
-  }
-
-  return Object.values(value).some((property) => statusOf(property) === "warning") ? "warning" : "success";
 }
-
-function freeze(value: unknown): void {
-  if (!value || typeof value !== "object") {
-    return;
-  }
-
-  Object.freeze(value);
-
-  for (const property of Object.values(value)) {
-    freeze(property);
-  }
-}
-/**
- * What openstrap printed, checked far enough to be worth rebuilding.
- *
- * Only what a reader could otherwise be wrong about: the shape it claims, and that the pieces a
- * snapshot cannot exist without are there. Anything more would be judging facts openstrap collected.
- */
-function shapeOf(output: unknown): {
-  id: string;
-  takenAt: string;
-  scope: unknown;
-  target?: { type?: unknown; id?: unknown; displayName?: unknown };
-  facts: FactSections;
-} {
-  if (!output || typeof output !== "object" || Array.isArray(output)) {
-    throw new TypeError("Not a snapshot");
-  }
-
-  const printed = output as {
-    schemaVersion?: unknown;
-    id?: unknown;
-    scope?: unknown;
-    target?: { type?: unknown; id?: unknown; displayName?: unknown };
-    facts?: unknown;
-    reading?: { takenAt?: unknown };
-  };
-
-  if (printed.schemaVersion !== schemaVersion) {
-    throw new TypeError(`A snapshot in ${JSON.stringify(printed.schemaVersion)}, which this openstrap does not read`);
-  }
-
-  if (typeof printed.id !== "string" || typeof printed.reading?.takenAt !== "string") {
-    throw new TypeError("A snapshot with no name, or none of the moment it was taken");
-  }
-
-  if (!printed.facts || typeof printed.facts !== "object" || Array.isArray(printed.facts)) {
-    throw new TypeError("A snapshot with no facts in it");
-  }
-
-  return {
-    id: printed.id,
-    takenAt: printed.reading.takenAt,
-    scope: printed.scope,
-    target: printed.target,
-    facts: printed.facts as FactSections,
-  };
-}
-
