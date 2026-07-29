@@ -4,6 +4,8 @@ import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
 import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
+import { TargetPlatform } from "../../RemoteOpenStrap/TargetPlatform.js";
+import { UnknownMachinePlatformError } from "../../RemoteOpenStrap/UnknownMachinePlatformError.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
@@ -50,7 +52,16 @@ export class VerifyMachine {
     try {
       // Read by openstrap on the machine itself, delivered over this connection. The connection is
       // how it gets there and how it answers; it is not where any fact comes from.
-      const snapshot = await new RemoteOpenStrap(connection).collect({
+      const machine = request.store.readMachinePlatform(request.target.name);
+
+      if (machine === null) {
+        throw new UnknownMachinePlatformError(request.target.name);
+      }
+
+      const snapshot = await new RemoteOpenStrap(
+        connection,
+        TargetPlatform.of(machine.platform, machine.architecture),
+      ).collect({
         target: {
           name: request.target.name,
           scope: request.target.scope,

@@ -17,6 +17,20 @@ export const stateStoreSchema = [
      updated_at  TEXT NOT NULL
    )`,
 
+  /**
+   * What kind of machine a target is, recorded when it was created.
+   *
+   * openstrap has to know before it can deliver itself there, and a build for one platform does not
+   * run on another. It is known at creation — the provider resolved the image — so it is written down
+   * then rather than worked out from the machine afterwards.
+   */
+  `CREATE TABLE IF NOT EXISTS machine_platform (
+     target      TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
+     platform    TEXT NOT NULL,
+     architecture TEXT NOT NULL,
+     created_at  TEXT NOT NULL
+   )`,
+
   `CREATE TABLE IF NOT EXISTS desired_state (
      id          INTEGER PRIMARY KEY AUTOINCREMENT,
      target      TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,

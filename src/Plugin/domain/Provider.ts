@@ -37,6 +37,15 @@ export type ResolvedImage = {
   url: string;
   sha256: string;
   signatureUrl?: string;
+  /**
+   * What a machine made from this image will be.
+   *
+   * The provider resolved `ubuntu:24.04` into a file, so it knows: the platform is what the image
+   * installs, the architecture is what it was built for. openstrap records both when it creates the
+   * machine, because that is the moment they are known — and later, when it has to deliver itself
+   * there, the alternative is working out from the machine what it already decided.
+   */
+  platform: string;
   architecture: string;
   format: string;
   boot: string;

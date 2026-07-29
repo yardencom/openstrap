@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CapturedSystemCommand, ProcessOutput, Transport } from "../Transport/index.js";
 import type { FactOrder } from "../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "./RemoteOpenStrap.js";
+import { TargetPlatform } from "./TargetPlatform.js";
 import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 
 const order: FactOrder = {
@@ -25,6 +26,9 @@ const snapshot = {
   facts: { arch: "arm64" },
   reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
 };
+
+/** What openstrap recorded the target to be when it created it. */
+const linuxArm64 = TargetPlatform.of("linux", "arm64");
 
 let built: string;
 
@@ -44,7 +48,7 @@ describe("openstrap on the target", () => {
   it("hands back the snapshot openstrap took over there", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 
-    const taken = await new RemoteOpenStrap(target.api).collect(order);
+    const taken = await new RemoteOpenStrap(target.api, linuxArm64).collect(order);
 
     // Read back into the types a snapshot is made of, not handed on as the text it arrived as.
     expect(String(taken.id)).toBe(snapshot.id);
@@ -56,7 +60,7 @@ describe("openstrap on the target", () => {
   it("asks the openstrap it delivered for facts, with the order as one argument", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 
-    await new RemoteOpenStrap(target.api).collect(order);
+    await new RemoteOpenStrap(target.api, linuxArm64).collect(order);
 
     const [command] = target.captured;
 
@@ -72,37 +76,37 @@ describe("openstrap on the target", () => {
   it("treats an openstrap that failed as a machine it did not read", async () => {
     const target = fakeTarget({ answer: { exitCode: 1, stdout: "", stderr: "cannot read /proc" } });
 
-    await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(RemoteOpenStrapError);
-    await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(/cannot read \/proc/);
+    await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(RemoteOpenStrapError);
+    await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(/cannot read \/proc/);
   });
 
   it("refuses an answer that is not a snapshot, rather than reporting a machine with nothing on it", async () => {
     const noise = fakeTarget({ answer: { exitCode: 0, stdout: "Welcome to Ubuntu\n", stderr: "" } });
     const list = fakeTarget({ answer: { exitCode: 0, stdout: "[]", stderr: "" } });
 
-    await expect(new RemoteOpenStrap(noise.api).collect(order)).rejects.toThrow(/not JSON/);
-    await expect(new RemoteOpenStrap(list.api).collect(order)).rejects.toThrow(/Not a snapshot/);
+    await expect(new RemoteOpenStrap(noise.api, linuxArm64).collect(order)).rejects.toThrow(/not JSON/);
+    await expect(new RemoteOpenStrap(list.api, linuxArm64).collect(order)).rejects.toThrow(/Not a snapshot/);
   });
 
   it("refuses a snapshot in a shape it does not read", async () => {
     const target = fakeTarget({ answer: answering({ ...snapshot, schemaVersion: "facts.v2" }) });
 
-    await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(/facts\.v2/);
+    await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(/facts\.v2/);
   });
 
   it("refuses a snapshot whose name does not follow from what is in it", async () => {
     const renamed = { ...snapshot, id: "snap_something-else_20260608T100000000Z" };
     const target = fakeTarget({ answer: answering(renamed) });
 
-    await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(/is not what/);
+    await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(/is not what/);
   });
 
-  it("works out what the target is before choosing a build for it", async () => {
+  it("reads nothing off the target to choose a build, because it was told what it is", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 
-    await new RemoteOpenStrap(target.api).collect(order);
+    await new RemoteOpenStrap(target.api, linuxArm64).collect(order);
 
-    expect(target.read).toEqual(["/bin/sh"]);
+    expect(target.read).toEqual([]);
   });
 });
 

@@ -1,6 +1,8 @@
 import { ConnectToTarget } from "../../Connect/index.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
+import { TargetPlatform } from "../../RemoteOpenStrap/TargetPlatform.js";
+import { UnknownMachinePlatformError } from "../../RemoteOpenStrap/UnknownMachinePlatformError.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
@@ -68,10 +70,19 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
 
     try {
       const recorded = store.readTarget(target);
+      const machine = store.readMachinePlatform(target);
+
+      if (machine === null) {
+        throw new UnknownMachinePlatformError(target);
+      }
+
       const connection = await new ConnectToTarget().execute({ target, runtime, store });
 
       try {
-        return await new RemoteOpenStrap(connection.transport).collect({
+        return await new RemoteOpenStrap(
+          connection.transport,
+          TargetPlatform.of(machine.platform, machine.architecture),
+        ).collect({
           target: { name: target, scope: recorded?.scope ?? "machine", type: recorded?.type ?? "vm" },
           declare: everySection,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },

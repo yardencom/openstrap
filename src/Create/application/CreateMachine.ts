@@ -96,6 +96,15 @@ export class CreateMachine {
       });
       done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
 
+      // What kind of machine this will be is settled here, by the image it is made from. Writing it
+      // down is what saves openstrap from working it out again from the machine every time it has to
+      // deliver itself there.
+      request.store.saveMachinePlatform(
+        target.name,
+        { platform: image.platform, architecture: image.architecture },
+        timestamp,
+      );
+
       request.lockFile?.record(target.name, {
         image: {
           resolved: image.url,

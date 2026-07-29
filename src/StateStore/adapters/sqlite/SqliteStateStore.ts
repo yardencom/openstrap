@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type {
+  MachinePlatformRecord,
   AllocatedPortRecord,
   FactSnapshotRecord,
   ProviderResourceRecord,
@@ -248,6 +249,22 @@ export class SqliteStateStore {
         store = excluded.store,
         name = excluded.name
     `).run(reference.target, reference.purpose, reference.store, reference.name, now);
+  }
+
+  /** Records what kind of machine a target is, as the provider that created it reported. */
+  saveMachinePlatform(target: string, platform: MachinePlatformRecord, now: string): void {
+    this.database.prepare(`
+      INSERT INTO machine_platform (target, platform, architecture, created_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT(target) DO UPDATE SET platform = excluded.platform, architecture = excluded.architecture
+    `).run(target, platform.platform, platform.architecture, now);
+  }
+
+  readMachinePlatform(target: string): MachinePlatformRecord | null {
+    const row = this.database
+      .prepare("SELECT platform, architecture FROM machine_platform WHERE target = ?")
+      .get(target) as { platform?: string; architecture?: string } | undefined;
+
+    return row ? { platform: String(row.platform), architecture: String(row.architecture) } : null;
   }
 
   readSecretReference(target: string, purpose: string): SecretReferenceRecord | null {

@@ -2,7 +2,7 @@ import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 import type { Transport } from "../Transport/index.js";
 import { Facts, type FactOrder, type FactSnapshot } from "../Modules/Facts/Facts.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
-import { TargetPlatform } from "./TargetPlatform.js";
+import type { TargetPlatform } from "./TargetPlatform.js";
 
 
 /**
@@ -19,12 +19,19 @@ import { TargetPlatform } from "./TargetPlatform.js";
  * outside that module and why that module has never heard of a transport.
  */
 export class RemoteOpenStrap {
-  constructor(private readonly transport: Transport) {}
+  /**
+   * @param platform What kind of machine this is, as it was recorded when openstrap created it. Told
+   * rather than found out: a build for one platform does not run on another, and the machine cannot
+   * be asked before openstrap is on it.
+   */
+  constructor(
+    private readonly transport: Transport,
+    private readonly platform: TargetPlatform,
+  ) {}
 
   /** Puts openstrap on the target, has it read the machine, and returns the snapshot it took. */
   async collect(order: FactOrder): Promise<FactSnapshot> {
-    const platform = await TargetPlatform.detect(this.transport.fileSystem);
-    const openstrap = await new OpenStrapBinary(platform).deliverTo(this.transport.fileSystem);
+    const openstrap = await new OpenStrapBinary(this.platform).deliverTo(this.transport.fileSystem);
     const result = await this.transport.processes.capture({
       command: openstrap,
       args: ["facts", "collect", "host", "--json", "--order", encodeOrder(order)],

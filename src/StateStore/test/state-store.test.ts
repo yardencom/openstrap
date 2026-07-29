@@ -123,6 +123,7 @@ describe("State store", () => {
       "allocated_port",
       "desired_state",
       "fact_snapshot",
+      "machine_platform",
       "provider_resource",
       "run",
       "run_step",
