@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { FactSnapshot } from "../domain/FactSnapshot.js";
-import type { FactSections } from "../domain/FactModel.js";
-import { MachineFacts } from "../domain/MachineFacts.js";
+import { FactSnapshot } from "../FactSnapshot.js";
+import type { FactDeclaration } from "../domain/FactDeclaration.js";
 import { Moment } from "../domain/Moment.js";
 import { Facts } from "../Facts.js";
 
@@ -45,7 +44,7 @@ describe("making a snapshot", () => {
 
 describe("reading a machine", () => {
   it("stamps the target it read", async () => {
-    const snapshot = await new Facts().collect({ target: host, declare: { sections: ["os", "arch"] } });
+    const snapshot = await snapshotOfThisMachine({ sections: ["os", "arch"] });
 
     expect(snapshot.scope).toBe("host");
     expect(snapshot.target).toMatchObject({ id: "host", type: "host" });
@@ -54,7 +53,7 @@ describe("reading a machine", () => {
   });
 
   it("names no channel when it opened none", async () => {
-    const snapshot = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    const snapshot = await snapshotOfThisMachine({ sections: ["os"] });
 
     // Reading in process opens nothing, so there is nothing to report. A `local` transport written
     // here would be an invention, and a requirement about it used to pass against exactly that.
@@ -62,10 +61,7 @@ describe("reading a machine", () => {
   });
 
   it("reads the machine it is running on when given no transport", async () => {
-    const snapshot = await new Facts().collect({
-      target: host,
-      declare: { sections: ["os", "arch", "cpu", "memory"] },
-    });
+    const snapshot = await snapshotOfThisMachine({ sections: ["os", "arch", "cpu", "memory"] });
 
     expect(snapshot.facts.os.family).toBe(process.platform === "darwin" ? "macos" : process.platform);
     expect(snapshot.facts.os.name).not.toBe("");
@@ -76,14 +72,14 @@ describe("reading a machine", () => {
   });
 
   it("does not read a section nobody asked about", async () => {
-    const snapshot = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    const snapshot = await snapshotOfThisMachine({ sections: ["os"] });
 
     expect(snapshot.facts.processes).toEqual({});
     expect(snapshot.facts.commands).toEqual({});
   });
 
   it("reads everything it can when the order names nothing", async () => {
-    const snapshot = await new Facts().collect({ target: host });
+    const snapshot = await snapshotOfThisMachine();
 
     // "Tell me about this machine": every section that answers without being told a name does, and
     // the ones that need names stay empty rather than inventing entries.
@@ -93,12 +89,9 @@ describe("reading a machine", () => {
   });
 
   it("marks the reading a warning when any section reports a failure, whichever section it is", async () => {
-    const clean = await new Facts().collect({ target: host, declare: { sections: ["os"] } });
+    const clean = await snapshotOfThisMachine({ sections: ["os"] });
     // root exists, but the declaration asserts a uid it does not have.
-    const failed = await new Facts().collect({
-      target: host,
-      declare: { users: { superuser: { name: "root", uid: 1234 } } },
-    });
+    const failed = await snapshotOfThisMachine({ users: { superuser: { name: "root", uid: 1234 } } });
 
     expect(clean.reading.status).toBe("success");
     expect(failed.facts.users.superuser!.status).toBe("error");
@@ -106,18 +99,22 @@ describe("reading a machine", () => {
   });
 
   it("gives every snapshot a name of its own", async () => {
-    const facts = new Facts();
-    const first = await facts.collect({ target: host, declare: { sections: ["os"] }, now: new Date("2026-01-01T00:00:00Z") });
-    const second = await facts.collect({ target: host, declare: { sections: ["os"] }, now: new Date("2026-01-02T00:00:00Z") });
+    const first = await snapshotOfThisMachine({ sections: ["os"] }, new Moment(new Date("2026-01-01T00:00:00Z")));
+    const second = await snapshotOfThisMachine({ sections: ["os"] }, new Moment(new Date("2026-01-02T00:00:00Z")));
 
     expect(String(first.id)).not.toBe(String(second.id));
   });
 });
 
+/** What every caller does: collect the facts, then name the machine they are about. */
+async function snapshotOfThisMachine(declare?: FactDeclaration, takenAt = Moment.now()): Promise<FactSnapshot> {
+  return new FactSnapshot(host, await Facts.collect({ declare }), takenAt);
+}
+
 function snapshotOf(sections: Record<string, unknown> = { arch: "x64" }): FactSnapshot {
   return new FactSnapshot(
     host,
-    new MachineFacts(sections as unknown as FactSections),
+    Facts.of(sections),
     new Moment(new Date("2026-06-08T10:00:00.000Z")),
   );
 }

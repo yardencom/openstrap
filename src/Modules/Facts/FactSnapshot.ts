@@ -1,7 +1,17 @@
-import { MachineFacts, type FactsStatus } from "./MachineFacts.js";
-import { Moment } from "./Moment.js";
-import { SnapshotId } from "./SnapshotId.js";
-import type { FactTarget } from "./FactTarget.js";
+import { Facts, type FactsStatus } from "./Facts.js";
+import { Moment } from "./domain/Moment.js";
+import { SnapshotId } from "./domain/SnapshotId.js";
+import type { FactTarget } from "./domain/FactTarget.js";
+
+/**
+ * What a caller needs to make or read a snapshot.
+ *
+ * A moment is here rather than somewhere of its own to be found, because a snapshot cannot be made
+ * without one: the two names a caller spells are the snapshot and the moment it was taken.
+ */
+export { Moment } from "./domain/Moment.js";
+export type { SnapshotId } from "./domain/SnapshotId.js";
+export type { FactTarget } from "./domain/FactTarget.js";
 
 /** Which shape of snapshot this is. Every reader compares against it before trusting one. */
 const schemaVersion = "facts.v1";
@@ -43,7 +53,7 @@ export class FactSnapshot {
   readonly schemaVersion = schemaVersion;
   readonly scope: string;
   readonly target: { type: string; id: string; displayName?: string };
-  readonly facts: MachineFacts;
+  readonly facts: Facts;
   readonly reading: SnapshotReading;
 
   /**
@@ -53,7 +63,7 @@ export class FactSnapshot {
    * never disagree. The outcome is not given, because the facts answer it and nobody should be able
    * to disagree with them.
    */
-  constructor(target: FactTarget, facts: MachineFacts, takenAt: Moment) {
+  constructor(target: FactTarget, facts: Facts, takenAt: Moment) {
     this.id = SnapshotId.for(target.name, takenAt);
     this.scope = target.scope;
     this.target = { type: target.type, id: target.name, displayName: target.displayName };
@@ -109,7 +119,7 @@ export class FactSnapshot {
         type: String(printed.target?.type),
         displayName: printed.target?.displayName === undefined ? undefined : String(printed.target.displayName),
       },
-      MachineFacts.of(printed.facts),
+      Facts.of(printed.facts),
       Moment.of(printed.reading.takenAt),
     );
 

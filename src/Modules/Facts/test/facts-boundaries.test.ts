@@ -3,6 +3,13 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+/**
+ * The two names the module answers to: the facts, and a snapshot naming what was collected. Two and
+ * not one because they are two things — collecting a machine, and saying which machine and when — and
+ * two and not more because everything else the module holds is reached through them.
+ */
+const doors = ["/Facts.js", "/FactSnapshot.js"];
+
 describe("Facts boundaries", () => {
   it("keeps Facts independent from Zod and concrete adapters", () => {
     const factsSourcePaths = listSourceFiles(join(process.cwd(), "src/Modules/Facts")).filter(
@@ -41,7 +48,7 @@ describe("Facts boundaries", () => {
       const source = readFileSync(filePath, "utf8");
       const imports = [...source.matchAll(/from\s+["']([^"']*Facts\/[^"']+)["']/g)];
 
-      return imports.some((match) => !match[1]!.endsWith("/Facts.js"));
+      return imports.some((match) => !doors.some((door) => match[1]!.endsWith(door)));
     });
 
     expect(offenders).toEqual([]);

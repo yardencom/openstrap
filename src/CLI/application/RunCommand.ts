@@ -1,5 +1,6 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
+import { FactSnapshot, Moment } from "../../Modules/Facts/FactSnapshot.js";
 import {
   mergeRequirementRuns,
   RequiredFacts,
@@ -10,7 +11,6 @@ import {
 import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-type FactSnapshot = Awaited<ReturnType<Facts["collect"]>>;
 
 export type RunResult = {
   targets: Array<{
@@ -50,26 +50,23 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
       explicitPath: args.configPath,
       workspaceRoot: context.workspaceRoot,
     });
-    // One collection, used for every target: a plain run is about the machine openstrap is on, and
-    // that is the only machine the facts module ever reads.
-    const host = new Facts();
     const collected: FactSnapshot[] = [];
     const runs: RequirementRun[] = [];
 
     for (const target of Object.values(blueprint.targets)) {
-      const snapshot = await host.collect({
-        target: {
-          name: target.name,
-          scope: target.scope,
-          type: target.type,
-          displayName: target.displayName,
-        },
+      // Every target of a plain run is the machine openstrap is on, so every one of them is read
+      // here, and each reading is named after the target it was asked about.
+      const facts = await Facts.collect({
         declare: new RequiredFacts({
           requirements: target.requirements,
           workspaceRoot: context.workspaceRoot,
         }).declaration,
-        now: context.now,
       });
+      const snapshot = new FactSnapshot(
+        { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
+        facts,
+        context.now === undefined ? Moment.now() : new Moment(context.now),
+      );
 
       collected.push(snapshot);
       runs.push(this.evaluator.evaluate({

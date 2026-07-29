@@ -1,4 +1,5 @@
 import { Facts, type FactOrder } from "../../Modules/Facts/Facts.js";
+import { FactSnapshot, Moment } from "../../Modules/Facts/FactSnapshot.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -9,7 +10,7 @@ import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js
  * is openstrap itself — asked for facts on a machine it delivered itself to, it wants the snapshot,
  * not an envelope.
  */
-export type FactsCollectResult = Awaited<ReturnType<Facts["collect"]>>;
+export type FactsCollectResult = FactSnapshot;
 
 /**
  * `openstrap facts collect` — read this machine and say what is on it.
@@ -26,7 +27,14 @@ export type FactsCollectResult = Awaited<ReturnType<Facts["collect"]>>;
  */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
-    const snapshot = await new Facts().collect(args.order ?? thisMachine(context.now));
+    const order = args.order ?? thisMachine(context.now);
+    // Collect the facts, then name what was collected: the facts are about a machine, and what the
+    // caller calls that machine is not something the machine can answer.
+    const snapshot = new FactSnapshot(
+      order.target,
+      await Facts.collect({ declare: order.declare, channel: order.channel }),
+      order.now === undefined ? Moment.now() : new Moment(order.now),
+    );
 
     return {
       result: snapshot,

@@ -1,5 +1,6 @@
 import type { Transport } from "../Transport/index.js";
-import { FactSnapshot, type FactOrder } from "../Modules/Facts/Facts.js";
+import type { FactOrder } from "../Modules/Facts/Facts.js";
+import { FactSnapshot } from "../Modules/Facts/FactSnapshot.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 

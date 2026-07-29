@@ -4,6 +4,13 @@ import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
+ * The two names the module answers to: the facts, and a snapshot naming what was collected. Two and
+ * not one because they are two things — collecting a machine, and saying which machine and when — and
+ * two and not more because everything else the module holds is reached through them.
+ */
+const doors = ["/Facts.js", "/FactSnapshot.js"];
+
+/**
  * The rule this file exists for: imagine openstrap does not exist. Does the module still make sense?
  * It has to be liftable into a package of its own without a line rewritten.
  */
@@ -44,7 +51,7 @@ describe("Facts is a module of its own", () => {
       const source = readFileSync(filePath, "utf8");
       const imports = [...source.matchAll(/from\s+["']([^"']*Facts\/[^"']+)["']/g)];
 
-      return imports.some((match) => !match[1]!.endsWith("/Facts.js"));
+      return imports.some((match) => !doors.some((door) => match[1]!.endsWith(door)));
     });
 
     expect(offenders.map(relative)).toEqual([]);
