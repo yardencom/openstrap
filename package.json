@@ -45,8 +45,8 @@
     }
   },
   "scripts": {
-    "build": "find dist -mindepth 1 -maxdepth 1 ! -name remote -exec rm -rf {} + 2>/dev/null; tsc -p tsconfig.build.json",
-    "remote:build": "tsx src/RemoteOpenStrap/BuildOpenStrapForLinux.ts",
+    "binaries": "tsx build/binaries.ts",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

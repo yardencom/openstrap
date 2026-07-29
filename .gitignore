@@ -3,3 +3,4 @@ dist/
 coverage/
 .openstrap/
 .DS_Store
+bin/

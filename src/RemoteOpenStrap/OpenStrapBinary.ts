@@ -16,26 +16,28 @@ import type { TargetPlatform } from "./TargetPlatform.js";
 const targetDirectory = "/tmp/openstrap";
 
 /**
- * Where the builds for other platforms are kept on the machine openstrap runs on.
+ * Where openstrap's builds of itself are.
  *
- * Overridable, because how openstrap was installed decides where its own files
- * ended up, and an operator holding a prebuilt binary should not have to rebuild it
- * to put it somewhere openstrap looks.
+ * The same build that put openstrap on this machine puts it on the next one: `npm run binaries`
+ * produces one executable per platform, and delivering is choosing the one the target runs.
  *
- * Two ways of asking where openstrap is, because there are two ways it runs. From
- * `src` or `dist` this file has a path of its own. Bundled into a single executable
- * it does not — `import.meta` is empty there — and then what openstrap has is the
- * executable it was started as, with its builds for other platforms beside it.
+ * Two ways of asking where they are, because there are two ways openstrap runs. From `src` or `dist`
+ * this file has a path of its own and they sit beside the repository. Bundled into a single
+ * executable it does not — `import.meta` is empty there — and then they sit beside that executable.
+ * `OPENSTRAP_BINARY_DIR` overrides both, because how openstrap was installed decides where its files
+ * ended up.
  */
 function builtBinariesDirectory(): string {
-  return process.env.OPENSTRAP_REMOTE_BINARY_DIR ?? join(openStrapDirectory(), "dist", "remote");
-}
-
-function openStrapDirectory(): string {
   const url = import.meta.url as string | undefined;
 
-  // Two levels up from `RemoteOpenStrap` is the package root.
-  return url === undefined ? dirname(process.execPath) : resolve(dirname(fileURLToPath(url)), "../..");
+  if (process.env.OPENSTRAP_BINARY_DIR) {
+    return process.env.OPENSTRAP_BINARY_DIR;
+  }
+
+  // Two levels up from `RemoteOpenStrap` is the package root, whether this runs from `src` or `dist`.
+  return url === undefined
+    ? dirname(process.execPath)
+    : join(resolve(dirname(fileURLToPath(url)), "../.."), "bin");
 }
 
 

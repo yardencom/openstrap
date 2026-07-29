@@ -36,7 +36,7 @@ afterAll(() => {
 describe("OpenStrapBinary", () => {
   it("says how to get a build it does not have, rather than failing on the target", () => {
     expect(() => new OpenStrapBinary(TargetPlatform.of("linux", "x64"), built)).toThrow(MissingBinaryError);
-    expect(() => new OpenStrapBinary(TargetPlatform.of("linux", "x64"), built)).toThrow(/npm run remote:build/);
+    expect(() => new OpenStrapBinary(TargetPlatform.of("linux", "x64"), built)).toThrow(/npm run binaries/);
   });
 
   it("delivers openstrap named after the digest of its own contents", async () => {

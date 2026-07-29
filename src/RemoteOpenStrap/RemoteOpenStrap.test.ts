@@ -32,11 +32,11 @@ beforeAll(() => {
   built = mkdtempSync(join(tmpdir(), "openstrap-remote-"));
   writeFileSync(join(built, "openstrap-linux-arm64"), Buffer.from("openstrap"));
   writeFileSync(join(built, "openstrap-linux-arm64.sha256"), createHash("sha256").update("openstrap").digest("hex"));
-  process.env.OPENSTRAP_REMOTE_BINARY_DIR = built;
+  process.env.OPENSTRAP_BINARY_DIR = built;
 });
 
 afterAll(() => {
-  delete process.env.OPENSTRAP_REMOTE_BINARY_DIR;
+  delete process.env.OPENSTRAP_BINARY_DIR;
   rmSync(built, { recursive: true, force: true });
 });
 
