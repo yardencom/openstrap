@@ -55,8 +55,20 @@ describe("Facts public API", () => {
   it("cannot be edited after it is collected", async () => {
     const { facts } = await Facts.collect({ target: host, declare: { sections: ["os"] } });
 
-    expect(Object.isFrozen(facts)).toBe(true);
-    expect(Object.isFrozen(facts.os)).toBe(true);
+    expect(facts.os.name).not.toBe("");
+
+    // Never run. What it asserts is asserted by `tsc`: every line here is rejected, and
+    // `@ts-expect-error` fails the typecheck the day one stops being. A requirement checked against
+    // edited facts checks nothing, and there is nothing to check at runtime because there is no way
+    // to write it.
+    void (() => {
+      // @ts-expect-error a section is not something a reader replaces
+      facts.os = { family: "made up", name: "made up", version: "0" };
+      // @ts-expect-error nor anything inside one, however deep it sits
+      facts.os.name = "made up";
+      // @ts-expect-error nor a list inside one
+      facts.users.openstrap?.groups?.push("wheel");
+    });
   });
 
   it("is one class in a file, and the file is named after it", () => {

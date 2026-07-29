@@ -1,4 +1,5 @@
 import type { FactSections } from "./domain/FactModel.js";
+import type { Immutable } from "./domain/Immutable.js";
 import type { FactTarget } from "./domain/FactTarget.js";
 import type { FactsStatus } from "./domain/FactStatus.js";
 import type { Moment } from "./domain/Moment.js";
@@ -12,7 +13,7 @@ import { SnapshotId } from "./domain/SnapshotId.js";
  * a snapshot, so a snapshot naming `Facts` back would be two files each needing the other to be read;
  * and what a snapshot depends on is not who collected the facts.
  */
-export type SnapshotFacts = FactSections & { status(): FactsStatus };
+export type SnapshotFacts = Immutable<FactSections> & { status(): FactsStatus };
 
 /** Which shape of snapshot this is. Every reader compares against it before trusting one. */
 export const schemaVersion = "facts.v1";
@@ -44,7 +45,8 @@ export type SnapshotReading = {
  *
  * Each of those is a type of its own rather than a string: an id knows how it is spelled, a moment
  * knows both of its spellings, and the facts know whether they are complete. What is left here is the
- * putting together, and then it is frozen — everything downstream reads it as it was taken.
+ * putting together. Everything downstream reads it as it was taken, which the types say and no
+ * runtime freezing has to enforce.
  *
  * A constructor rather than a method, because nothing here waits: the machine has already answered
  * and this only turns the answer into something that can be trusted.
@@ -53,9 +55,9 @@ export class FactSnapshot {
   readonly id: SnapshotId;
   readonly schemaVersion = schemaVersion;
   readonly scope: string;
-  readonly target: { type: string; id: string; displayName?: string };
+  readonly target: Immutable<{ type: string; id: string; displayName?: string }>;
   readonly facts: SnapshotFacts;
-  readonly reading: SnapshotReading;
+  readonly reading: Immutable<SnapshotReading>;
 
   /**
    * @param takenAt When the machine was read. Given rather than read from the clock here, because
@@ -70,10 +72,6 @@ export class FactSnapshot {
     this.target = { type: target.type, id: target.name, displayName: target.displayName };
     this.facts = facts;
     this.reading = { takenAt, status: facts.status() };
-
-    Object.freeze(this.target);
-    Object.freeze(this.reading);
-    Object.freeze(this);
   }
 
 }

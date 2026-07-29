@@ -1,5 +1,6 @@
 import type { FactOrder } from "./domain/FactOrder.js";
 import type { FactSections } from "./domain/FactModel.js";
+import type { Immutable } from "./domain/Immutable.js";
 import type { FactsStatus } from "./domain/FactStatus.js";
 import { Collecting } from "./collect/Collecting.js";
 import { FactSnapshot, schemaVersion } from "./FactSnapshot.js";
@@ -32,28 +33,20 @@ export type { FactSnapshot } from "./FactSnapshot.js";
  * never from openstrap parsing the output of a program it chose to run. The two exceptions are stated
  * where they are made: whether `sudo` runs without a password, and programs the caller declared.
  *
+ * Nothing edits them afterwards, and that is said in the type — see `Immutable` — rather than done by
+ * walking and freezing every section on every collection.
+ *
  * The sections are its own properties rather than something it wraps, so the facts and their JSON are
  * one shape: `facts.os.name` here is `facts.os.name` in the snapshot openstrap printed on another
  * machine, and requirements are written against one spelling. That is what the interface below is
  * for — it gives the class the sections in the type system, the constructor gives them at runtime,
  * and methods are not enumerable, so they never reach the JSON.
  */
-export interface Facts extends FactSections {}
+export interface Facts extends Immutable<FactSections> {}
 
 export class Facts {
   private constructor(sections: FactSections) {
     Object.assign(this, sections);
-
-    // All the way down, because `Object.freeze` leaves `facts.os` editable, which is most of the
-    // facts, and `facts.users.openstrap.groups` deeper still.
-    const freeze = (value: unknown): void => {
-      if (value && typeof value === "object") {
-        Object.freeze(value);
-        Object.values(value).forEach(freeze);
-      }
-    };
-
-    freeze(this);
   }
 
   /**

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { FactDeclaration } from "../domain/FactDeclaration.js";
 import { Facts, type FactSnapshot } from "../Facts.js";
+import { Moment } from "../domain/Moment.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
@@ -27,9 +28,15 @@ describe("a snapshot openstrap took elsewhere and printed", () => {
   it("cannot be edited after it is made", () => {
     const snapshot = snapshotOf();
 
-    expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(snapshot.facts)).toBe(true);
-    expect(Object.isFrozen(snapshot.reading)).toBe(true);
+    expect(snapshot.target.id).toBe("host");
+
+    // Never run: `tsc` rejects both, and `@ts-expect-error` fails the typecheck if it stops.
+    void (() => {
+      // @ts-expect-error what a snapshot is about does not change after it was taken
+      snapshot.target.id = "another machine";
+      // @ts-expect-error nor when it was taken
+      snapshot.reading.takenAt = Moment.now();
+    });
   });
 
   it("calls a reading a warning when any section reports a failure", () => {
