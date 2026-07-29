@@ -12,17 +12,6 @@ import { SystemFacts } from "./system/SystemFacts.js";
 import { ToolFacts } from "./tools/ToolFacts.js";
 
 /**
- * Every section there is, which is what a caller gets by naming none.
- *
- * A caller that has not said what it cares about is worse served by a missing fact than by an extra
- * one; a caller that has said is served exactly that and pays for nothing else.
- */
-const everySection: readonly string[] = [
-  "os", "arch", "cpu", "memory", "storage", "virtualization", "network", "packages", "privileges",
-  "users", "groups", "services", "paths", "artifacts", "commands", "env", "processes", "tools", "runtimes",
-];
-
-/**
  * One reading of a machine, section by section.
  *
  * Apart from the facts themselves because collecting is work and facts are an answer: this holds the
@@ -42,9 +31,14 @@ export class Collecting {
 
   async read(request: FactOrder): Promise<FactSections> {
     const declaration = request.declare ?? {};
-    const sections = new Set(declaration.sections ?? everySection);
-    const scalars = await this.system.read(sections);
-    const tools = sections.has("tools") || sections.has("runtimes")
+    // A caller that named no sections has not said what it cares about, so nothing is filtered out.
+    // Written this way rather than against a list of every section there is: such a list is a copy of
+    // the model kept by hand, and the day a section is added to one and not the other it stops being
+    // collected without anyone noticing.
+    const listed = declaration.sections === undefined ? undefined : new Set(declaration.sections);
+    const wanted = (section: string): boolean => listed === undefined || listed.has(section);
+    const scalars = await this.system.read(wanted);
+    const tools = wanted("tools") || wanted("runtimes")
       ? await this.tools.tools(declaration.tools ?? {})
       : {};
 
@@ -53,16 +47,16 @@ export class Collecting {
       ...(scalars.packages === undefined ? {} : {
         packages: { ...scalars.packages, installed: this.packages.packages(declaration.packages ?? {}) },
       }),
-      users: sections.has("users") ? this.accounts.accounts(declaration.users ?? {}) : {},
-      groups: sections.has("groups") ? this.accounts.members(declaration.groups ?? {}) : {},
-      services: sections.has("services") ? await this.services.services(declaration.services ?? {}) : {},
-      paths: sections.has("paths") ? this.paths.paths(declaration.paths ?? {}) : {},
-      artifacts: sections.has("artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
-      commands: sections.has("commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
-      env: sections.has("env") ? this.commands.env(declaration.env ?? {}) : {},
-      processes: sections.has("processes") ? await this.processes.processes(declaration.processes ?? {}) : {},
-      tools: sections.has("tools") ? tools : {},
-      runtimes: sections.has("runtimes") ? this.tools.runtimes(tools) : {},
+      users: wanted("users") ? this.accounts.accounts(declaration.users ?? {}) : {},
+      groups: wanted("groups") ? this.accounts.members(declaration.groups ?? {}) : {},
+      services: wanted("services") ? await this.services.services(declaration.services ?? {}) : {},
+      paths: wanted("paths") ? this.paths.paths(declaration.paths ?? {}) : {},
+      artifacts: wanted("artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
+      commands: wanted("commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
+      env: wanted("env") ? this.commands.env(declaration.env ?? {}) : {},
+      processes: wanted("processes") ? await this.processes.processes(declaration.processes ?? {}) : {},
+      tools: wanted("tools") ? tools : {},
+      runtimes: wanted("runtimes") ? this.tools.runtimes(tools) : {},
       transports: this.transports(request.channel),
     };
   }
