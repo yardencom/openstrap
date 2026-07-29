@@ -45,7 +45,7 @@
     }
   },
   "scripts": {
-    "binaries": "rm -rf bin && npm run bundle && pkg bin/openstrap.cjs --config package.json",
+    "binaries": "rm -rf bin && npm run bundle && pkg bin/openstrap.cjs --config pkg.config.mjs && rm bin/openstrap.cjs",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "bundle": "esbuild src/CLI/index.ts --bundle --platform=node --target=node24 --format=cjs --minify --define:import.meta.url=undefined --outfile=bin/openstrap.cjs",
     "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
@@ -71,20 +71,5 @@
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
-  },
-  "pkg": {
-    "targets": [
-      "node24-macos-arm64",
-      "node24-macos-x64",
-      "node24-linuxstatic-arm64",
-      "node24-linuxstatic-x64"
-    ],
-    "outputPath": "bin",
-    "bytecode": false,
-    "public": true,
-    "publicPackages": [
-      "*"
-    ],
-    "postBuild": "node build/name-and-stamp.mjs"
   }
 }
