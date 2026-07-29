@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { FileSystemAPI } from "../Transport/index.js";
-import type { MachinePlatform } from "./MachinePlatform.js";
+import type { FileSystemAPI } from "../../../Transport/index.js";
+import type { MachinePlatform } from "../domain/MachinePlatform.js";
 
 /**
  * Where openstrap lands on a target.
@@ -34,10 +34,10 @@ function builtBinariesDirectory(): string {
     return process.env.OPENSTRAP_BINARY_DIR;
   }
 
-  // Two levels up from `RemoteOpenStrap` is the package root, whether this runs from `src` or `dist`.
+  // Four levels up from `Modules/RemoteOpenStrap/deliver` is the package root, from `src` or `dist`.
   return url === undefined
     ? dirname(process.execPath)
-    : join(resolve(dirname(fileURLToPath(url)), "../.."), "bin");
+    : join(resolve(dirname(fileURLToPath(url)), "../../../.."), "bin");
 }
 
 

@@ -127,7 +127,7 @@ describe("openstrap delivering itself", () => {
   });
 
   it("sends openstrap and asks openstrap, rather than shipping a program of its own", () => {
-    const source = readFileSync(join(process.cwd(), "src/RemoteOpenStrap/RemoteOpenStrap.ts"), "utf8");
+    const source = readFileSync(join(process.cwd(), "src/Modules/RemoteOpenStrap/RemoteOpenStrap.ts"), "utf8");
 
     expect(source).toMatch(/"facts",\s*"collect"/);
   });
@@ -193,7 +193,7 @@ function collectSources(): string[] {
 
 /** What gets openstrap to a machine it is not running on. */
 function deliverySources(): string[] {
-  return listSources(join(process.cwd(), "src/RemoteOpenStrap"))
+  return listSources(join(process.cwd(), "src/Modules/RemoteOpenStrap"))
     .filter((filePath: string) => !filePath.includes(".test."));
 }
 

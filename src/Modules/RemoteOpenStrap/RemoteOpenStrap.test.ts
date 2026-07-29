@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { CapturedSystemCommand, ProcessOutput, Transport } from "../Transport/index.js";
-import type { FactOrder } from "../Modules/Facts/Facts.js";
+import type { CapturedSystemCommand, ProcessOutput, Transport } from "../../Transport/index.js";
+import type { FactOrder } from "../Facts/Facts.js";
 import { RemoteOpenStrap } from "./RemoteOpenStrap.js";
 import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 
