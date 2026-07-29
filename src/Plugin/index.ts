@@ -1,19 +1,19 @@
 export {
   OpenStrapPluginContainer,
   type OpenStrapPluginContainerCreateRequest,
-} from "./Application/OpenStrapPluginContainer.js";
+} from "./application/OpenStrapPluginContainer.js";
 export {
   ProviderRegistry,
   type RegisteredProvider,
-} from "./Application/ProviderRegistry.js";
+} from "./application/ProviderRegistry.js";
 export {
   TransportRegistry,
   type RegisteredTransport,
-} from "./Application/TransportRegistry.js";
+} from "./application/TransportRegistry.js";
 export {
   SecretStoreRegistry,
   type RegisteredSecretStore,
-} from "./Application/SecretStoreRegistry.js";
+} from "./application/SecretStoreRegistry.js";
 export type {
   ImageRequest,
   MachineAccess,
@@ -28,30 +28,30 @@ export type {
   ResolvedImage,
   TargetScope,
   TargetType,
-} from "./Domain/Provider.js";
+} from "./domain/Provider.js";
 export type {
   TransportConnection,
   TransportConnectionRequest,
   TransportConnector,
   TransportEndpoint,
-} from "./Domain/Transport.js";
+} from "./domain/Transport.js";
 export type {
   SecretReference,
   SecretStore,
-} from "./Domain/Secret.js";
+} from "./domain/Secret.js";
 export {
   loadOpenStrapPlugin,
   loadOpenStrapPluginConfig,
   type LoadOpenStrapPluginConfigRequest,
   type LoadOpenStrapPluginRequest,
-} from "./Application/OpenStrapPluginLoader.js";
+} from "./application/OpenStrapPluginLoader.js";
 export {
   createOpenStrapRuntime,
   loadOpenStrapRuntime,
   type LoadOpenStrapRuntimeRequest,
   type OpenStrapRuntime,
   type OpenStrapRuntimeCreateRequest,
-} from "./Application/OpenStrapRuntime.js";
+} from "./application/OpenStrapRuntime.js";
 export {
   defineOpenStrapConfig,
   defineOpenStrapPlugin,
@@ -60,5 +60,5 @@ export {
   type OpenStrapPluginConfig,
   type OpenStrapPluginOption,
   type OpenStrapPluginOrder,
-} from "./Domain/OpenStrapPlugin.js";
-export { OpenStrapPluginError } from "./Domain/OpenStrapPluginError.js";
+} from "./domain/OpenStrapPlugin.js";
+export { OpenStrapPluginError } from "./domain/OpenStrapPluginError.js";

@@ -1,8 +1,8 @@
-export { ConfigCore } from "./Application/ConfigCore.js";
-export { ConfigSchema } from "./Application/ConfigSchema.js";
-export type { ConfigLoadRequest } from "./Ports/ConfigLoaderBackend.js";
-export type { JsonSchema } from "./Ports/ConfigJsonSchemaBackend.js";
-export { ConfigNotFoundError, ConfigParseError, ConfigReadError, ConfigValidationError } from "./Domain/ConfigErrors.js";
-export type { ConfigDefinition } from "./Domain/ConfigDefinition.js";
-export type { ConfigIssue } from "./Domain/ConfigIssue.js";
-export type { ConfigSchemaNode } from "./Domain/ConfigSchemaNode.js";
+export { ConfigCore } from "./application/ConfigCore.js";
+export { ConfigSchema } from "./application/ConfigSchema.js";
+export type { ConfigLoadRequest } from "./ports/ConfigLoaderBackend.js";
+export type { JsonSchema } from "./ports/ConfigJsonSchemaBackend.js";
+export { ConfigNotFoundError, ConfigParseError, ConfigReadError, ConfigValidationError } from "./domain/ConfigErrors.js";
+export type { ConfigDefinition } from "./domain/ConfigDefinition.js";
+export type { ConfigIssue } from "./domain/ConfigIssue.js";
+export type { ConfigSchemaNode } from "./domain/ConfigSchemaNode.js";

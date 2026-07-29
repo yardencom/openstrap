@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ConfigCore } from "../../../ConfigCore/index.js";
-import { BlueprintSchema } from "../Schema/BlueprintSchema.js";
+import { BlueprintSchema } from "../schema/BlueprintSchema.js";
 
 describe("Blueprint JSON Schema", () => {
   it("emits the OpenStrap blueprint schema artifact", () => {

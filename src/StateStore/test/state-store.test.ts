@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SqliteStateStore } from "../index.js";
-import { stateStoreSchema } from "../Adapters/Sqlite/Schema.js";
+import { stateStoreSchema } from "../adapters/sqlite/Schema.js";
 
 const now = "2026-07-27T10:00:00.000Z";
 

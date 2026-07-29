@@ -25,7 +25,7 @@ describe("Plugin boundaries", () => {
   });
 
   it("offers no slot for reading a machine, because openstrap owns that", () => {
-    const api = readFileSync(join(process.cwd(), "src/Plugin/Domain/OpenStrapPlugin.ts"), "utf8");
+    const api = readFileSync(join(process.cwd(), "src/Plugin/domain/OpenStrapPlugin.ts"), "utf8");
     const contracts = readdirSync(join(process.cwd(), "src/Plugin/Domain"));
 
     expect(api).not.toMatch(/registerFactsBackend|facts\?:/);

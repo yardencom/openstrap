@@ -1,10 +1,10 @@
-export { RequirementEvaluator } from "./Application/RequirementEvaluator.js";
-export { RequiredFacts, type RequiredFactsRequest } from "./Application/RequiredFacts.js";
+export { RequirementEvaluator } from "./application/RequirementEvaluator.js";
+export { RequiredFacts, type RequiredFactsRequest } from "./application/RequiredFacts.js";
 export {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
-} from "./Application/MergeRequirementRuns.js";
-export { runSucceeded } from "./Domain/Requirements.js";
+} from "./application/MergeRequirementRuns.js";
+export { runSucceeded } from "./domain/Requirements.js";
 export type {
   CheckStatus,
   RequirementCheckNode,
@@ -14,4 +14,4 @@ export type {
   RequirementRun,
   RequirementTarget,
   TargetlessRequirement,
-} from "./Domain/Requirements.js";
+} from "./domain/Requirements.js";

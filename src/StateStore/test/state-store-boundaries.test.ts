@@ -15,7 +15,7 @@ describe("State store boundaries", () => {
 
   it("keeps SQL inside the sqlite adapter", () => {
     const outsideAdapter = storeSourceFiles().filter(
-      (filePath: string) => !filePath.includes("/Adapters/Sqlite/"),
+      (filePath: string) => !filePath.includes("/adapters/sqlite/"),
     );
     const offenders = outsideAdapter.filter((filePath: string) =>
       /CREATE TABLE|INSERT INTO|SELECT .* FROM/.test(readFileSync(filePath, "utf8")),
@@ -25,7 +25,7 @@ describe("State store boundaries", () => {
   });
 
   it("does not keep the machine's actual state", () => {
-    const schema = readFileSync(join(process.cwd(), "src/StateStore/Adapters/Sqlite/Schema.ts"), "utf8");
+    const schema = readFileSync(join(process.cwd(), "src/StateStore/adapters/sqlite/Schema.ts"), "utf8");
 
     for (const absent of ["actual_state", "machine_status", "current_state"]) {
       expect(schema).not.toContain(absent);
@@ -33,7 +33,7 @@ describe("State store boundaries", () => {
   });
 
   it("keeps secret values out of the schema", () => {
-    const schema = readFileSync(join(process.cwd(), "src/StateStore/Adapters/Sqlite/Schema.ts"), "utf8");
+    const schema = readFileSync(join(process.cwd(), "src/StateStore/adapters/sqlite/Schema.ts"), "utf8");
 
     expect(schema).toMatch(/secret_reference/);
     expect(schema).not.toMatch(/private_key|secret_value|password/);

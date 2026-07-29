@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 describe("ConfigCore boundaries", () => {
   it("keeps ConfigCore orchestration independent from concrete backend packages", () => {
     const sourcePaths = [
-      join(process.cwd(), "src/ConfigCore/Application/ConfigCore.ts"),
+      join(process.cwd(), "src/ConfigCore/application/ConfigCore.ts"),
       ...readdirSync(join(process.cwd(), "src/ConfigCore/Ports")).map((entry) =>
         join(process.cwd(), "src/ConfigCore/Ports", entry),
       ),
@@ -15,7 +15,7 @@ describe("ConfigCore boundaries", () => {
     const offenders = sourcePaths.filter((filePath) => {
       const source = readFileSync(filePath, "utf8");
 
-      return /\bZod\b|\bzod\b|\bLilconfig\b|\blilconfig\b|from "\.\.\/Adapters/.test(source);
+      return /\bZod\b|\bzod\b|\bLilconfig\b|\blilconfig\b|from "\.\.\/adapters/.test(source);
     });
 
     expect(offenders).toEqual([]);

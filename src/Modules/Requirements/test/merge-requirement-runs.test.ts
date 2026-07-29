@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
-} from "../Application/MergeRequirementRuns.js";
-import type { CheckStatus, RequirementRun } from "../Domain/Requirements.js";
+} from "../application/MergeRequirementRuns.js";
+import type { CheckStatus, RequirementRun } from "../domain/Requirements.js";
 
 describe("merging one evaluation per target", () => {
   it("refuses to merge nothing, because a run cannot be made out of nothing", () => {

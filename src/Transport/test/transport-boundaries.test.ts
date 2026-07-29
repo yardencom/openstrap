@@ -26,7 +26,7 @@ describe("Transport boundaries", () => {
   });
 
   it("keeps progress output and the openstrap process environment out of the port", () => {
-    const transport = readFileSync(join(process.cwd(), "src/Transport/Domain/Transport.ts"), "utf8");
+    const transport = readFileSync(join(process.cwd(), "src/Transport/domain/Transport.ts"), "utf8");
     const barrel = readFileSync(join(process.cwd(), "src/Transport/index.ts"), "utf8");
 
     for (const absent of ["OutputAPI", "EnvironmentAPI", "stateHome", "prependPathDirectory", "progress"]) {

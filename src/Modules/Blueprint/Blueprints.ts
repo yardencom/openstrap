@@ -2,10 +2,10 @@ import {
   ConfigCore,
   type ConfigLoadRequest,
 } from "../../ConfigCore/index.js";
-import type { Blueprint } from "./Domain/Blueprint.js";
-import { BlueprintReadError } from "./Application/BlueprintErrors.js";
-import { declaredTargets } from "./Application/DeclaredTargets.js";
-import { BlueprintSchema } from "./Schema/BlueprintSchema.js";
+import type { Blueprint } from "./domain/Blueprint.js";
+import { BlueprintReadError } from "./application/BlueprintErrors.js";
+import { declaredTargets } from "./application/DeclaredTargets.js";
+import { BlueprintSchema } from "./schema/BlueprintSchema.js";
 
 export class Blueprints {
   private readonly schemaDefinition;
