@@ -28,10 +28,8 @@ export type FactsCollectResult = FactSnapshot;
  * snapshot of the same shape, because both were collected by the same code — that is the whole point
  * of openstrap going to a machine rather than asking about it from outside.
  *
- * Nothing is written. A run keeps its snapshots in the state store; this command used to also drop a
- * `result.json` under `.openstrap/runs/facts/`, which was a second store for the same thing. It has to
- * write nothing anyway, because this is the command openstrap runs on a machine it was only asked to
- * read, where a working directory of its own is not something it has.
+ * Nothing is written anywhere: the answer is the answer. Keeping snapshots is what a run does, and
+ * this is the command openstrap runs on a machine it was asked only to read.
  */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
   constructor(private readonly stateHome = new StateHome()) {}
@@ -60,9 +58,9 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
    * closing it, and putting away the store it was found in. What is collected once openstrap is
    * there is the same as anywhere else.
    *
-   * The channel is recorded as the connection reports it, because that is a fact about this reading
-   * which the machine itself cannot answer, and it is what a requirement about the channel is checked
-   * against.
+   * The channel goes in as the connection reports it. A machine cannot say how anyone reached it, and
+   * `key-only-login` — reached over ssh, by a key and nothing else — is a requirement about exactly
+   * that.
    */
   private async read(target: string, context: CommandContext): Promise<FactSnapshot> {
     const runtime = await context.runtime();
