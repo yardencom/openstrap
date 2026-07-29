@@ -26,6 +26,17 @@ const output = join(repositoryRoot, "bin");
 /**
  * Builds openstrap.
  *
+ * Both halves are the tools' own: esbuild bundles, pkg packages, and this only calls them. What is
+ * left over is why it exists at all — one output per platform, named the way openstrap names
+ * platforms. `pkg --targets a,b --out-path` names its own files `openstrap-macos` and
+ * `openstrap-linuxstatic`: its build flavours rather than platforms, without the architecture, and
+ * differently again depending on how many targets it was given. openstrap works out what a target is
+ * by reading the header of its `/bin/sh` — ELF or Mach-O, and the machine in it — so it asks for
+ * `linux-arm64`, and bending that to a packager's vocabulary would be the wrong way round.
+ *
+ * The digest beside each binary is nobody else's job either: the copy openstrap delivers is named
+ * after it.
+ *
  * Two steps, because they answer two different problems. Bundling collapses openstrap and everything
  * it depends on into one file, so nothing has to be resolved where it lands. Packaging puts a Node
  * runtime around that file, so the machine it lands on needs no runtime of its own — installing
