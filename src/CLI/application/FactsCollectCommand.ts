@@ -43,7 +43,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
         declare: everySection,
         now: context.now,
       })
-      : await this.read(args.target, context);
+      : await this.visited(args.target, context);
 
     return {
       result: snapshot,
@@ -54,17 +54,17 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
   }
 
   /**
-   * A machine openstrap created, read by openstrap on it.
+   * A machine openstrap went to, as openstrap found it there.
    *
-   * Everything here is about getting there and back: finding the machine, opening the channel,
-   * closing it, and putting away the store it was found in. What is collected once openstrap is
-   * there is the same as anywhere else.
+   * Not named for reading, because nothing here reads: it finds the machine, opens a channel, closes
+   * it, and puts away the store it was found in. The reading happens on the machine, by the openstrap
+   * delivered to it, and is the same reading as anywhere else.
    *
    * The channel is recorded as the connection reports it, because that is a fact about this reading
    * which the machine itself cannot answer, and it is what a requirement about the channel is checked
    * against.
    */
-  private async read(target: string, context: CommandContext): Promise<FactSnapshot> {
+  private async visited(target: string, context: CommandContext): Promise<FactSnapshot> {
     const runtime = await context.runtime();
     const store = new SqliteStateStore(this.stateHome.database());
 
