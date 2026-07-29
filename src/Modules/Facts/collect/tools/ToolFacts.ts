@@ -1,7 +1,7 @@
 import si from "systeminformation";
 import which from "which";
 
-import type { ToolDeclaration } from "../../domain/FactDeclaration.js";
+import type { Asked, ToolDeclaration } from "../../domain/FactDeclaration.js";
 import type { RuntimeFact, ToolFact } from "../../domain/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
@@ -36,7 +36,40 @@ export class ToolFacts {
    * is one for that tool; when there is not, the tool is still reported present
    * with no version rather than being run to see what it says about itself.
    */
-  async tools(declared: Record<string, ToolDeclaration>): Promise<Record<string, ToolFact>> {
+  private lookup?: Promise<Record<string, ToolFact>>;
+
+  async tools(declared: Record<string, ToolDeclaration> | undefined): Promise<Record<string, ToolFact>> {
+    if (declared === undefined) {
+      return {};
+    }
+
+    return this.looked(declared);
+  }
+
+  /**
+   * Which runtimes a blueprint can rely on.
+   *
+   * Asked for on its own, because a blueprint that wants "node 18 or later" is asking whether it can
+   * run something, not where the binary lives. The tools are looked up once either way, so the two
+   * sections cannot disagree about the same machine and neither pays for the other.
+   */
+  async runtimes(declared: Asked | undefined): Promise<Record<string, RuntimeFact>> {
+    if (declared === undefined) {
+      return {};
+    }
+
+    return this.derived(await this.looked({}));
+  }
+
+  /** The lookup, done once however many sections turn out to need it. */
+  private looked(declared: Record<string, ToolDeclaration>): Promise<Record<string, ToolFact>> {
+    this.lookup ??= this.look(declared);
+
+    return this.lookup;
+  }
+
+  private async look(declared: Record<string, ToolDeclaration>): Promise<Record<string, ToolFact>> {
+
     const wanted = Object.keys(declared).length > 0
       ? Object.entries(declared).map(([id, declaration]) => ({ id, name: declaration.name ?? id, declaration }))
       : commonTools.map((name) => ({ id: name, name, declaration: {} as ToolDeclaration }));
@@ -78,7 +111,7 @@ export class ToolFacts {
    * lives. Derived here rather than read again, so the two sections cannot
    * disagree about the same machine.
    */
-  runtimes(tools: Record<string, ToolFact>): Record<string, RuntimeFact> {
+  private derived(tools: Record<string, ToolFact>): Record<string, RuntimeFact> {
     return Object.fromEntries(
       Object.entries(tools)
         .filter(([name, tool]) => tool.status === "present" && runtimeTools.includes(tool.name ?? name))

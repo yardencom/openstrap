@@ -10,15 +10,26 @@
  * declared name that produced no entry would be indistinguishable from a name
  * nobody asked about.
  */
+/** A section with nothing to name in it. Asking for it is the whole of what a caller can say. */
+export type Asked = Record<string, never>;
+
 export type FactDeclaration = {
   /**
-   * Which sections to read at all.
+   * The sections that answer with one value each: asking for them is all there is to say.
    *
-   * Reading a machine costs time, so a caller that only compares memory should
-   * not pay for its process table. Omitting this reads everything that can be
-   * read without being asked to name something.
+   * Reading a machine costs time — the network alone costs more than everything else put together —
+   * so a section that is not here is not read, and is absent from the facts rather than present and
+   * unwanted.
    */
-  sections?: readonly string[];
+  os?: Asked;
+  arch?: Asked;
+  cpu?: Asked;
+  memory?: Asked;
+  storage?: Asked;
+  network?: Asked;
+  virtualization?: Asked;
+  privileges?: Asked;
+  runtimes?: Asked;
   processes?: Record<string, ProcessDeclaration>;
   services?: Record<string, ServiceDeclaration>;
   tools?: Record<string, ToolDeclaration>;
@@ -120,4 +131,21 @@ export type PackageDeclaration = {
 export type FactRedaction = {
   strategy: "none" | "omit" | "hash" | "mask";
   patterns?: readonly string[];
+};
+
+/**
+ * Every section there is to ask for, which is what `openstrap facts collect` means.
+ *
+ * Written out here, in the file that declares what a caller may ask for, because that is the one
+ * place where a new section is added — and a section added to the type and not to this would be a
+ * section the command that collects everything quietly stops collecting. A test holds the two
+ * together.
+ *
+ * `transports` is not here: nothing on a machine can answer it. It is what the caller that opened
+ * the channel says, and it comes with the order rather than being asked for in it.
+ */
+export const everySection: FactDeclaration = {
+  os: {}, arch: {}, cpu: {}, memory: {}, storage: {}, network: {}, virtualization: {}, privileges: {},
+  runtimes: {}, processes: {}, services: {}, tools: {}, paths: {}, env: {}, commands: {},
+  artifacts: {}, packages: {}, users: {}, groups: {},
 };

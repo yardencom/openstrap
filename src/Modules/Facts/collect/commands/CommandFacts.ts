@@ -35,7 +35,11 @@ const readLimitBytes = 8 * 1024 * 1024;
 export class CommandFacts {
   constructor(private readonly platform: Platform) {}
 
-  async commands(declared: Record<string, CommandDeclaration>): Promise<Record<string, CommandFact>> {
+  async commands(declared: Record<string, CommandDeclaration> | undefined): Promise<Record<string, CommandFact>> {
+    if (declared === undefined) {
+      return {};
+    }
+
     const facts = await Promise.all(Object.entries(declared).map(async ([id, declaration]) => {
       return [id, await this.command(declaration)] as const;
     }));
@@ -51,7 +55,11 @@ export class CommandFacts {
    * the answer. Nothing is read that was not named: an environment copied whole
    * into a snapshot is a way to leak a token.
    */
-  env(declared: Record<string, EnvDeclaration>): Record<string, EnvVarFact> {
+  env(declared: Record<string, EnvDeclaration> | undefined): Record<string, EnvVarFact> {
+    if (declared === undefined) {
+      return {};
+    }
+
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
       if (!this.platform.matches(declaration.platforms)) {
         return [id, {

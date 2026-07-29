@@ -53,6 +53,7 @@ describe("Facts boundaries", () => {
   it("lets consumers import only what the facade offers", () => {
     const offered = new Set([
       "Facts", "FactOrder", "FactChannel", "FactTarget", "FactDeclaration", "FactSnapshot",
+      "Asked", "FactSections", "FactsStatus", "everySection",
     ]);
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
       (filePath: string) => !filePath.includes("/src/Modules/Facts/"),

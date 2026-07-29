@@ -12,7 +12,7 @@ import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 
 const order: FactOrder = {
   target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
-  declare: { sections: ["paths"], paths: { home: { path: "$HOME" } } },
+  declare: { paths: { home: { path: "$HOME" } } },
   channel: { type: "ssh", authMethods: ["publickey"] },
 };
 

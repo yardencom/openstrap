@@ -10,7 +10,8 @@ describe("RequiredFacts", () => {
       ],
     }).declaration;
 
-    expect(declared.sections).toEqual(["cpu", "memory"]);
+    // One entry per section, holding the names asked about in it — none, for these two.
+    expect(declared).toEqual({ cpu: {}, memory: {} });
   });
 
   it("does not mistake the fields naming a requirement for fact sections", () => {
@@ -18,7 +19,7 @@ describe("RequiredFacts", () => {
       requirements: [{ id: "optional-check", optional: true, arch: { const: "arm64" } }],
     }).declaration;
 
-    expect(declared.sections).toEqual(["arch"]);
+    expect(declared).toEqual({ arch: {} });
   });
 
   it("carries the names asked about in a section into the declaration", () => {
@@ -40,8 +41,8 @@ describe("RequiredFacts", () => {
       ],
     }).declaration;
 
-    expect(Object.keys(declared.services)).toEqual(["sshd", "cron"]);
-    expect(declared.sections).toEqual(["services"]);
+    expect(Object.keys(declared.services!)).toEqual(["sshd", "cron"]);
+    expect(Object.keys(declared)).toEqual(["services"]);
   });
 
   it("knows where the workspace is, because only the run does", () => {
@@ -74,14 +75,12 @@ describe("RequiredFacts", () => {
       requirements: [{ id: "transport", transports: { ssh: { ready: true } } }],
     }).declaration;
 
-    expect(declared.sections).toEqual(["transports"]);
-    expect(declared.processes).toEqual({});
-    expect(declared.paths).toEqual({});
+    expect(declared).toEqual({ transports: {} });
   });
 
   it("asks for nothing when there is nothing to check", () => {
     const declared = new RequiredFacts({ requirements: [] }).declaration;
 
-    expect(declared.sections).toEqual([]);
+    expect(declared).toEqual({});
   });
 });

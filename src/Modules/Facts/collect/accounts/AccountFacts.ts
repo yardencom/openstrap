@@ -56,7 +56,11 @@ export class AccountFacts {
    * read it cannot be compared with the next one: `/home/ada` being writable is a
    * different fact depending on who was asking.
    */
-  accounts(declared: Record<string, UserDeclaration>): FactSections["users"] {
+  accounts(declared: Record<string, UserDeclaration> | undefined): FactSections["users"] {
+    if (declared === undefined) {
+      return {};
+    }
+
     const current = this.currentUser();
 
     return {
@@ -71,7 +75,11 @@ export class AccountFacts {
     };
   }
 
-  members(declared: Record<string, GroupDeclaration>): Record<string, GroupFact> {
+  members(declared: Record<string, GroupDeclaration> | undefined): Record<string, GroupFact> {
+    if (declared === undefined) {
+      return {};
+    }
+
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
       if (!this.platform.matches(declaration.platforms)) {
         return [id, { status: "unsupported" as const, name: declaration.name ?? id, reason: "platform_not_selected" }];

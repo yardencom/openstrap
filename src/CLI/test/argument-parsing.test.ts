@@ -164,7 +164,7 @@ describe("openstrap facts collect", () => {
   it("takes the order openstrap hands it when openstrap is the caller", () => {
     const order = {
       target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
-      declare: { sections: ["os"] },
+      declare: { os: {} },
       channel: { type: "ssh", authMethods: ["publickey"] },
     };
     const encoded = Buffer.from(JSON.stringify(order)).toString("base64");

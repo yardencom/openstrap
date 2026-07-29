@@ -23,7 +23,11 @@ export class ServiceFacts {
    * service the two states are the same. `running` carries the same answer
    * explicitly, so a requirement can be written either way.
    */
-  async services(declared: Record<string, ServiceDeclaration>): Promise<Record<string, ServiceFact>> {
+  async services(declared: Record<string, ServiceDeclaration> | undefined): Promise<Record<string, ServiceFact>> {
+    if (declared === undefined) {
+      return {};
+    }
+
     const applicable = Object.entries(declared).filter(([, declaration]) => this.platform.matches(declaration.platforms));
     const wanted = applicable.map(([id, declaration]) => declaration.name ?? id);
     const reported = wanted.length === 0 ? [] : await si.services(wanted.join(","));

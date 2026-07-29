@@ -29,7 +29,11 @@ const contentLimitBytes = 1024 * 1024;
 export class PathFacts {
   constructor(private readonly platform: Platform) {}
 
-  paths(declared: Record<string, PathDeclaration>): Record<string, PathFact> {
+  paths(declared: Record<string, PathDeclaration> | undefined): Record<string, PathFact> {
+    if (declared === undefined) {
+      return {};
+    }
+
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
       if (!this.platform.matches(declaration.platforms)) {
         return [id, { status: "unsupported" as const, path: declaration.path, reason: "platform_not_selected" }];
@@ -39,7 +43,11 @@ export class PathFacts {
     }));
   }
 
-  artifacts(declared: Record<string, ArtifactDeclaration>): Record<string, ArtifactFact> {
+  artifacts(declared: Record<string, ArtifactDeclaration> | undefined): Record<string, ArtifactFact> {
+    if (declared === undefined) {
+      return {};
+    }
+
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
       if (!this.platform.matches(declaration.platforms)) {
         return [id, { status: "unsupported" as const, path: declaration.path, reason: "platform_not_selected" }];

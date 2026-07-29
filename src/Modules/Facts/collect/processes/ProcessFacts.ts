@@ -22,7 +22,11 @@ export class ProcessFacts {
    * a declared process is keyed by the name the caller gave it, because that is
    * what the caller will look for.
    */
-  async processes(declared: Record<string, ProcessDeclaration>): Promise<Record<string, ProcessFact>> {
+  async processes(declared: Record<string, ProcessDeclaration> | undefined): Promise<Record<string, ProcessFact>> {
+    if (declared === undefined) {
+      return {};
+    }
+
     const running = await si.processes();
     const table: Record<string, ProcessFact> = {};
 

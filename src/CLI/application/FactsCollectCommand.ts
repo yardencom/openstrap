@@ -1,4 +1,4 @@
-import { Facts, type FactOrder, type FactSnapshot } from "../../Modules/Facts/Facts.js";
+import { Facts, everySection, type FactOrder, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -37,10 +37,16 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
   }
 }
 
-/** What to read when nobody said: this machine, all of it, reached by no channel. */
+/**
+ * What to read when a person asked: this machine, every section of it, reached by no channel.
+ *
+ * Asking openstrap to collect facts is asking for the facts, not for some of them. A run is the other
+ * way round — it collects what its requirements are about — and that order is built from them.
+ */
 function thisMachine(now: Date | undefined): FactOrder {
   return {
     target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
+    declare: everySection,
     now,
   };
 }

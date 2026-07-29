@@ -26,7 +26,7 @@ describe("Facts public API", () => {
   });
 
   it("makes the facts it collected an instance of itself, and names them", async () => {
-    const snapshot = await Facts.collect({ target: host, declare: { sections: ["os", "arch"] } });
+    const snapshot = await Facts.collect({ target: host, declare: { os: {}, arch: {} } });
 
     expect(snapshot.facts).toBeInstanceOf(Facts);
     expect(snapshot.facts.os!.name).not.toBe("");
@@ -35,7 +35,7 @@ describe("Facts public API", () => {
   });
 
   it("answers for itself whether everything asked for came back", async () => {
-    const clean = await Facts.collect({ target: host, declare: { sections: ["os"] } });
+    const clean = await Facts.collect({ target: host, declare: { os: {} } });
     // root exists, but the declaration asserts a uid it does not have.
     const failed = await Facts.collect({ target: host, declare: { users: { superuser: { name: "root", uid: 1234 } } } });
 
@@ -44,7 +44,7 @@ describe("Facts public API", () => {
   });
 
   it("is its sections, so the facts and their JSON are one shape", async () => {
-    const { facts } = await Facts.collect({ target: host, declare: { sections: ["arch"] } });
+    const { facts } = await Facts.collect({ target: host, declare: { arch: {} } });
     const printed = JSON.parse(JSON.stringify(facts));
 
     expect(printed.arch).toBe(facts.arch);
@@ -53,7 +53,7 @@ describe("Facts public API", () => {
   });
 
   it("cannot be edited after it is collected", async () => {
-    const { facts } = await Facts.collect({ target: host, declare: { sections: ["os"] } });
+    const { facts } = await Facts.collect({ target: host, declare: { os: {} } });
 
     expect(facts.os!.name).not.toBe("");
 
@@ -77,8 +77,10 @@ describe("Facts public API", () => {
 
     expect(exported.filter((entry) => !["type", "interface"].includes(entry.kind!)))
       .toEqual([{ kind: "class", name: "Facts" }]);
-    // Nothing is re-exported as a value: the other names a caller spells are types.
-    expect(source.split("\n").filter((line) => /^export\s+\{/.test(line))).toEqual([]);
+    // One thing is re-exported as a value, and it is not a class: what "every section" means, which
+    // is the whole of what `openstrap facts collect` asks for.
+    expect(source.split("\n").filter((line) => /^export\s+\{/.test(line)))
+      .toEqual(['export { everySection, type FactDeclaration, type Asked } from "./domain/FactDeclaration.js";']);
   });
 
   it("keeps one class to a file across the module", () => {

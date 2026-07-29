@@ -27,26 +27,25 @@ export type RequiredFactsRequest = {
 export class RequiredFacts {
   constructor(private readonly request: RequiredFactsRequest) {}
 
-  get declaration(): {
-    sections: string[];
-    processes: Record<string, { name: string }>;
-    services: Record<string, { name: string }>;
-    tools: Record<string, { name: string }>;
-    users: Record<string, { name: string }>;
-    groups: Record<string, { name: string }>;
-    paths: Record<string, { path: string }>;
-  } {
-    const asked = this.askedSections();
+  /**
+   * The order: one entry per section the requirements are about, holding the names they name.
+   *
+   * A section that no requirement mentions is not in it, and so is not collected. A section that
+   * holds no names — how much memory there is, which architecture this is — is here with nothing in
+   * it, because asking for it is all there is to say about it.
+   */
+  get declaration(): Record<string, Record<string, unknown>> {
+    return Object.fromEntries(
+      [...this.askedSections()].map(([section, names]) => [section, this.namedIn(section, names)]),
+    );
+  }
 
-    return {
-      sections: [...asked.keys()],
-      processes: named(asked.get("processes"), (name) => ({ name })),
-      services: named(asked.get("services"), (name) => ({ name })),
-      tools: named(asked.get("tools"), (name) => ({ name })),
-      users: named(asked.get("users"), (name) => ({ name })),
-      groups: named(asked.get("groups"), (name) => ({ name })),
-      paths: named(asked.get("paths"), (name) => ({ path: this.pathOf(name) })),
-    };
+  private namedIn(section: string, names: ReadonlySet<string>): Record<string, unknown> {
+    if (section === "paths") {
+      return Object.fromEntries([...names].map((name) => [name, { path: this.pathOf(name) }]));
+    }
+
+    return Object.fromEntries([...names].map((name) => [name, { name }]));
   }
 
   /**

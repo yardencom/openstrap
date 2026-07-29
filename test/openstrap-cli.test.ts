@@ -89,7 +89,7 @@ targets:
   it("reads what it is told to read, when openstrap is the one asking", async () => {
     const order = Buffer.from(JSON.stringify({
       target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
-      declare: { sections: ["os", "arch"] },
+      declare: { os: {}, arch: {} },
       channel: { type: "ssh", authMethods: ["publickey"] },
     })).toString("base64");
 

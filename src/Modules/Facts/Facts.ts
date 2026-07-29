@@ -9,7 +9,7 @@ import { Moment } from "./domain/Moment.js";
 /** What a caller has to name to ask for facts. */
 export type { FactOrder, FactChannel } from "./domain/FactOrder.js";
 export type { FactTarget } from "./domain/FactTarget.js";
-export type { FactDeclaration } from "./domain/FactDeclaration.js";
+export { everySection, type FactDeclaration, type Asked } from "./domain/FactDeclaration.js";
 export type { FactSections } from "./domain/FactModel.js";
 export type { FactsStatus } from "./domain/FactStatus.js";
 export type { FactSnapshot } from "./FactSnapshot.js";
