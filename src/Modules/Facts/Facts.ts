@@ -73,14 +73,14 @@ export class Facts {
    *
    * The other way facts reach this openstrap: it delivers itself to a machine it cannot read from
    * here, and what comes back over the channel is text. Text is not a snapshot — the id that knows
-   * how it is spelled, the moment with both of its spellings, the facts that can say whether they
-   * are complete are all lost in it.
+   * how it is spelled, the moment with both of its spellings, the facts that can answer for their own
+   * completeness are all strings in it, and a reader that cast it into place would find out at the
+   * first method call.
    *
-   * Checked only where a reader could otherwise be wrong: the shape it claims, that the pieces a
-   * snapshot cannot exist without are there, and that its name is the name this machine and this
-   * moment produce — a snapshot whose name does not follow from its own contents is one the state
-   * store and a requirement result would disagree about. The facts are not judged again: openstrap
-   * collected them, and a second opinion here would be a second implementation.
+   * Nothing in it is second-guessed. openstrap put that binary there and knows its digest, so the
+   * answer is its own; checking it would be checking the same code against itself. What is looked at
+   * is whether this is that answer at all — JSON, an object, and a schema this openstrap reads —
+   * because a channel can hand back anything.
    */
   static printed(output: unknown): FactSnapshot {
     if (!output || typeof output !== "object" || Array.isArray(output)) {
@@ -100,15 +100,15 @@ export class Facts {
       throw new TypeError(`A snapshot in ${JSON.stringify(printed.schemaVersion)}, which this openstrap does not read`);
     }
 
-    if (typeof printed.id !== "string" || typeof printed.reading?.takenAt !== "string") {
-      throw new TypeError("A snapshot with no name, or none of the moment it was taken");
+    if (typeof printed.reading?.takenAt !== "string") {
+      throw new TypeError("A snapshot with none of the moment it was taken");
     }
 
     if (!printed.facts || typeof printed.facts !== "object" || Array.isArray(printed.facts)) {
       throw new TypeError("A snapshot with no facts in it");
     }
 
-    const snapshot = new FactSnapshot(
+    return new FactSnapshot(
       {
         name: String(printed.target?.id),
         scope: String(printed.scope),
@@ -118,12 +118,6 @@ export class Facts {
       new Facts(printed.facts as FactSections),
       Moment.of(printed.reading.takenAt),
     );
-
-    if (String(snapshot.id) !== printed.id) {
-      throw new TypeError(`A snapshot called ${JSON.stringify(printed.id)}, which is not what ${snapshot.id} is called`);
-    }
-
-    return snapshot;
   }
 
   /**

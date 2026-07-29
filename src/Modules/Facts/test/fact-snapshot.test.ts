@@ -7,6 +7,15 @@ import { Moment } from "../domain/Moment.js";
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
 describe("a snapshot openstrap took elsewhere and printed", () => {
+  it("is named by what it holds, so the name a printed one arrived with is not read", () => {
+    // openstrap over there built the id from the target and the moment, out of the same code. Reading
+    // its answer back builds the same id from the same two, and comparing them would be comparing a
+    // function with itself.
+    const renamed = snapshotOf({ arch: "x64" }, "snap_something-else_20260608T100000000Z");
+
+    expect(String(renamed.id)).toBe("snap_host_20260608T100000000Z");
+  });
+
   it("names it after the machine and the moment it was taken", () => {
     const snapshot = snapshotOf();
 
@@ -45,17 +54,6 @@ describe("a snapshot openstrap took elsewhere and printed", () => {
     // Worked out from the facts rather than taken from the text: the printed snapshot said "success".
     expect(failed.reading.status).toBe("warning");
     expect(snapshotOf().reading.status).toBe("success");
-  });
-
-  it("refuses one whose name does not follow from what is in it", () => {
-    expect(() => Facts.printed({
-      id: "snap_something-else_20260608T100000000Z",
-      schemaVersion: "facts.v1",
-      scope: "host",
-      target: { type: "host", id: "host" },
-      facts: { arch: "x64" },
-      reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
-    })).toThrow(/is not what/);
   });
 
   it("refuses one in a shape it does not read, or with no facts in it", () => {
@@ -145,9 +143,12 @@ function snapshotOfThisMachine(declare?: FactDeclaration, now?: Date): Promise<F
  * The only way to hold a snapshot of facts this process did not collect — which is the point, because
  * facts assembled by a caller out of whatever it liked would be facts nothing is entitled to trust.
  */
-function snapshotOf(sections: Record<string, unknown> = { arch: "x64" }): FactSnapshot {
+function snapshotOf(
+  sections: Record<string, unknown> = { arch: "x64" },
+  id = "snap_host_20260608T100000000Z",
+): FactSnapshot {
   return Facts.printed({
-    id: "snap_host_20260608T100000000Z",
+    id,
     schemaVersion: "facts.v1",
     scope: "host",
     target: { type: "host", id: "host" },

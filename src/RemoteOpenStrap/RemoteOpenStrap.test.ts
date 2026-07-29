@@ -93,13 +93,6 @@ describe("openstrap on the target", () => {
     await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(/facts\.v2/);
   });
 
-  it("refuses a snapshot whose name does not follow from what is in it", async () => {
-    const renamed = { ...snapshot, id: "snap_something-else_20260608T100000000Z" };
-    const target = fakeTarget({ answer: answering(renamed) });
-
-    await expect(new RemoteOpenStrap(target.api, linuxArm64).collect(order)).rejects.toThrow(/is not what/);
-  });
-
   it("reads nothing off the target to choose a build, because it was told what it is", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 
