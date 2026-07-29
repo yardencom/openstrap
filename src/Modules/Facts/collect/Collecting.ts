@@ -11,8 +11,16 @@ import { ServiceFacts } from "./services/ServiceFacts.js";
 import { SystemFacts } from "./system/SystemFacts.js";
 import { ToolFacts } from "./tools/ToolFacts.js";
 
-/** A section a caller can name things in. */
-type DeclaredSection = Exclude<keyof FactDeclaration, "sections">;
+/**
+ * Every section there is, which is what a caller gets by naming none.
+ *
+ * A caller that has not said what it cares about is worse served by a missing fact than by an extra
+ * one; a caller that has said is served exactly that and pays for nothing else.
+ */
+const everySection: readonly string[] = [
+  "os", "arch", "cpu", "memory", "storage", "virtualization", "network", "packages", "privileges",
+  "users", "groups", "services", "paths", "artifacts", "commands", "env", "processes", "tools", "runtimes",
+];
 
 /**
  * One reading of a machine, section by section.
@@ -34,35 +42,27 @@ export class Collecting {
 
   async read(request: FactOrder): Promise<FactSections> {
     const declaration = request.declare ?? {};
-    const scalars = await this.system.read((section) => this.asked(declaration, section as DeclaredSection));
-    const tools = await this.readTools(declaration);
+    const sections = new Set(declaration.sections ?? everySection);
+    const scalars = await this.system.read(sections);
+    const tools = sections.has("tools") || sections.has("runtimes")
+      ? await this.tools.tools(declaration.tools ?? {})
+      : {};
 
     return {
       ...scalars,
-      // Nothing declared is nothing to answer: every section below is made of the names it was
-      // given, so an empty declaration produces an empty section without being asked about first.
-      // The managers are read when the section was asked about, and naming a package is one of the
-      // ways of asking, so the two halves of this section are there together or not at all.
       ...(scalars.packages === undefined ? {} : {
         packages: { ...scalars.packages, installed: this.packages.packages(declaration.packages ?? {}) },
       }),
-      // Asked about, because this one answers without being given a name too: the account the
-      // reading ran as is always in it, which is how a snapshot says who took it.
-      users: this.asked(declaration, "users") ? this.accounts.accounts(declaration.users ?? {}) : {},
-      groups: this.accounts.members(declaration.groups ?? {}),
-      services: await this.services.services(declaration.services ?? {}),
-      paths: this.paths.paths(declaration.paths ?? {}),
-      artifacts: this.paths.artifacts(declaration.artifacts ?? {}),
-      commands: await this.commands.commands(declaration.commands ?? {}),
-      env: this.commands.env(declaration.env ?? {}),
-      // These three are the ones that answer without being given a name — the process table, the
-      // tools a machine has anyway, and the runtimes those turn out to be — so these are the ones
-      // there is something to ask about.
-      processes: this.asked(declaration, "processes")
-        ? await this.processes.processes(declaration.processes ?? {})
-        : {},
-      tools: this.asked(declaration, "tools") ? tools : {},
-      runtimes: this.asked(declaration, "runtimes") ? this.tools.runtimes(tools) : {},
+      users: sections.has("users") ? this.accounts.accounts(declaration.users ?? {}) : {},
+      groups: sections.has("groups") ? this.accounts.members(declaration.groups ?? {}) : {},
+      services: sections.has("services") ? await this.services.services(declaration.services ?? {}) : {},
+      paths: sections.has("paths") ? this.paths.paths(declaration.paths ?? {}) : {},
+      artifacts: sections.has("artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
+      commands: sections.has("commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
+      env: sections.has("env") ? this.commands.env(declaration.env ?? {}) : {},
+      processes: sections.has("processes") ? await this.processes.processes(declaration.processes ?? {}) : {},
+      tools: sections.has("tools") ? tools : {},
+      runtimes: sections.has("runtimes") ? this.tools.runtimes(tools) : {},
       transports: this.transports(request.channel),
     };
   }
@@ -91,42 +91,5 @@ export class Collecting {
         authMethods: channel.authMethods === undefined ? undefined : [...channel.authMethods],
       },
     };
-  }
-
-  /**
-   * Tools, read once for two sections.
-   *
-   * Runtimes are tools seen from the other side, so asking for either asks for the same lookup. Doing
-   * it once means the two sections cannot disagree.
-   */
-  private async readTools(declaration: FactDeclaration): Promise<Record<string, ToolFact>> {
-    if (!this.asked(declaration, "tools") && !this.asked(declaration, "runtimes")) {
-      return {};
-    }
-
-    return this.tools.tools(declaration.tools ?? {});
-  }
-
-  /**
-   * Whether a caller asked about a section that answers without being given a name.
-   *
-   * Only three sections have anything to ask about. Every other one is made of the names it was
-   * given, so a caller that named nothing gets nothing whether it is asked about or not — the check
-   * used to be written out for all of them and could not change a single answer.
-   *
-   * Three ways of asking, and they are one question. Naming something in the section asks for it — a
-   * caller that declares a process should not also have to list `processes`. Listing the section by
-   * name asks for it. And naming no sections at all asks for every one of them, because a caller that
-   * has not said what it cares about is worse served by a missing fact than by an extra one.
-   *
-   * `runtimes` can only be asked for the last two ways: nothing can be named in it, because runtimes
-   * are what the tools turned out to be rather than something to look up.
-   */
-  private asked(declaration: FactDeclaration, section: DeclaredSection | "runtimes"): boolean {
-    const named = section === "runtimes" ? undefined : declaration[section];
-
-    return Object.keys(named ?? {}).length > 0
-      || declaration.sections === undefined
-      || declaration.sections.includes(section);
   }
 }

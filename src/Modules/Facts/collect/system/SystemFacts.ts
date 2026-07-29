@@ -42,22 +42,22 @@ export class SystemFacts {
   constructor(private readonly platform: Platform) {}
 
   /**
-   * @param asked Which of these sections the caller wants. Everything else is not read: the machine
-   * is not asked, and the section is absent from the snapshot rather than present and unwanted.
+   * @param sections What the order says to collect. Everything else is not read: the machine is not
+   * asked, and the section is absent from the snapshot rather than present and unwanted.
    */
-  async read(asked: (section: string) => boolean): Promise<Sections> {
+  async read(sections: ReadonlySet<string>): Promise<Sections> {
     const [operatingSystem, cpu, memory, filesystems, interfaces, connections] = await Promise.all([
-      asked("os") ? si.osInfo() : undefined,
-      asked("cpu") ? si.cpu() : undefined,
-      asked("memory") ? si.mem() : undefined,
-      asked("storage") ? si.fsSize() : undefined,
-      asked("network") ? si.networkInterfaces() : undefined,
-      asked("network") ? si.networkConnections() : undefined,
+      sections.has("os") ? si.osInfo() : undefined,
+      sections.has("cpu") ? si.cpu() : undefined,
+      sections.has("memory") ? si.mem() : undefined,
+      sections.has("storage") ? si.fsSize() : undefined,
+      sections.has("network") ? si.networkInterfaces() : undefined,
+      sections.has("network") ? si.networkConnections() : undefined,
     ]);
 
     return {
       ...(operatingSystem === undefined ? {} : { os: this.operatingSystem(operatingSystem) }),
-      ...(asked("arch") ? { arch: this.platform.architecture } : {}),
+      ...(sections.has("arch") ? { arch: this.platform.architecture } : {}),
       ...(cpu === undefined ? {} : {
         cpu: {
           // Cores are packages of execution, threads are what the scheduler sees.
@@ -79,12 +79,12 @@ export class SystemFacts {
         },
       }),
       ...(filesystems === undefined ? {} : { storage: this.storage(filesystems) }),
-      ...(asked("virtualization") ? { virtualization: this.virtualization() } : {}),
+      ...(sections.has("virtualization") ? { virtualization: this.virtualization() } : {}),
       ...(interfaces === undefined || connections === undefined
         ? {}
         : { network: this.network(interfaces, connections) }),
-      ...(asked("packages") ? { packages: { managers: await this.packageManagers() } } : {}),
-      ...(asked("privileges") ? { privileges: this.privileges() } : {}),
+      ...(sections.has("packages") ? { packages: { managers: await this.packageManagers() } } : {}),
+      ...(sections.has("privileges") ? { privileges: this.privileges() } : {}),
     };
   }
 
