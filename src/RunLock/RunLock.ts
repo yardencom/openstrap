@@ -13,11 +13,20 @@ export type RunLockOptions = {
 /**
  * Stops two operations on the same subject from running at once.
  *
- * The lock is a directory, because creating one is atomic on every filesystem
- * that matters — two processes cannot both win.
+ * The lock is a directory, because creating one is atomic on every filesystem that matters — two
+ * processes cannot both win, and one of them is told `EEXIST`. Node offers nothing better: there is no
+ * lock in its standard library and no `fs.flock`, and the real `flock(2)` comes only through a native
+ * addon, which openstrap cannot have — native modules do not survive being packaged into one
+ * executable (ADR 0001).
  *
- * A lock left behind by a process that died is not a lock. It is reclaimed,
- * otherwise a single crash makes the subject unusable forever.
+ * `proper-lockfile` is the package everyone reaches for and does the same `mkdir` underneath. It is
+ * not used for two reasons. It decides a lock is stale by how fresh the directory's mtime is, kept up
+ * to date by a timer, where every lock openstrap takes is held by a process on this same machine — the
+ * state home is not shared — so the honest question is whether that process is alive, and the kernel
+ * answers it. And it does not record who holds the lock, so it could not say what is already running.
+ *
+ * A lock left behind by a process that died is not a lock. It is reclaimed, otherwise a single crash
+ * makes the subject unusable forever.
  */
 export class RunLock {
   private readonly processRunning: (pid: number) => boolean;
