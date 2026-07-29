@@ -1,4 +1,7 @@
+import { ConnectToTarget } from "../../Connect/index.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
+import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
+import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -20,8 +23,10 @@ export type FactsCollectResult = FactSnapshot;
  * sections that hold named things come back empty, because nothing on a machine can list every
  * service or every program on it and openstrap does not invent names to fill them with.
  *
- * The machine is called `host`, which is what openstrap calls the machine it is running on when
- * nobody has called it anything else. A run takes the name from the blueprint instead.
+ * Which machine is the argument: `host` is the one openstrap is running on, and any other name is a
+ * target it created, which it reads by delivering itself there and asking. Both answer with the same
+ * snapshot of the same shape, because both were collected by the same code — that is the whole point
+ * of openstrap going to a machine rather than asking about it from outside.
  *
  * Nothing is written. A run keeps its snapshots in the state store; this command used to also drop a
  * `result.json` under `.openstrap/runs/facts/`, which was a second store for the same thing. It has to
@@ -29,12 +34,12 @@ export type FactsCollectResult = FactSnapshot;
  * read, where a working directory of its own is not something it has.
  */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
+  constructor(private readonly stateHome = new StateHome()) {}
+
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
-    const snapshot = await Facts.collect(args.order ?? {
-      target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
-      declare: everySection,
-      now: context.now,
-    });
+    const snapshot = args.target === "host"
+      ? await this.thisMachine(args, context)
+      : await this.machine(args.target, context);
 
     return {
       result: snapshot,
@@ -42,5 +47,48 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       // section is still a result, and the caller has to be able to notice.
       exitCode: snapshot.reading.status === "error" ? 1 : 0,
     };
+  }
+
+  /** The machine openstrap is running on, read in this process. */
+  private thisMachine(args: FactsCollectArgs, context: CommandContext): Promise<FactSnapshot> {
+    return Facts.collect(args.order ?? {
+      target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
+      declare: everySection,
+      now: context.now,
+    });
+  }
+
+  /**
+   * A machine openstrap created, read by openstrap on it.
+   *
+   * The channel is recorded as the connection reports it, because that is a fact about this reading
+   * that the machine itself cannot answer, and it is what a requirement about the channel is checked
+   * against.
+   */
+  private async machine(target: string, context: CommandContext): Promise<FactSnapshot> {
+    const runtime = await context.runtime();
+    const store = new SqliteStateStore(this.stateHome.database());
+
+    try {
+      const recorded = store.readTarget(target);
+      const connection = await new ConnectToTarget().execute({ target, runtime, store });
+
+      try {
+        return await new RemoteOpenStrap(connection.transport).collect({
+          target: {
+            name: target,
+            scope: recorded?.scope ?? "machine",
+            type: recorded?.type ?? "vm",
+          },
+          declare: everySection,
+          channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
+          now: context.now,
+        });
+      } finally {
+        await connection.close();
+      }
+    } finally {
+      store.close();
+    }
   }
 }

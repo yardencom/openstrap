@@ -61,10 +61,12 @@ describe("openstrap on the target", () => {
     const [command] = target.captured;
 
     expect(command!.command).toContain("/tmp/openstrap/openstrap-");
-    expect(command!.args.slice(0, 4)).toEqual(["facts", "collect", "--json", "--order"]);
-    expect(JSON.parse(Buffer.from(command!.args[4]!, "base64").toString("utf8"))).toEqual(order);
+    // `host` because openstrap over there reads the machine it is on; which machine that is to the
+    // caller is in the order, and so is everything else it could not know about itself.
+    expect(command!.args.slice(0, 5)).toEqual(["facts", "collect", "host", "--json", "--order"]);
+    expect(JSON.parse(Buffer.from(command!.args[5]!, "base64").toString("utf8"))).toEqual(order);
     // One argument that no shell can reinterpret on the way.
-    expect(command!.args[4]).not.toMatch(/["' \n]/);
+    expect(command!.args[5]).not.toMatch(/["' \n]/);
   });
 
   it("treats an openstrap that failed as a machine it did not read", async () => {

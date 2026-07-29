@@ -1,6 +1,6 @@
 import { MachineNotRunningError } from "./MachineNotRunningError.js";
 import { UnknownMachineError } from "./UnknownMachineError.js";
-import type { MachineAccess, OpenStrapRuntime } from "../../Plugin/index.js";
+import type { MachineAccess, TransportConnection, OpenStrapRuntime } from "../../Plugin/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
@@ -13,8 +13,16 @@ export type ConnectRequest = {
 };
 
 export type Connection = {
+  /** Where the machine listens and what reached it, as the provider reports. */
   access: MachineAccess;
-  run(command: string): Promise<{ exitCode: number | null; stdout: string; stderr: string }>;
+  /**
+   * What was opened.
+   *
+   * Handed over rather than hidden behind a method or two of this module's choosing: the callers are
+   * a person running a command on the machine and openstrap delivering itself to it, and no pair of
+   * methods serves both without one of them being wrong.
+   */
+  transport: TransportConnection;
   close(): Promise<void>;
 };
 
@@ -55,14 +63,6 @@ export class ConnectToTarget {
       reveal: (reference) => this.secrets.read(reference),
     });
 
-    return {
-      access,
-      run: (command) => connection.processes.capture({
-        command: "sh",
-        args: ["-c", command],
-        cwd: ".",
-      }),
-      close: () => connection.close(),
-    };
+    return { access, transport: connection, close: () => connection.close() };
   }
 }

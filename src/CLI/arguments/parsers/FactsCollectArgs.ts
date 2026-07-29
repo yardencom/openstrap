@@ -3,10 +3,11 @@ import type { FactsCollectArgs, SubcommandArgsParser } from "../types.js";
 import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 /**
- * `openstrap facts collect [host]`.
+ * `openstrap facts collect <host|target>`.
  *
- * A person has nothing to fill in: the command reads this machine as it is, so it takes no file to
- * read questions from and no values to fill one in with.
+ * The machine has to be named, because there is more than one it could be: `host` is the machine
+ * openstrap is running on, and any other name is a target it created, which it reaches by delivering
+ * itself there. A command that guessed would read the wrong machine and say nothing about it.
  *
  * `--order` is how openstrap asks openstrap. Having delivered itself to a machine it cannot read from
  * here, it starts this same command over there, and has to say the three things that machine cannot
@@ -23,16 +24,17 @@ export class FactsCollectArgsParser implements SubcommandArgsParser {
     });
     const named = read.positionals[0];
 
-    if (named !== undefined && named !== "host") {
-      throw new Error(`Unexpected argument "${named}". Use: openstrap facts collect [host]`);
+    if (named === undefined) {
+      throw new Error("Missing machine. Use: openstrap facts collect <host|target>");
     }
 
     if (read.positionals.length > 1) {
-      throw new Error(`Unexpected argument "${read.positionals[1]}". Use: openstrap facts collect [host]`);
+      throw new Error(`Unexpected argument "${read.positionals[1]}". Use: openstrap facts collect <host|target>`);
     }
 
     return {
       command: "facts.collect",
+      target: named,
       json: read.flag("json"),
       order: orderIn(read.value("order")),
       ...runtimeArgsIn(read),

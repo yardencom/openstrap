@@ -27,7 +27,7 @@ export class RemoteOpenStrap {
     const openstrap = await new OpenStrapBinary(platform).deliverTo(this.transport.fileSystem);
     const result = await this.transport.processes.capture({
       command: openstrap,
-      args: ["facts", "collect", "--json", "--order", encodeOrder(order)],
+      args: ["facts", "collect", "host", "--json", "--order", encodeOrder(order)],
       // Nowhere in particular: openstrap is being asked to read this machine, not to work in a
       // directory, and a directory it has no business writing to is one more way to fail.
       cwd: "/",

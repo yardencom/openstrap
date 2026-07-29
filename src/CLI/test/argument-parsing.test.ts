@@ -143,9 +143,10 @@ describe("openstrap connect", () => {
 });
 
 describe("openstrap facts collect", () => {
-  it("reads this machine and takes no file", () => {
+  it("reads the machine it was told to read and takes no file", () => {
     expect(parse("facts", "collect", "host", "--json")).toEqual({
       command: "facts.collect",
+      target: "host",
       json: true,
       order: undefined,
       pluginSpecifiers: [],
@@ -153,12 +154,12 @@ describe("openstrap facts collect", () => {
     });
   });
 
-  it("reads this machine when told nothing at all", () => {
-    expect(parse("facts", "collect")).toMatchObject({ command: "facts.collect", order: undefined });
+  it("needs to be told which machine, because there is more than one it could be", () => {
+    expect(() => parse("facts", "collect")).toThrow("Missing machine");
   });
 
-  it("knows only the machine it is running on, whatever else it is called", () => {
-    expect(() => parse("facts", "collect", "guest")).toThrow('Unexpected argument "guest"');
+  it("takes the name of a machine openstrap created", () => {
+    expect(parse("facts", "collect", "ubuntu-vm")).toMatchObject({ command: "facts.collect", target: "ubuntu-vm" });
   });
 
   it("takes the order openstrap hands it when openstrap is the caller", () => {
@@ -169,17 +170,17 @@ describe("openstrap facts collect", () => {
     };
     const encoded = Buffer.from(JSON.stringify(order)).toString("base64");
 
-    expect(parse("facts", "collect", "--order", encoded)).toMatchObject({
+    expect(parse("facts", "collect", "host", "--order", encoded)).toMatchObject({
       command: "facts.collect",
       order: { ...order, now: undefined },
     });
   });
 
   it("refuses an order it cannot read, rather than reading the wrong machine", () => {
-    expect(() => parse("facts", "collect", "--order", "not base64 json")).toThrow("--order must");
-    expect(() => parse("facts", "collect", "--order", Buffer.from("[]").toString("base64")))
+    expect(() => parse("facts", "collect", "host", "--order", "not base64 json")).toThrow("--order must");
+    expect(() => parse("facts", "collect", "host", "--order", Buffer.from("[]").toString("base64")))
       .toThrow("--order must decode to an order");
-    expect(() => parse("facts", "collect", "--order", Buffer.from("{}").toString("base64")))
+    expect(() => parse("facts", "collect", "host", "--order", Buffer.from("{}").toString("base64")))
       .toThrow("--order must name the target it is about");
   });
 

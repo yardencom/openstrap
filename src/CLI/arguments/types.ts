@@ -19,6 +19,8 @@ export type RunArgs = {
 
 export type FactsCollectArgs = {
   command: "facts.collect";
+  /** `host` is the machine openstrap is running on; anything else is a target it created. */
+  target: string;
   json: boolean;
   /**
    * What to read, what to call it, and which channel reached it.

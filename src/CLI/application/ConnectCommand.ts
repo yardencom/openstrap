@@ -59,7 +59,13 @@ export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
   }
 
   private async ran(connection: Connection, command: string): Promise<CommandOutcome<ConnectResult>> {
-    const result = await connection.run(command);
+    // Through a shell, because what a person types after `--run` is a command line and not a program
+    // with arguments: `ls -la | head` is one thing to them and three to anything else.
+    const result = await connection.transport.processes.capture({
+      command: "sh",
+      args: ["-c", command],
+      cwd: ".",
+    });
     const exitCode = result.exitCode ?? 1;
 
     return {

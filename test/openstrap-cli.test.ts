@@ -93,7 +93,7 @@ targets:
       channel: { type: "ssh", authMethods: ["publickey"] },
     })).toString("base64");
 
-    const output = await captureCli(["facts", "collect", "--json", "--order", order]);
+    const output = await captureCli(["facts", "collect", "host", "--json", "--order", order]);
     const snapshot = JSON.parse(output.stdout);
 
     expect(output.exitCode).toBe(0);
