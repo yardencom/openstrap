@@ -65,6 +65,18 @@ describe("TargetPlatform", () => {
 
     expect(read).toEqual(["/bin/sh"]);
   });
+
+  it("says a machine with no /bin/sh is not one it delivers itself to", async () => {
+    await expect(TargetPlatform.detect(answering(null))).rejects.toThrow(/not a linux or macos machine/);
+  });
+
+  it("names Windows rather than calling it an unknown format", async () => {
+    const windows = Buffer.alloc(64);
+
+    windows.write("MZ", 0, "binary");
+
+    await expect(TargetPlatform.detect(answering(windows))).rejects.toThrow(/no build it could send there/);
+  });
 });
 
 function answering(content: Buffer | null): FileSystemAPI {

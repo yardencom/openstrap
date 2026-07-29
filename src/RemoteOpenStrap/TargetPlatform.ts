@@ -8,6 +8,8 @@ const elfMagic = 0x7f454c46;
 const machO64LittleEndian = 0xcffaedfe;
 const machO64BigEndian = 0xfeedfacf;
 const machOUniversal = 0xcafebabe;
+/** `MZ`, which every Windows executable still begins with. */
+const windowsMagic = 0x4d5a;
 
 /** `e_machine`, the architecture an ELF file was built for. */
 const elfMachines: Record<number, string> = {
@@ -48,7 +50,14 @@ export class TargetPlatform {
     const header = await files.readFile(probedExecutable);
 
     if (header === null) {
-      throw new UnreadableTargetPlatformError(`${probedExecutable} could not be read`);
+      // Every POSIX machine has it, so a target without one is not a POSIX machine — Windows, most
+      // likely. Saying that is more use than saying a file was missing, because it is the answer: the
+      // builds openstrap delivers are linux and macos, `/tmp` is where it puts them, and an
+      // executable bit is how it makes them run.
+      throw new UnreadableTargetPlatformError(
+        `it has no ${probedExecutable}, so it is not a linux or macos machine, and those are the ones `
+        + "openstrap delivers itself to",
+      );
     }
 
     if (header.length < 20) {
@@ -63,6 +72,12 @@ export class TargetPlatform {
 
     if (magic === machO64LittleEndian || magic === machO64BigEndian || magic === machOUniversal) {
       return new TargetPlatform("macos", TargetPlatform.machOArchitecture(header, magic));
+    }
+
+    if (header.readUInt16BE(0) === windowsMagic) {
+      throw new UnreadableTargetPlatformError(
+        `${probedExecutable} is a Windows executable, and openstrap has no build it could send there`,
+      );
     }
 
     throw new UnreadableTargetPlatformError(`${probedExecutable} is in an unknown executable format`);
