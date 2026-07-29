@@ -4,7 +4,10 @@ import type { TargetlessRequirement } from "../domain/Requirements.js";
 const metaFields = new Set(["id", "optional"]);
 
 /** Sections whose entries a caller has to name for the reading to find them. */
-const namedSections = new Set(["processes", "services", "tools", "paths", "env", "commands", "artifacts", "packages", "users", "groups"]);
+const namedSections = new Set([
+  "processes", "services", "tools", "runtimes", "paths", "env", "commands", "artifacts", "packages",
+  "users", "groups",
+]);
 
 export type RequiredFactsRequest = {
   requirements: readonly TargetlessRequirement[];

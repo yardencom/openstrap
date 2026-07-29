@@ -29,10 +29,11 @@ export type FactDeclaration = {
   network?: Asked;
   virtualization?: Asked;
   privileges?: Asked;
-  runtimes?: Asked;
   processes?: Record<string, ProcessDeclaration>;
   services?: Record<string, ServiceDeclaration>;
   tools?: Record<string, ToolDeclaration>;
+  /** Named like tools, because a runtime is a tool seen from the other side. */
+  runtimes?: Record<string, ToolDeclaration>;
   paths?: Record<string, PathDeclaration>;
   env?: Record<string, EnvDeclaration>;
   commands?: Record<string, CommandDeclaration>;
@@ -145,7 +146,7 @@ export type FactRedaction = {
  * the channel says, and it comes with the order rather than being asked for in it.
  */
 export const everySection: FactDeclaration = {
-  os: {}, arch: {}, cpu: {}, memory: {}, storage: {}, network: {}, virtualization: {}, privileges: {},
-  runtimes: {}, processes: {}, services: {}, tools: {}, paths: {}, env: {}, commands: {},
+  os: {}, arch: {}, cpu: {}, memory: {}, storage: {}, network: {}, virtualization: {}, privileges: {}, runtimes: {},
+  processes: {}, services: {}, tools: {}, paths: {}, env: {}, commands: {},
   artifacts: {}, packages: {}, users: {}, groups: {},
 };

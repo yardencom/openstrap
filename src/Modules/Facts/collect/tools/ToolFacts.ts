@@ -1,7 +1,7 @@
 import si from "systeminformation";
 import which from "which";
 
-import type { Asked, ToolDeclaration } from "../../domain/FactDeclaration.js";
+import type { ToolDeclaration } from "../../domain/FactDeclaration.js";
 import type { RuntimeFact, ToolFact } from "../../domain/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
@@ -53,12 +53,12 @@ export class ToolFacts {
    * run something, not where the binary lives. The tools are looked up once either way, so the two
    * sections cannot disagree about the same machine and neither pays for the other.
    */
-  async runtimes(declared: Asked | undefined): Promise<Record<string, RuntimeFact>> {
+  async runtimes(declared: Record<string, ToolDeclaration> | undefined): Promise<Record<string, RuntimeFact>> {
     if (declared === undefined) {
       return {};
     }
 
-    return this.derived(await this.looked({}));
+    return this.derived(await this.looked(declared));
   }
 
   /** The lookup, done once however many sections turn out to need it. */
