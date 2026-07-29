@@ -52,7 +52,7 @@ export class Collecting {
         ? await this.services.services(declaration.services ?? {})
         : {},
       tools: this.asked(declaration, "tools") ? tools : {},
-      runtimes: this.tools.runtimes(tools),
+      runtimes: this.asked(declaration, "runtimes") ? this.tools.runtimes(tools) : {},
       paths: this.asked(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
       artifacts: this.asked(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
       commands: this.asked(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
