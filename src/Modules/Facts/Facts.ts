@@ -45,17 +45,15 @@ export class Facts {
     Object.assign(this, sections);
 
     // All the way down, because `Object.freeze` leaves `facts.os` editable, which is most of the
-    // facts. Walked rather than recursed: the same walk twice would be two ways to miss a section.
-    const pending: unknown[] = [this];
-
-    while (pending.length > 0) {
-      const value = pending.pop();
-
+    // facts, and `facts.users.openstrap.groups` deeper still.
+    const freeze = (value: unknown): void => {
       if (value && typeof value === "object") {
         Object.freeze(value);
-        pending.push(...Object.values(value));
+        Object.values(value).forEach(freeze);
       }
-    }
+    };
+
+    freeze(this);
   }
 
   /**
@@ -148,22 +146,14 @@ export class Facts {
    * as a clean collection.
    */
   status(): FactsStatus {
-    const pending: unknown[] = [{ ...this }];
-
-    while (pending.length > 0) {
-      const value = pending.pop();
-
+    const failed = (value: unknown): boolean => {
       if (!value || typeof value !== "object") {
-        continue;
+        return false;
       }
 
-      if (!Array.isArray(value) && (value as { status?: unknown }).status === "error") {
-        return "warning";
-      }
+      return (value as { status?: unknown }).status === "error" || Object.values(value).some(failed);
+    };
 
-      pending.push(...Object.values(value));
-    }
-
-    return "success";
+    return failed({ ...this }) ? "warning" : "success";
   }
 }
