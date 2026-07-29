@@ -8,7 +8,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CapturedSystemCommand, ProcessOutput, Transport } from "../Transport/index.js";
 import type { FactOrder } from "../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "./RemoteOpenStrap.js";
-import { TargetPlatform } from "./TargetPlatform.js";
 import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 
 const order: FactOrder = {
@@ -28,7 +27,7 @@ const snapshot = {
 };
 
 /** What openstrap recorded the target to be when it created it. */
-const linuxArm64 = TargetPlatform.of("linux", "arm64");
+const linuxArm64 = { platform: "linux", architecture: "arm64" };
 
 let built: string;
 

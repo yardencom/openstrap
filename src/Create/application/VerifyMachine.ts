@@ -4,7 +4,6 @@ import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
 import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
-import { TargetPlatform } from "../../RemoteOpenStrap/TargetPlatform.js";
 import { UnknownMachinePlatformError } from "../../RemoteOpenStrap/UnknownMachinePlatformError.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
@@ -60,7 +59,7 @@ export class VerifyMachine {
 
       const snapshot = await new RemoteOpenStrap(
         connection,
-        TargetPlatform.of(machine.platform, machine.architecture),
+        machine,
       ).collect({
         target: {
           name: request.target.name,

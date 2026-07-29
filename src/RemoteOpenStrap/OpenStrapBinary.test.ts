@@ -8,9 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BinaryFileWriteOptions, FileSystemAPI } from "../Transport/index.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { MissingBinaryError } from "./MissingBinaryError.js";
-import { TargetPlatform } from "./TargetPlatform.js";
 
-const platform = TargetPlatform.of("linux", "arm64");
+const platform = { platform: "linux", architecture: "arm64" };
 const contents = Buffer.from("an agent, for the purposes of this test");
 const digest = createHash("sha256").update(contents).digest("hex");
 
@@ -35,8 +34,8 @@ afterAll(() => {
 
 describe("OpenStrapBinary", () => {
   it("says how to get a build it does not have, rather than failing on the target", () => {
-    expect(() => new OpenStrapBinary(TargetPlatform.of("linux", "x64"), built)).toThrow(MissingBinaryError);
-    expect(() => new OpenStrapBinary(TargetPlatform.of("linux", "x64"), built)).toThrow(/npm run binaries/);
+    expect(() => new OpenStrapBinary({ platform: "linux", architecture: "x64" }, built)).toThrow(MissingBinaryError);
+    expect(() => new OpenStrapBinary({ platform: "linux", architecture: "x64" }, built)).toThrow(/npm run binaries/);
   });
 
   it("delivers openstrap named after the digest of its own contents", async () => {

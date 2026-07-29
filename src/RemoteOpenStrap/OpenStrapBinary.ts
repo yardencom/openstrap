@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { FileSystemAPI } from "../Transport/index.js";
-import type { TargetPlatform } from "./TargetPlatform.js";
+import type { MachinePlatform } from "./MachinePlatform.js";
 
 /**
  * Where openstrap lands on a target.
@@ -65,13 +65,16 @@ export class OpenStrapBinary {
   private readonly path: string;
   private readonly digest: string;
 
-  constructor(platform: TargetPlatform, directory = builtBinariesDirectory()) {
-    this.path = join(directory, `openstrap-${platform.id}`);
+  constructor(machine: MachinePlatform, directory = builtBinariesDirectory()) {
+    // The name a build carries is what it runs on, which is what the machine was recorded to be.
+    const platform = `${machine.platform}-${machine.architecture}`;
+
+    this.path = join(directory, `openstrap-${platform}`);
 
     try {
       this.digest = readFileSync(`${this.path}.sha256`, "utf8").trim();
     } catch {
-      throw new MissingBinaryError(platform.id, this.path);
+      throw new MissingBinaryError(platform, this.path);
     }
   }
 

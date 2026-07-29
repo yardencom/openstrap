@@ -1,7 +1,6 @@
 import { ConnectToTarget } from "../../Connect/index.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../RemoteOpenStrap/RemoteOpenStrap.js";
-import { TargetPlatform } from "../../RemoteOpenStrap/TargetPlatform.js";
 import { UnknownMachinePlatformError } from "../../RemoteOpenStrap/UnknownMachinePlatformError.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
@@ -81,7 +80,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       try {
         return await new RemoteOpenStrap(
           connection.transport,
-          TargetPlatform.of(machine.platform, machine.architecture),
+        machine,
         ).collect({
           target: { name: target, scope: recorded?.scope ?? "machine", type: recorded?.type ?? "vm" },
           declare: everySection,
