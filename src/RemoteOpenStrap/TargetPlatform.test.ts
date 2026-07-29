@@ -36,48 +36,61 @@ describe("TargetPlatform", () => {
     expect(platform.id).toBe("macos-x64");
   });
 
-  it("refuses to guess when the probe cannot be read", async () => {
+  it("reads windows and its architecture out of a PE header", async () => {
+    const platform = await TargetPlatform.detect(answering(windowsHeader(0x8664)));
+
+    expect(platform.id).toBe("windows-x64");
+  });
+
+  it("refuses to guess when there is no executable to read", async () => {
     await expect(TargetPlatform.detect(answering(null))).rejects.toThrow(UnreadableTargetPlatformError);
+    await expect(TargetPlatform.detect(answering(null))).rejects.toThrow(/nothing to read its platform from/);
   });
 
-  it("refuses to guess from a file too short to carry a header", async () => {
-    await expect(TargetPlatform.detect(answering(Buffer.alloc(8)))).rejects.toThrow(/too short/);
+  it("refuses to guess from a file too short to carry a header, or a format it does not know", async () => {
+    await expect(TargetPlatform.detect(answering(Buffer.alloc(8)))).rejects.toThrow(/does not read/);
+    await expect(TargetPlatform.detect(answering(Buffer.alloc(64)))).rejects.toThrow(/does not read/);
   });
 
-  it("refuses to guess from a format it does not know", async () => {
-    await expect(TargetPlatform.detect(answering(Buffer.alloc(64)))).rejects.toThrow(/unknown executable format/);
+  it("says which architecture it will not build for rather than picking one", async () => {
+    await expect(TargetPlatform.detect(answering(elfHeader(0x2b)))).rejects.toThrow(/no build for/);
+    await expect(TargetPlatform.detect(answering(machOHeader(0x0000000c)))).rejects.toThrow(/no build for/);
   });
 
-  it("names the architecture it will not build for rather than picking one", async () => {
-    await expect(TargetPlatform.detect(answering(elfHeader(0x2b)))).rejects.toThrow(/ELF machine 0x2b/);
-    await expect(TargetPlatform.detect(answering(machOHeader(0x0000000c)))).rejects.toThrow(/cputype 0xc/);
-  });
+  it("reads what a POSIX machine has, and what a Windows machine has instead", async () => {
+    const posix: string[] = [];
+    const windows: string[] = [];
 
-  it("reads the probe every POSIX machine has", async () => {
-    const read: string[] = [];
+    await TargetPlatform.detect(recording(posix, () => elfHeader(0xb7)));
+    await TargetPlatform.detect(recording(windows, (path) =>
+      path === "/bin/sh" ? null : windowsHeader(0xaa64)));
 
-    await TargetPlatform.detect({
-      readFile: async (path: string) => {
-        read.push(path);
-        return elfHeader(0xb7);
-      },
-    } as unknown as FileSystemAPI);
-
-    expect(read).toEqual(["/bin/sh"]);
-  });
-
-  it("says a machine with no /bin/sh is not one it delivers itself to", async () => {
-    await expect(TargetPlatform.detect(answering(null))).rejects.toThrow(/not a linux or macos machine/);
-  });
-
-  it("names Windows rather than calling it an unknown format", async () => {
-    const windows = Buffer.alloc(64);
-
-    windows.write("MZ", 0, "binary");
-
-    await expect(TargetPlatform.detect(answering(windows))).rejects.toThrow(/no build it could send there/);
+    expect(posix).toEqual(["/bin/sh"]);
+    expect(windows).toEqual(["/bin/sh", "C:/Windows/System32/cmd.exe"]);
   });
 });
+
+function recording(paths: string[], answer: (path: string) => Buffer | null): FileSystemAPI {
+  return {
+    readFile: async (path: string) => {
+      paths.push(path);
+      return answer(path);
+    },
+  } as unknown as FileSystemAPI;
+}
+
+/** A Windows executable: the DOS header saying where the real one is, and the real one. */
+function windowsHeader(machine: number): Buffer {
+  const header = Buffer.alloc(256);
+  const start = 0x80;
+
+  header.write("MZ", 0, "binary");
+  header.writeUInt32LE(start, 0x3c);
+  header.write("PE\0\0", start, "binary");
+  header.writeUInt16LE(machine, start + 4);
+
+  return header;
+}
 
 function answering(content: Buffer | null): FileSystemAPI {
   return { readFile: async () => content } as unknown as FileSystemAPI;

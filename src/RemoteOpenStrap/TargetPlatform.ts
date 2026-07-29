@@ -1,44 +1,31 @@
+import { ElfHeader } from "./executables/ElfHeader.js";
+import { MachOHeader } from "./executables/MachOHeader.js";
+import { PortableExecutableHeader } from "./executables/PortableExecutableHeader.js";
 import { UnreadableTargetPlatformError } from "./UnreadableTargetPlatformError.js";
 import type { FileSystemAPI } from "../Transport/index.js";
 
-/** An executable every POSIX machine has, read for the header it carries. */
-const probedExecutable = "/bin/sh";
-
-const elfMagic = 0x7f454c46;
-const machO64LittleEndian = 0xcffaedfe;
-const machO64BigEndian = 0xfeedfacf;
-const machOUniversal = 0xcafebabe;
-/** `MZ`, which every Windows executable still begins with. */
-const windowsMagic = 0x4d5a;
-
-/** `e_machine`, the architecture an ELF file was built for. */
-const elfMachines: Record<number, string> = {
-  0x03: "x86",
-  0x28: "arm",
-  0x3e: "x64",
-  0xb7: "arm64",
-};
-
-/** `cputype`, the architecture a Mach-O file was built for. */
-const machOCpuTypes: Record<number, string> = {
-  0x01000007: "x64",
-  0x0100000c: "arm64",
-  0x00000007: "x86",
-};
-
+/**
+ * Executables a machine is expected to already have, whichever machine it turns out to be.
+ *
+ * Read for their headers, in this order, until one of them is there. `/bin/sh` is required of every
+ * POSIX machine; `cmd.exe` has been where it is since Windows NT.
+ */
+const probed = ["/bin/sh", "C:/Windows/System32/cmd.exe"] as const;
 
 /**
  * Which machine is on the other end of a transport.
  *
- * Needed before anything else, because the agent that reads the facts has to be
- * built for that machine. It is answered by reading the header of an executable
- * the target already has: an operating system and an architecture are exactly
- * what an executable format records, and reading a file is something a transport
- * can do without running anything.
+ * Answered before anything else, because the openstrap that reads a machine has to be built for it,
+ * and a build for one machine does not run on another.
  *
- * This is not a fact about the target and never reaches a snapshot. It is how
- * openstrap decides which binary to send, so the names here are the names the
- * builds carry: `linux-arm64`, `macos-arm64`.
+ * Answered by reading a program the target already has, rather than by running one: an operating
+ * system and an architecture are exactly what an executable format records, in a number that means
+ * the same everywhere. `uname` would answer in words that do not — `aarch64` on Linux is `arm64` on
+ * macOS — and it is a program, which is the thing openstrap does not have there yet.
+ *
+ * This is not a fact about the target and never reaches a snapshot. It is how openstrap picks the
+ * build to send, so the words here are the words its builds are named with: `linux-arm64`,
+ * `macos-arm64`, `windows-x64`.
  */
 export class TargetPlatform {
   private constructor(
@@ -47,43 +34,27 @@ export class TargetPlatform {
   ) {}
 
   static async detect(files: FileSystemAPI): Promise<TargetPlatform> {
-    const header = await files.readFile(probedExecutable);
+    for (const path of probed) {
+      const bytes = await files.readFile(path);
+      const header = bytes === null
+        ? undefined
+        : ElfHeader.in(bytes) ?? MachOHeader.in(bytes) ?? PortableExecutableHeader.in(bytes);
 
-    if (header === null) {
-      // Every POSIX machine has it, so a target without one is not a POSIX machine — Windows, most
-      // likely. Saying that is more use than saying a file was missing, because it is the answer: the
-      // builds openstrap delivers are linux and macos, `/tmp` is where it puts them, and an
-      // executable bit is how it makes them run.
-      throw new UnreadableTargetPlatformError(
-        `it has no ${probedExecutable}, so it is not a linux or macos machine, and those are the ones `
-        + "openstrap delivers itself to",
-      );
+      if (bytes !== null && header === undefined) {
+        throw new UnreadableTargetPlatformError(`${path} is in an executable format openstrap does not read`);
+      }
+
+      if (header !== undefined) {
+        return TargetPlatform.reading(path, header);
+      }
     }
 
-    if (header.length < 20) {
-      throw new UnreadableTargetPlatformError(`${probedExecutable} is too short to carry a header`);
-    }
-
-    const magic = header.readUInt32BE(0);
-
-    if (magic === elfMagic) {
-      return new TargetPlatform("linux", TargetPlatform.elfArchitecture(header));
-    }
-
-    if (magic === machO64LittleEndian || magic === machO64BigEndian || magic === machOUniversal) {
-      return new TargetPlatform("macos", TargetPlatform.machOArchitecture(header, magic));
-    }
-
-    if (header.readUInt16BE(0) === windowsMagic) {
-      throw new UnreadableTargetPlatformError(
-        `${probedExecutable} is a Windows executable, and openstrap has no build it could send there`,
-      );
-    }
-
-    throw new UnreadableTargetPlatformError(`${probedExecutable} is in an unknown executable format`);
+    throw new UnreadableTargetPlatformError(
+      `it has none of ${probed.join(", ")}, so openstrap has nothing to read its platform from`,
+    );
   }
 
-  /** For tests and for callers that already know what they are talking to. */
+  /** For tests, and for callers that already know what they are talking to. */
   static of(name: string, architecture: string): TargetPlatform {
     return new TargetPlatform(name, architecture);
   }
@@ -92,35 +63,11 @@ export class TargetPlatform {
     return `${this.name}-${this.architecture}`;
   }
 
-  /**
-   * `e_machine` sits at offset 18, in the endianness the file declares at offset
-   * 5. Both are read rather than assumed, because an arm64 host is perfectly
-   * capable of reaching an x86 target.
-   */
-  private static elfArchitecture(header: Buffer): string {
-    const littleEndian = header.readUInt8(5) === 1;
-    const machine = littleEndian ? header.readUInt16LE(18) : header.readUInt16BE(18);
-    const architecture = elfMachines[machine];
-
-    if (architecture === undefined) {
-      throw new UnreadableTargetPlatformError(`ELF machine 0x${machine.toString(16)} is not one openstrap builds for`);
+  private static reading(path: string, header: { platform: string; architecture: string | undefined }): TargetPlatform {
+    if (header.architecture === undefined) {
+      throw new UnreadableTargetPlatformError(`${path} is built for a machine openstrap has no build for`);
     }
 
-    return architecture;
-  }
-
-  /**
-   * `cputype` sits at offset 4 of a Mach-O header, and at offset 8 of a universal
-   * binary's first architecture entry.
-   */
-  private static machOArchitecture(header: Buffer, magic: number): string {
-    const cpuType = magic === machOUniversal ? header.readUInt32BE(8) : header.readUInt32LE(4);
-    const architecture = machOCpuTypes[cpuType];
-
-    if (architecture === undefined) {
-      throw new UnreadableTargetPlatformError(`Mach-O cputype 0x${cpuType.toString(16)} is not one openstrap builds for`);
-    }
-
-    return architecture;
+    return new TargetPlatform(header.platform, header.architecture);
   }
 }
