@@ -38,8 +38,12 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
 
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
     const snapshot = args.target === "host"
-      ? await this.thisMachine(args, context)
-      : await this.machine(args.target, context);
+      ? await Facts.collect(args.order ?? {
+        target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
+        declare: everySection,
+        now: context.now,
+      })
+      : await this.read(args.target, context);
 
     return {
       result: snapshot,
@@ -49,23 +53,18 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     };
   }
 
-  /** The machine openstrap is running on, read in this process. */
-  private thisMachine(args: FactsCollectArgs, context: CommandContext): Promise<FactSnapshot> {
-    return Facts.collect(args.order ?? {
-      target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
-      declare: everySection,
-      now: context.now,
-    });
-  }
-
   /**
    * A machine openstrap created, read by openstrap on it.
    *
+   * Everything here is about getting there and back: finding the machine, opening the channel,
+   * closing it, and putting away the store it was found in. What is collected once openstrap is
+   * there is the same as anywhere else.
+   *
    * The channel is recorded as the connection reports it, because that is a fact about this reading
-   * that the machine itself cannot answer, and it is what a requirement about the channel is checked
+   * which the machine itself cannot answer, and it is what a requirement about the channel is checked
    * against.
    */
-  private async machine(target: string, context: CommandContext): Promise<FactSnapshot> {
+  private async read(target: string, context: CommandContext): Promise<FactSnapshot> {
     const runtime = await context.runtime();
     const store = new SqliteStateStore(this.stateHome.database());
 
@@ -75,11 +74,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
 
       try {
         return await new RemoteOpenStrap(connection.transport).collect({
-          target: {
-            name: target,
-            scope: recorded?.scope ?? "machine",
-            type: recorded?.type ?? "vm",
-          },
+          target: { name: target, scope: recorded?.scope ?? "machine", type: recorded?.type ?? "vm" },
           declare: everySection,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
           now: context.now,
