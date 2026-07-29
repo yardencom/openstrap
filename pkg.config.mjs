@@ -2,8 +2,14 @@ import { createHash } from "node:crypto";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-/** pkg's word for a platform, against the platform's own. */
-const platforms = { macos: "darwin", linuxstatic: "linux", win: "windows" };
+/**
+ * pkg's word for a platform, against openstrap's.
+ *
+ * `linuxstatic` is a build flavour of pkg's; `linux` is what openstrap reads out of a target's
+ * `/bin/sh` and what it calls the platform everywhere else. `macos` needs no translation: openstrap
+ * says `macos` too, and `darwin` — which is Node's word — would be a third name for one thing.
+ */
+const platforms = { linuxstatic: "linux", win: "windows" };
 
 /**
  * How openstrap is packaged.

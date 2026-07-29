@@ -35,7 +35,8 @@ const machOCpuTypes: Record<number, string> = {
  * can do without running anything.
  *
  * This is not a fact about the target and never reaches a snapshot. It is how
- * openstrap decides which binary to send.
+ * openstrap decides which binary to send, so the names here are the names the
+ * builds carry: `linux-arm64`, `macos-arm64`.
  */
 export class TargetPlatform {
   private constructor(
