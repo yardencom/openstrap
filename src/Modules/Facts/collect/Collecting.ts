@@ -41,22 +41,22 @@ export class Collecting {
       ...scalars,
       packages: {
         ...scalars.packages,
-        installed: this.packages.packages(this.wanted(declaration, "packages") ? declaration.packages ?? {} : {}),
+        installed: this.packages.packages(this.asked(declaration, "packages") ? declaration.packages ?? {} : {}),
       },
-      users: this.accounts.accounts(this.wanted(declaration, "users") ? declaration.users ?? {} : {}),
-      groups: this.wanted(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
-      processes: this.wanted(declaration, "processes")
+      users: this.accounts.accounts(this.asked(declaration, "users") ? declaration.users ?? {} : {}),
+      groups: this.asked(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
+      processes: this.asked(declaration, "processes")
         ? await this.processes.processes(declaration.processes ?? {})
         : {},
-      services: this.wanted(declaration, "services")
+      services: this.asked(declaration, "services")
         ? await this.services.services(declaration.services ?? {})
         : {},
-      tools: this.wanted(declaration, "tools") ? tools : {},
+      tools: this.asked(declaration, "tools") ? tools : {},
       runtimes: this.tools.runtimes(tools),
-      paths: this.wanted(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
-      artifacts: this.wanted(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
-      commands: this.wanted(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
-      env: this.wanted(declaration, "env") ? this.commands.env(declaration.env ?? {}) : {},
+      paths: this.asked(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
+      artifacts: this.asked(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
+      commands: this.asked(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
+      env: this.asked(declaration, "env") ? this.commands.env(declaration.env ?? {}) : {},
       transports: this.transports(request.channel),
     };
   }
@@ -94,7 +94,7 @@ export class Collecting {
    * it once means the two sections cannot disagree.
    */
   private async readTools(declaration: FactDeclaration): Promise<Record<string, ToolFact>> {
-    if (!this.wanted(declaration, "tools") && !this.requested(declaration, "runtimes")) {
+    if (!this.asked(declaration, "tools") && !this.asked(declaration, "runtimes")) {
       return {};
     }
 
@@ -102,22 +102,21 @@ export class Collecting {
   }
 
   /**
-   * Whether a section was asked for.
+   * Whether a caller asked about a section.
    *
-   * Naming something in a section is itself a request for it — a caller that declares a process
-   * should not also have to list `processes`.
+   * Three ways of asking, and they are one question. Naming something in the section asks for it — a
+   * caller that declares a process should not also have to list `processes`. Listing the section by
+   * name asks for it. And naming no sections at all asks for every one of them, because a caller that
+   * has not said what it cares about is worse served by a missing fact than by an extra one.
+   *
+   * `runtimes` can only be asked for the last two ways: nothing can be named in it, because runtimes
+   * are what the tools turned out to be rather than something to look up.
    */
-  private wanted(declaration: FactDeclaration, section: DeclaredSection): boolean {
-    return Object.keys(declaration[section] ?? {}).length > 0 || this.requested(declaration, section);
-  }
+  private asked(declaration: FactDeclaration, section: DeclaredSection | "runtimes"): boolean {
+    const named = section === "runtimes" ? undefined : declaration[section];
 
-  /**
-   * Whether a caller listed a section by name.
-   *
-   * A caller that names no sections at all gets everything, because it has not said what it cares
-   * about and the cheapest wrong answer is a missing fact.
-   */
-  private requested(declaration: FactDeclaration, section: string): boolean {
-    return declaration.sections === undefined || declaration.sections.includes(section);
+    return Object.keys(named ?? {}).length > 0
+      || declaration.sections === undefined
+      || declaration.sections.includes(section);
   }
 }
