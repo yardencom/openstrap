@@ -9,6 +9,17 @@ import { describe, expect, it } from "vitest";
  * chose between its implementations, and they import the contract.
  */
 describe("CLI imports", () => {
+  it("keeps one class to a file", () => {
+    // A file with two classes in it cannot be named after what it holds, and the second one is
+    // always found by opening the first. Error classes are classes.
+    const crowded = sourceFiles(join(process.cwd(), "src"))
+      .filter((file) => !file.includes(".test."))
+      .filter((file) => [...readFileSync(file, "utf8").matchAll(/^(?:export )?(?:abstract )?class /gm)].length > 1)
+      .map((file) => file.slice(file.indexOf("/src/") + 1));
+
+    expect(crowded).toEqual([]);
+  });
+
   it("has no cycles", () => {
     const graph = importGraph(join(process.cwd(), "src"));
 

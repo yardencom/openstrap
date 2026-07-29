@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -61,15 +61,31 @@ describe("Facts public API", () => {
     expect(Object.isFrozen(facts.os)).toBe(true);
   });
 
-  it("exports the two classes it makes, and otherwise only types", () => {
+  it("is one class in a file, and the file is named after it", () => {
     const exported = [...source.matchAll(/^export\s+(class|type|function|const|let|var|interface|enum)\s+([A-Za-z0-9_]+)/gm)]
       .map((match) => ({ kind: match[1], name: match[2] }));
 
-    // Two: the facts, and the snapshot that names a collection of them. Both are made here and
-    // neither can be made anywhere else.
     expect(exported.filter((entry) => !["type", "interface"].includes(entry.kind!)))
-      .toEqual([{ kind: "class", name: "Facts" }, { kind: "class", name: "FactSnapshot" }]);
+      .toEqual([{ kind: "class", name: "Facts" }]);
     // Nothing is re-exported as a value: the other names a caller spells are types.
     expect(source.split("\n").filter((line) => /^export\s+\{/.test(line))).toEqual([]);
   });
+
+  it("keeps one class to a file across the module", () => {
+    const files = sourcesIn(join(process.cwd(), "src/Modules/Facts"))
+      .filter((path) => !path.includes(".test."));
+    const crowded = files.filter((path) =>
+      [...readFileSync(path, "utf8").matchAll(/^(?:export )?(?:abstract )?class /gm)].length > 1,
+    );
+
+    expect(crowded).toEqual([]);
+  });
 });
+
+function sourcesIn(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+
+    return statSync(path).isDirectory() ? sourcesIn(path) : path.endsWith(".ts") ? [path] : [];
+  });
+}

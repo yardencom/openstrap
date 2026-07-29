@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { FileSystemAPI } from "../Transport/index.js";
-import { TargetPlatform, UnreadableTargetPlatformError } from "./TargetPlatform.js";
+import { TargetPlatform } from "./TargetPlatform.js";
+import { UnreadableTargetPlatformError } from "./UnreadableTargetPlatformError.js";
 
 describe("TargetPlatform", () => {
   it("reads linux and its architecture out of an ELF header", async () => {

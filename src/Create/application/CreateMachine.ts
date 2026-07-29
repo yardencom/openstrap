@@ -1,3 +1,4 @@
+import { ProviderUnavailableError } from "./ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineHandle, Provider, ProviderAvailability } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";
@@ -39,14 +40,6 @@ export type CreateMachineResult = {
   created: boolean;
 };
 
-export class ProviderUnavailableError extends Error {
-  constructor(providerId: string, availability: ProviderAvailability) {
-    const install = availability.install ? `\n\n${availability.install.description}\n  ${availability.install.command}` : "";
-
-    super(`Provider "${providerId}" is not available: ${availability.reason ?? "unknown reason"}${install}`);
-    this.name = "ProviderUnavailableError";
-  }
-}
 
 const sizes: Record<string, { cpuCores: number; memoryBytes: number; diskBytes: number }> = {
   small: { cpuCores: 1, memoryBytes: 1024 * 1024 * 1024, diskBytes: 10 * 1024 * 1024 * 1024 },

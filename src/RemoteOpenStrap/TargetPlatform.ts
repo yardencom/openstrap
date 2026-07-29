@@ -1,3 +1,4 @@
+import { UnreadableTargetPlatformError } from "./UnreadableTargetPlatformError.js";
 import type { FileSystemAPI } from "../Transport/index.js";
 
 /** An executable every POSIX machine has, read for the header it carries. */
@@ -23,12 +24,6 @@ const machOCpuTypes: Record<number, string> = {
   0x00000007: "x86",
 };
 
-export class UnreadableTargetPlatformError extends Error {
-  constructor(detail: string) {
-    super(`openstrap could not tell what kind of machine the target is: ${detail}`);
-    this.name = "UnreadableTargetPlatformError";
-  }
-}
 
 /**
  * Which machine is on the other end of a transport.

@@ -4,7 +4,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ConfigNotFoundError, type ConfigLoadRequest } from "../index.js";
+import { type ConfigLoadRequest } from "../index.js";
+import { ConfigNotFoundError } from "../domain/ConfigNotFoundError.js";
 import { exampleConfigCore, exampleDefinition } from "./config-core-test-fixtures.js";
 
 describe("ConfigCore loading", () => {

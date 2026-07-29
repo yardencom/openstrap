@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  ConfigCore,
-  ConfigValidationError,
-} from "../index.js";
+import { ConfigCore } from "../index.js";
+import { ConfigValidationError } from "../domain/ConfigValidationError.js";
 import { exampleConfigCore, exampleDefinition } from "./config-core-test-fixtures.js";
 
 describe("ConfigCore schema validation", () => {

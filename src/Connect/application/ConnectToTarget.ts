@@ -1,20 +1,10 @@
+import { MachineNotRunningError } from "./MachineNotRunningError.js";
+import { UnknownMachineError } from "./UnknownMachineError.js";
 import type { MachineAccess, OpenStrapRuntime } from "../../Plugin/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
-export class UnknownMachineError extends Error {
-  constructor(target: string) {
-    super(`openstrap has no record of a machine for target "${target}". Create it first with: openstrap create vm ${target}`);
-    this.name = "UnknownMachineError";
-  }
-}
 
-export class MachineNotRunningError extends Error {
-  constructor(target: string, status: string) {
-    super(`Machine "${target}" is ${status}. Start it before connecting.`);
-    this.name = "MachineNotRunningError";
-  }
-}
 
 export type ConnectRequest = {
   target: string;

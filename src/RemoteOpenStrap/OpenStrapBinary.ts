@@ -1,3 +1,4 @@
+import { MissingBinaryError } from "./MissingBinaryError.js";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,15 +38,6 @@ function openStrapDirectory(): string {
   return url === undefined ? dirname(process.execPath) : resolve(dirname(fileURLToPath(url)), "../..");
 }
 
-export class MissingBinaryError extends Error {
-  constructor(platform: string, path: string) {
-    super(
-      `openstrap has no build of itself for ${platform}. Expected it at ${path}. ` +
-      "Build them with `npm run remote:build`.",
-    );
-    this.name = "MissingBinaryError";
-  }
-}
 
 /**
  * openstrap itself, built for a machine openstrap is not running on.

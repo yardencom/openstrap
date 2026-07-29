@@ -1,4 +1,4 @@
-import { ConfigValidationError } from "../../domain/ConfigErrors.js";
+import { ConfigValidationError } from "../../domain/ConfigValidationError.js";
 import type { ConfigDefinition } from "../../domain/ConfigDefinition.js";
 import type { LoadedConfig } from "../../ports/ConfigLoaderBackend.js";
 import type { ValidatedConfig } from "../../ports/ConfigValidatorBackend.js";

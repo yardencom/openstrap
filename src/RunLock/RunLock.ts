@@ -1,18 +1,9 @@
+import type { RunLockHolder } from "./RunLockHolder.js";
+import { RunLockedError } from "./RunLockedError.js";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export class RunLockedError extends Error {
-  constructor(readonly holder: RunLockHolder) {
-    super(`Already running: ${holder.operation} started at ${holder.startedAt} by process ${holder.pid}`);
-    this.name = "RunLockedError";
-  }
-}
 
-export type RunLockHolder = {
-  pid: number;
-  operation: string;
-  startedAt: string;
-};
 
 export type RunLockOptions = {
   /** Decides whether the process that took the lock is still alive. */

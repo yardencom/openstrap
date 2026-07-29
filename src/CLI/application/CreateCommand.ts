@@ -1,3 +1,5 @@
+import { MissingProviderError } from "./MissingProviderError.js";
+import { UnknownTargetError } from "./UnknownTargetError.js";
 import { join } from "node:path";
 
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
@@ -10,19 +12,7 @@ import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-export class UnknownTargetError extends Error {
-  constructor(name: string, declared: readonly string[]) {
-    super(`Target "${name}" is not declared in the blueprint. Declared targets: ${declared.join(", ")}`);
-    this.name = "UnknownTargetError";
-  }
-}
 
-export class MissingProviderError extends Error {
-  constructor(name: string) {
-    super(`Target "${name}" declares no provider, so there is nothing to create it with`);
-    this.name = "MissingProviderError";
-  }
-}
 
 /**
  * What creating a target produced.

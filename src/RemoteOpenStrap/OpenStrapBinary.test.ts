@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { BinaryFileWriteOptions, FileSystemAPI } from "../Transport/index.js";
-import { OpenStrapBinary, MissingBinaryError } from "./OpenStrapBinary.js";
+import { OpenStrapBinary } from "./OpenStrapBinary.js";
+import { MissingBinaryError } from "./MissingBinaryError.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 
 const platform = TargetPlatform.of("linux", "arm64");

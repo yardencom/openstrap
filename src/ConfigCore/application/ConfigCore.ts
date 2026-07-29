@@ -1,4 +1,4 @@
-import { ConfigNotFoundError } from "../domain/ConfigErrors.js";
+import { ConfigNotFoundError } from "../domain/ConfigNotFoundError.js";
 import type { ConfigDefinition } from "../domain/ConfigDefinition.js";
 import type { ConfigLoadRequest } from "../ports/ConfigLoaderBackend.js";
 import type { ConfigSchemaBackend } from "../ports/ConfigSchemaBackend.js";

@@ -1,14 +1,9 @@
+import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
 import type { Transport } from "../Transport/index.js";
 import { Facts, type FactOrder, type FactSnapshot } from "../Modules/Facts/Facts.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 
-export class RemoteOpenStrapError extends Error {
-  constructor(detail: string) {
-    super(`openstrap on the target did not answer: ${detail}`);
-    this.name = "RemoteOpenStrapError";
-  }
-}
 
 /**
  * openstrap on a machine openstrap is not running on.

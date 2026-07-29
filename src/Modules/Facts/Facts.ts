@@ -1,30 +1,18 @@
-import type { FactChannel, FactOrder } from "./domain/FactOrder.js";
-import type { FactDeclaration } from "./domain/FactDeclaration.js";
-import type { FactTarget } from "./domain/FactTarget.js";
+import type { FactOrder } from "./domain/FactOrder.js";
+import type { FactSections } from "./domain/FactModel.js";
+import type { FactsStatus } from "./domain/FactStatus.js";
+import { Collecting } from "./collect/Collecting.js";
+import { FactSnapshot, schemaVersion } from "./FactSnapshot.js";
 import { Moment } from "./domain/Moment.js";
-import { SnapshotId } from "./domain/SnapshotId.js";
-import type { FactSections, ToolFact, TransportFact } from "./domain/FactModel.js";
-import { AccountFacts } from "./collect/accounts/AccountFacts.js";
-import { CommandFacts } from "./collect/commands/CommandFacts.js";
-import { PackageFacts } from "./collect/packages/PackageFacts.js";
-import { PathFacts } from "./collect/paths/PathFacts.js";
-import { Platform } from "./collect/platform/Platform.js";
-import { ProcessFacts } from "./collect/processes/ProcessFacts.js";
-import { ServiceFacts } from "./collect/services/ServiceFacts.js";
-import { SystemFacts } from "./collect/system/SystemFacts.js";
-import { ToolFacts } from "./collect/tools/ToolFacts.js";
 
 /** What a caller has to name to ask for facts. */
 export type { FactOrder, FactChannel } from "./domain/FactOrder.js";
 export type { FactTarget } from "./domain/FactTarget.js";
 export type { FactDeclaration } from "./domain/FactDeclaration.js";
 export type { FactSections } from "./domain/FactModel.js";
+export type { FactsStatus } from "./domain/FactStatus.js";
+export type { FactSnapshot } from "./FactSnapshot.js";
 
-/** A section a caller can name things in. */
-type DeclaredSection = Exclude<keyof FactDeclaration, "sections">;
-
-/** Whether the collecting got everything it was asked for. */
-export type FactsStatus = "success" | "warning" | "error";
 
 /**
  * The facts about the machine this is running on.
@@ -128,114 +116,6 @@ export class Facts {
   }
 }
 
-/**
- * One reading of a machine, section by section.
- *
- * Apart from the facts themselves because collecting is work and facts are an answer: this holds the
- * collectors and the decisions about what was asked for, and stops existing the moment it has
- * produced a set of sections.
- */
-class Collecting {
-  private readonly platform = Platform.current();
-  private readonly system = new SystemFacts(this.platform);
-  private readonly accounts = new AccountFacts(this.platform);
-  private readonly processes = new ProcessFacts(this.platform);
-  private readonly services = new ServiceFacts(this.platform);
-  private readonly tools = new ToolFacts(this.platform);
-  private readonly packages = new PackageFacts();
-  private readonly paths = new PathFacts(this.platform);
-  private readonly commands = new CommandFacts(this.platform);
-
-  async read(request: FactOrder): Promise<FactSections> {
-    const declaration = request.declare ?? {};
-    const scalars = await this.system.read();
-    const tools = await this.readTools(declaration);
-
-    return {
-      ...scalars,
-      packages: {
-        ...scalars.packages,
-        installed: this.packages.packages(this.wanted(declaration, "packages") ? declaration.packages ?? {} : {}),
-      },
-      users: this.accounts.accounts(this.wanted(declaration, "users") ? declaration.users ?? {} : {}),
-      groups: this.wanted(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
-      processes: this.wanted(declaration, "processes")
-        ? await this.processes.processes(declaration.processes ?? {})
-        : {},
-      services: this.wanted(declaration, "services")
-        ? await this.services.services(declaration.services ?? {})
-        : {},
-      tools: this.wanted(declaration, "tools") ? tools : {},
-      runtimes: this.tools.runtimes(tools),
-      paths: this.wanted(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
-      artifacts: this.wanted(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
-      commands: this.wanted(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
-      env: this.wanted(declaration, "env") ? this.commands.env(declaration.env ?? {}) : {},
-      transports: this.transports(request.channel),
-    };
-  }
-
-  /**
-   * The `transports` section: the channel these facts were read through, when there was one.
-   *
-   * Nothing on a machine can answer this — a machine does not know how anyone got in — so it is
-   * recorded only when whoever opened the channel says so. It matters because a requirement can be
-   * written about the channel itself.
-   *
-   * Nothing is invented. openstrap reading the machine it is on opened nothing, so it names nothing;
-   * a `local` transport written in anyway was an invention, and a requirement about a `local`
-   * transport was passing against exactly that.
-   */
-  private transports(channel: FactChannel | undefined): Record<string, TransportFact> {
-    if (channel === undefined) {
-      return {};
-    }
-
-    return {
-      [channel.type]: {
-        status: "present",
-        type: channel.type,
-        ready: true,
-        authMethods: channel.authMethods === undefined ? undefined : [...channel.authMethods],
-      },
-    };
-  }
-
-  /**
-   * Tools, read once for two sections.
-   *
-   * Runtimes are tools seen from the other side, so asking for either asks for the same lookup. Doing
-   * it once means the two sections cannot disagree.
-   */
-  private async readTools(declaration: FactDeclaration): Promise<Record<string, ToolFact>> {
-    if (!this.wanted(declaration, "tools") && !this.requested(declaration, "runtimes")) {
-      return {};
-    }
-
-    return this.tools.tools(declaration.tools ?? {});
-  }
-
-  /**
-   * Whether a section was asked for.
-   *
-   * Naming something in a section is itself a request for it — a caller that declares a process
-   * should not also have to list `processes`.
-   */
-  private wanted(declaration: FactDeclaration, section: DeclaredSection): boolean {
-    return Object.keys(declaration[section] ?? {}).length > 0 || this.requested(declaration, section);
-  }
-
-  /**
-   * Whether a caller listed a section by name.
-   *
-   * A caller that names no sections at all gets everything, because it has not said what it cares
-   * about and the cheapest wrong answer is a missing fact.
-   */
-  private requested(declaration: FactDeclaration, section: string): boolean {
-    return declaration.sections === undefined || declaration.sections.includes(section);
-  }
-}
-
 function statusOf(value: unknown): FactsStatus {
   if (!value || typeof value !== "object") {
     return "success";
@@ -259,71 +139,6 @@ function freeze(value: unknown): void {
     freeze(property);
   }
 }
-
-/** Which shape of snapshot this is. Every reader compares against it before trusting one. */
-const schemaVersion = "facts.v1";
-
-/**
- * How the snapshot came to be: when it was taken, and whether the taking went cleanly.
- *
- * One moment and not a pair. A start and a finish look like an interval, but no interval is kept
- * anywhere: the finish was `takenAt` and the start only spelled out the snapshot's own name a second
- * time. How long collecting took is nobody's question yet, and if it becomes one it is a duration and
- * not two stamps to subtract.
- */
-export type SnapshotReading = {
-  takenAt: Moment;
-  status: FactsStatus;
-};
-
-/**
- * A machine as it was read, once.
- *
- * Facts on their own are not something anyone can act on: two collections of the same machine look
- * alike, nothing says which shape they are in, and nothing says which machine anyone was asking
- * about. This is what makes them usable —
- *
- * - an identity, so it can be stored, referred to by a requirement result and named in a report;
- * - the schema it claims, so a reader can tell whether it understands the shape before trusting it;
- * - when it was taken, and how the taking went;
- * - which machine it is about, under the name the caller knows it by.
- *
- * Each of those is a type of its own rather than a string: an id knows how it is spelled, a moment
- * knows both of its spellings, and the facts know whether they are complete. What is left here is the
- * putting together, and then it is frozen — everything downstream reads it as it was taken.
- *
- * A constructor rather than a method, because nothing here waits: the machine has already answered
- * and this only turns the answer into something that can be trusted.
- */
-export class FactSnapshot {
-  readonly id: SnapshotId;
-  readonly schemaVersion = schemaVersion;
-  readonly scope: string;
-  readonly target: { type: string; id: string; displayName?: string };
-  readonly facts: Facts;
-  readonly reading: SnapshotReading;
-
-  /**
-   * @param takenAt When the machine was read. Given rather than read from the clock here, because
-   * what waited for the collection knows when it came back, and a constructor that stamped itself
-   * would be dating the paperwork instead. It also names the snapshot, so the name and the time can
-   * never disagree. The outcome is not given, because the facts answer it and nobody should be able
-   * to disagree with them.
-   */
-  constructor(target: FactTarget, facts: Facts, takenAt: Moment) {
-    this.id = SnapshotId.for(target.name, takenAt);
-    this.scope = target.scope;
-    this.target = { type: target.type, id: target.name, displayName: target.displayName };
-    this.facts = facts;
-    this.reading = { takenAt, status: facts.status() };
-
-    Object.freeze(this.target);
-    Object.freeze(this.reading);
-    Object.freeze(this);
-  }
-
-}
-
 /**
  * What openstrap printed, checked far enough to be worth rebuilding.
  *
@@ -370,3 +185,4 @@ function shapeOf(output: unknown): {
     facts: printed.facts as FactSections,
   };
 }
+

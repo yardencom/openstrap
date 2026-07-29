@@ -1,13 +1,8 @@
+import { UnsupportedPlatformError } from "./UnsupportedPlatformError.js";
 import { arch, platform } from "node:os";
 
 export type PlatformName = "linux" | "macos" | "windows";
 
-export class UnsupportedPlatformError extends Error {
-  constructor(reported: string) {
-    super(`openstrap does not know how to read facts from "${reported}"`);
-    this.name = "UnsupportedPlatformError";
-  }
-}
 
 /**
  * The machine a reading is running on.
