@@ -92,12 +92,12 @@ describe("reading a machine", () => {
   it("reads the machine it is running on when given no transport", async () => {
     const snapshot = await snapshotOfThisMachine({ sections: ["os", "arch", "cpu", "memory"] });
 
-    expect(snapshot.facts.os.family).toBe(process.platform === "darwin" ? "macos" : process.platform);
-    expect(snapshot.facts.os.name).not.toBe("");
-    expect(snapshot.facts.os.version).not.toBe("");
+    expect(snapshot.facts.os!.family).toBe(process.platform === "darwin" ? "macos" : process.platform);
+    expect(snapshot.facts.os!.name).not.toBe("");
+    expect(snapshot.facts.os!.version).not.toBe("");
     expect(snapshot.facts.arch).toBe(process.arch);
-    expect(snapshot.facts.cpu.cores).toBeGreaterThan(0);
-    expect(snapshot.facts.memory.totalBytes).toBeGreaterThan(0);
+    expect(snapshot.facts.cpu!.cores).toBeGreaterThan(0);
+    expect(snapshot.facts.memory!.totalBytes).toBeGreaterThan(0);
   });
 
   it("does not read a section nobody asked about", async () => {
@@ -112,7 +112,7 @@ describe("reading a machine", () => {
 
     // "Tell me about this machine": every section that answers without being told a name does, and
     // the ones that need names stay empty rather than inventing entries.
-    expect(snapshot.facts.os.name).not.toBe("");
+    expect(snapshot.facts.os!.name).not.toBe("");
     expect(Object.keys(snapshot.facts.processes).length).toBeGreaterThan(0);
     expect(snapshot.facts.commands).toEqual({});
   });
@@ -123,7 +123,7 @@ describe("reading a machine", () => {
     const failed = await snapshotOfThisMachine({ users: { superuser: { name: "root", uid: 1234 } } });
 
     expect(clean.reading.status).toBe("success");
-    expect(failed.facts.users.superuser!.status).toBe("error");
+    expect(failed.facts.users!.superuser!.status).toBe("error");
     expect(failed.reading.status).toBe("warning");
   });
 

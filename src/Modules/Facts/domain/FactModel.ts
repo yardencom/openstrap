@@ -23,8 +23,16 @@ export type Display = Record<string, string>;
  * maps keyed by that name, never lists: "is `sshd` running" is a question only
  * a map can answer.
  */
+/**
+ * Everything a machine can be asked about.
+ *
+ * Every section is optional, because a section nobody asked about is not collected and a snapshot
+ * says what was read rather than what could have been. A reader that needs one says so in what it
+ * declares, and a requirement written about a section it did not declare finds it missing — which is
+ * the truth, and better than a fact nobody asked for.
+ */
 export type FactSections = {
-  os: {
+  os?: {
     family: string;
     name: string;
     version: string;
@@ -33,8 +41,8 @@ export type FactSections = {
     edition?: string;
     display?: Display;
   };
-  arch: string;
-  cpu: {
+  arch?: string;
+  cpu?: {
     cores: number;
     threads?: number;
     model?: string;
@@ -43,7 +51,7 @@ export type FactSections = {
     load?: number[];
     display?: Display;
   };
-  memory: {
+  memory?: {
     totalBytes: number;
     availableBytes?: number;
     swapTotalBytes?: number;
@@ -51,7 +59,7 @@ export type FactSections = {
     pressure?: string;
     display?: Display;
   };
-  storage: {
+  storage?: {
     disks?: Record<string, unknown>;
     filesystems?: Record<string, unknown>;
     mounts: Record<string, unknown>;
@@ -66,7 +74,7 @@ export type FactSections = {
     nested?: boolean;
     reason?: string;
   };
-  network: Network;
+  network?: Network;
   /**
    * The users the caller named, plus the account the reading ran as.
    *
@@ -77,11 +85,11 @@ export type FactSections = {
    */
   users: Record<string, UserFact>;
   groups: Record<string, GroupFact>;
-  packages: {
+  packages?: {
     managers: Record<string, Observed & Record<string, unknown>>;
     installed?: Record<string, PackageFact>;
   };
-  privileges: {
+  privileges?: {
     mode?: string;
     sudo?: Observed & Record<string, unknown>;
     become?: Observed & Record<string, unknown>;

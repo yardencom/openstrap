@@ -34,15 +34,21 @@ export class Collecting {
 
   async read(request: FactOrder): Promise<FactSections> {
     const declaration = request.declare ?? {};
-    const scalars = await this.system.read();
+    const scalars = await this.system.read((section) => this.asked(declaration, section as DeclaredSection));
     const tools = await this.readTools(declaration);
 
     return {
       ...scalars,
       // Nothing declared is nothing to answer: every section below is made of the names it was
       // given, so an empty declaration produces an empty section without being asked about first.
-      packages: { ...scalars.packages, installed: this.packages.packages(declaration.packages ?? {}) },
-      users: this.accounts.accounts(declaration.users ?? {}),
+      // The managers are read when the section was asked about, and naming a package is one of the
+      // ways of asking, so the two halves of this section are there together or not at all.
+      ...(scalars.packages === undefined ? {} : {
+        packages: { ...scalars.packages, installed: this.packages.packages(declaration.packages ?? {}) },
+      }),
+      // Asked about, because this one answers without being given a name too: the account the
+      // reading ran as is always in it, which is how a snapshot says who took it.
+      users: this.asked(declaration, "users") ? this.accounts.accounts(declaration.users ?? {}) : {},
       groups: this.accounts.members(declaration.groups ?? {}),
       services: await this.services.services(declaration.services ?? {}),
       paths: this.paths.paths(declaration.paths ?? {}),

@@ -8,6 +8,12 @@ import which from "which";
 import type { FactSections, Network, NetworkInterface, PortFact } from "../../domain/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
+/** The sections read here: everything a machine answers with one value each. */
+type Sections = Pick<
+  FactSections,
+  "os" | "arch" | "cpu" | "memory" | "storage" | "virtualization" | "network" | "packages" | "privileges"
+>;
+
 /** A package manager is recognised by the executable that drives it. */
 const packageManagers: readonly { name: string; executable: string }[] = [
   { name: "apt", executable: "apt-get" },
@@ -23,9 +29,10 @@ const packageManagers: readonly { name: string; executable: string }[] = [
 /**
  * The sections a machine answers with one value each.
  *
- * Nobody asks "is `cpu` present", so unlike the named sections these are read
- * whole and always: they are what a requirement compares against — how much
- * memory there is, which architecture this is, who is running.
+ * Nobody asks "is `cpu` present" — unlike the named sections, each of these is read whole or not at
+ * all, and which ones are read is the caller's to say. Reading them is not free: the network alone
+ * costs more than everything else here put together, and asking `sudo` whether it needs a password
+ * means running it.
  *
  * Every value comes from an API. Nothing here parses the output of a program,
  * with one stated exception: whether `sudo` works without a password cannot be
@@ -34,40 +41,50 @@ const packageManagers: readonly { name: string; executable: string }[] = [
 export class SystemFacts {
   constructor(private readonly platform: Platform) {}
 
-  async read(): Promise<Omit<FactSections, "processes" | "services" | "transports" | "runtimes" | "paths" | "tools" | "env" | "commands" | "artifacts" | "users" | "groups">> {
+  /**
+   * @param asked Which of these sections the caller wants. Everything else is not read: the machine
+   * is not asked, and the section is absent from the snapshot rather than present and unwanted.
+   */
+  async read(asked: (section: string) => boolean): Promise<Sections> {
     const [operatingSystem, cpu, memory, filesystems, interfaces, connections] = await Promise.all([
-      si.osInfo(),
-      si.cpu(),
-      si.mem(),
-      si.fsSize(),
-      si.networkInterfaces(),
-      si.networkConnections(),
+      asked("os") ? si.osInfo() : undefined,
+      asked("cpu") ? si.cpu() : undefined,
+      asked("memory") ? si.mem() : undefined,
+      asked("storage") ? si.fsSize() : undefined,
+      asked("network") ? si.networkInterfaces() : undefined,
+      asked("network") ? si.networkConnections() : undefined,
     ]);
 
     return {
-      os: this.operatingSystem(operatingSystem),
-      arch: this.platform.architecture,
-      cpu: {
-        // Cores are packages of execution, threads are what the scheduler sees.
-        // A machine that reports no physical count answers with the logical one
-        // rather than with zero, which would read as a broken machine.
-        cores: cpu.physicalCores || cpu.cores,
-        threads: cpu.cores,
-        model: named(`${cpu.manufacturer} ${cpu.brand}`),
-        vendor: named(cpu.vendor) ?? named(cpu.manufacturer),
-        load: loadavg(),
-      },
-      memory: {
-        totalBytes: memory.total,
-        availableBytes: memory.available,
-        swapTotalBytes: memory.swaptotal,
-        swapUsedBytes: memory.swapused,
-      },
-      storage: this.storage(filesystems),
-      virtualization: this.virtualization(),
-      network: this.network(interfaces, connections),
-      packages: { managers: await this.packageManagers() },
-      privileges: this.privileges(),
+      ...(operatingSystem === undefined ? {} : { os: this.operatingSystem(operatingSystem) }),
+      ...(asked("arch") ? { arch: this.platform.architecture } : {}),
+      ...(cpu === undefined ? {} : {
+        cpu: {
+          // Cores are packages of execution, threads are what the scheduler sees.
+          // A machine that reports no physical count answers with the logical one
+          // rather than with zero, which would read as a broken machine.
+          cores: cpu.physicalCores || cpu.cores,
+          threads: cpu.cores,
+          model: named(`${cpu.manufacturer} ${cpu.brand}`),
+          vendor: named(cpu.vendor) ?? named(cpu.manufacturer),
+          load: loadavg(),
+        },
+      }),
+      ...(memory === undefined ? {} : {
+        memory: {
+          totalBytes: memory.total,
+          availableBytes: memory.available,
+          swapTotalBytes: memory.swaptotal,
+          swapUsedBytes: memory.swapused,
+        },
+      }),
+      ...(filesystems === undefined ? {} : { storage: this.storage(filesystems) }),
+      ...(asked("virtualization") ? { virtualization: this.virtualization() } : {}),
+      ...(interfaces === undefined || connections === undefined
+        ? {}
+        : { network: this.network(interfaces, connections) }),
+      ...(asked("packages") ? { packages: { managers: await this.packageManagers() } } : {}),
+      ...(asked("privileges") ? { privileges: this.privileges() } : {}),
     };
   }
 
@@ -271,7 +288,7 @@ export class SystemFacts {
    * A manager is present when its driving executable resolves on PATH — that is
    * what "this machine has apt" means to anyone about to install something.
    */
-  private async packageManagers(): Promise<FactSections["packages"]["managers"]> {
+  private async packageManagers(): Promise<NonNullable<FactSections["packages"]>["managers"]> {
     const found = await Promise.all(packageManagers.map(async (manager) => {
       const path = await which(manager.executable, { nothrow: true });
 
