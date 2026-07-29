@@ -58,9 +58,9 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
    * closing it, and putting away the store it was found in. What is collected once openstrap is
    * there is the same as anywhere else.
    *
-   * The channel goes in as the connection reports it. A machine cannot say how anyone reached it, and
-   * `key-only-login` — reached over ssh, by a key and nothing else — is a requirement about exactly
-   * that.
+   * The channel goes in as the connection reports it — which transport it was, and what it
+   * authenticated with. A machine cannot say how anyone reached it, so the only thing that knows is
+   * whatever opened the channel, and it is asked rather than guessed at from the blueprint.
    */
   private async read(target: string, context: CommandContext): Promise<FactSnapshot> {
     const runtime = await context.runtime();
