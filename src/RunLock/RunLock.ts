@@ -19,11 +19,15 @@ export type RunLockOptions = {
  * addon, which openstrap cannot have — native modules do not survive being packaged into one
  * executable (ADR 0001).
  *
- * `proper-lockfile` is the package everyone reaches for and does the same `mkdir` underneath. It is
- * not used for two reasons. It decides a lock is stale by how fresh the directory's mtime is, kept up
- * to date by a timer, where every lock openstrap takes is held by a process on this same machine — the
+ * Packages for this exist — `proper-lockfile`, `lockfile`, `@ster5/global-mutex` — and every one of
+ * them does the same `mkdir` or `open(…, "wx")` underneath, because there is nothing else to do it
+ * with. What they differ in is policy: how many times to retry, and when to call a lock stale. The two
+ * that offer a real `flock` are native addons, which rules them out.
+ *
+ * Their policy is not this one. They decide staleness by how fresh the lock's mtime is, kept up to
+ * date by a timer, where every lock openstrap takes is held by a process on this same machine — the
  * state home is not shared — so the honest question is whether that process is alive, and the kernel
- * answers it. And it does not record who holds the lock, so it could not say what is already running.
+ * answers it. And none of them records who holds the lock, so none could say what is already running.
  *
  * A lock left behind by a process that died is not a lock. It is reclaimed, otherwise a single crash
  * makes the subject unusable forever.
