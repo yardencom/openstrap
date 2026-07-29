@@ -1,5 +1,5 @@
 import type { Transport } from "../Transport/index.js";
-import type { FactOrder, FactSnapshot } from "../Modules/Facts/Facts.js";
+import { FactSnapshot, type FactOrder } from "../Modules/Facts/Facts.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 
@@ -48,11 +48,10 @@ export class RemoteOpenStrap {
   /**
    * What openstrap printed over there, which is one snapshot.
    *
-   * The schema it claims is checked and nothing else is: the snapshot was made by openstrap, and
-   * re-deriving what openstrap already decided would be a second opinion about the same reading.
-   * Anything unparseable is a failure rather than an empty reading — a machine that answered with
-   * noise has not been read, and reporting no facts would make that look like a machine with nothing
-   * on it.
+   * Read back into the types a snapshot is made of rather than cast into a lookalike of one: what
+   * came over the channel is text, and the snapshot knows how to be itself again. Anything
+   * unparseable is a failure rather than an empty reading — a machine that answered with noise has
+   * not been read, and reporting no facts would make that look like a machine with nothing on it.
    */
   private snapshotIn(output: string): FactSnapshot {
     let parsed: unknown;
@@ -63,19 +62,11 @@ export class RemoteOpenStrap {
       throw new RemoteOpenStrapError(`its answer was not JSON: ${output.slice(0, 200)}`);
     }
 
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new RemoteOpenStrapError("its answer was not a snapshot");
+    try {
+      return FactSnapshot.printed(parsed);
+    } catch (error) {
+      throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
     }
-
-    const snapshot = parsed as FactSnapshot;
-
-    if (snapshot.schemaVersion !== "facts.v1") {
-      throw new RemoteOpenStrapError(
-        `it answered with ${JSON.stringify(snapshot.schemaVersion)}, which this openstrap does not read`,
-      );
-    }
-
-    return snapshot;
   }
 }
 

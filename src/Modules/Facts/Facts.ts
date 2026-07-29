@@ -1,7 +1,9 @@
 import { FactSnapshot } from "./domain/FactSnapshot.js";
+import { MachineFacts } from "./domain/MachineFacts.js";
+import { Moment } from "./domain/Moment.js";
 import type { FactDeclaration } from "./domain/FactDeclaration.js";
 import type { FactOrder } from "./domain/FactOrder.js";
-import type { FactData, ToolFact, TransportFact } from "./domain/FactModel.js";
+import type { FactSections, ToolFact, TransportFact } from "./domain/FactModel.js";
 import { AccountFacts } from "./collect/accounts/AccountFacts.js";
 import { CommandFacts } from "./collect/commands/CommandFacts.js";
 import { PackageFacts } from "./collect/packages/PackageFacts.js";
@@ -21,9 +23,13 @@ import { ToolFacts } from "./collect/tools/ToolFacts.js";
 export type { FactOrder, FactChannel } from "./domain/FactOrder.js";
 export type { FactTarget } from "./domain/FactTarget.js";
 export type { FactDeclaration } from "./domain/FactDeclaration.js";
-// A type and not the class: a snapshot a caller assembled out of whatever it liked would be a
-// snapshot nothing else in openstrap is entitled to trust.
-export type { FactSnapshot } from "./domain/FactSnapshot.js";
+// The class, because a snapshot openstrap took on another machine comes back as text and has to be
+// read into these types again — `FactSnapshot.printed` is the one way in, and it checks that a
+// snapshot's name follows from its own contents rather than trusting whatever the text claimed.
+export { FactSnapshot } from "./domain/FactSnapshot.js";
+export type { MachineFacts } from "./domain/MachineFacts.js";
+export type { Moment } from "./domain/Moment.js";
+export type { SnapshotId } from "./domain/SnapshotId.js";
 
 /** A section a caller can name things in. */
 type DeclaredSection = Exclude<keyof FactDeclaration, "sections">;
@@ -56,17 +62,17 @@ export class Facts {
 
   /** Reads this machine and returns one snapshot of it. */
   async collect(order: FactOrder): Promise<FactSnapshot> {
-    const data = await this.read(order.declare ?? {});
+    const sections = await this.read(order.declare ?? {});
 
     // The moment is taken here, because this is what waited for the machine to answer.
     return new FactSnapshot(
       order.target,
-      { ...data, transports: this.transports(order) },
-      order.now ?? new Date(),
+      new MachineFacts({ ...sections, transports: this.transports(order) }),
+      order.now === undefined ? Moment.now() : new Moment(order.now),
     );
   }
 
-  private async read(declaration: FactDeclaration): Promise<FactData> {
+  private async read(declaration: FactDeclaration): Promise<FactSections> {
     const scalars = await this.system.read();
     const tools = await this.readTools(declaration);
 

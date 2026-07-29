@@ -69,16 +69,16 @@ export class VerifyMachine {
 
 
       request.store.saveFactSnapshot({
-        id: snapshot.id,
+        id: String(snapshot.id),
         target: request.target.name,
         runId: request.runId,
         schemaVersion: snapshot.schemaVersion,
-        capturedAt: snapshot.reading.takenAt,
-        data: snapshot.data,
+        capturedAt: String(snapshot.reading.takenAt),
+        data: { ...snapshot.facts },
       });
 
       return {
-        snapshotId: snapshot.id,
+        snapshotId: String(snapshot.id),
         requirementRun: this.evaluator.evaluate({
           target: request.target,
           requirements: request.target.requirements,

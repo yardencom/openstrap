@@ -154,7 +154,7 @@ function snapshots() {
     {
       id: "snap_guest",
       target: { id: "guest" },
-      data: {
+      facts: {
         users: {
           openstrap: {
             status: "present",

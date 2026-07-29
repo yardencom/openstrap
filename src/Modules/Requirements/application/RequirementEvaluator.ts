@@ -27,9 +27,9 @@ type Observed = {
  * against and not on the module that produces it.
  */
 type FactSnapshot = {
-  id: string;
+  id: { toString(): string };
   target: { id: string };
-  data: unknown;
+  facts: unknown;
 };
 
 const requirementMetaFields = new Set(["id", "optional"]);
@@ -105,7 +105,7 @@ export class RequirementEvaluator {
 
     const checks = evaluateNode({
       expected: checkBlocks,
-      actual: snapshot.data,
+      actual: snapshot.facts,
       path: [],
       observedAncestor: undefined,
     });
@@ -113,7 +113,7 @@ export class RequirementEvaluator {
     return {
       requirementId: requirement.id,
       target: targetName,
-      snapshotId: snapshot.id,
+      snapshotId: String(snapshot.id),
       status: aggregateCheckNode(checks),
       checks,
     };

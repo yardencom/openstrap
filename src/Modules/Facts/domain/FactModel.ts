@@ -23,7 +23,7 @@ export type Display = Record<string, string>;
  * maps keyed by that name, never lists: "is `sshd` running" is a question only
  * a map can answer.
  */
-export type FactData = {
+export type FactSections = {
   os: {
     family: string;
     name: string;

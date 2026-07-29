@@ -70,7 +70,7 @@ targets:
 
     try {
       const output = await captureCli(["facts", "collect", "host", "--json"], directory);
-      const data = JSON.parse(output.stdout).data;
+      const data = JSON.parse(output.stdout).facts;
 
       expect(output.exitCode).toBe(0);
       expect(data.os.name).not.toBe("");
@@ -101,8 +101,8 @@ targets:
     expect(snapshot.target).toEqual({ id: "ubuntu-vm", type: "vm", displayName: undefined });
     expect(snapshot.id).toMatch(/^snap_ubuntu-vm_/);
     // The channel is recorded because the caller opened it, and nothing else is invented.
-    expect(snapshot.data.transports).toEqual({ ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } });
-    expect(snapshot.data.processes).toEqual({});
+    expect(snapshot.facts.transports).toEqual({ ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } });
+    expect(snapshot.facts.processes).toEqual({});
   });
 
   it("prints what it read", async () => {

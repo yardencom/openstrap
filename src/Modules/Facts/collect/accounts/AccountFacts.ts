@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { userInfo } from "node:os";
 
 import type { GroupDeclaration, UserDeclaration } from "../../domain/FactDeclaration.js";
-import type { FactData, GroupFact, UserFact } from "../../domain/FactModel.js";
+import type { FactSections, GroupFact, UserFact } from "../../domain/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 const passwdFile = "/etc/passwd";
@@ -56,7 +56,7 @@ export class AccountFacts {
    * read it cannot be compared with the next one: `/home/ada` being writable is a
    * different fact depending on who was asking.
    */
-  accounts(declared: Record<string, UserDeclaration>): FactData["users"] {
+  accounts(declared: Record<string, UserDeclaration>): FactSections["users"] {
     const current = this.currentUser();
 
     return {

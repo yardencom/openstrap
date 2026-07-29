@@ -15,12 +15,13 @@ const order: FactOrder = {
   channel: { type: "ssh", authMethods: ["publickey"] },
 };
 
+/** What openstrap on the target prints: one snapshot, as JSON. */
 const snapshot = {
   id: "snap_ubuntu-vm_20260608T100000000Z",
   schemaVersion: "facts.v1",
   scope: "machine",
   target: { type: "vm", id: "ubuntu-vm" },
-  data: { arch: "arm64" },
+  facts: { arch: "arm64" },
   reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
 };
 
@@ -42,7 +43,13 @@ describe("openstrap on the target", () => {
   it("hands back the snapshot openstrap took over there", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 
-    expect(await new RemoteOpenStrap(target.api).collect(order)).toEqual(snapshot);
+    const taken = await new RemoteOpenStrap(target.api).collect(order);
+
+    // Read back into the types a snapshot is made of, not handed on as the text it arrived as.
+    expect(String(taken.id)).toBe(snapshot.id);
+    expect(String(taken.reading.takenAt)).toBe(snapshot.reading.takenAt);
+    expect(taken.facts.status()).toBe("success");
+    expect(JSON.parse(JSON.stringify(taken))).toEqual(snapshot);
   });
 
   it("asks the openstrap it delivered for facts, with the order as one argument", async () => {
@@ -71,13 +78,20 @@ describe("openstrap on the target", () => {
     const list = fakeTarget({ answer: { exitCode: 0, stdout: "[]", stderr: "" } });
 
     await expect(new RemoteOpenStrap(noise.api).collect(order)).rejects.toThrow(/not JSON/);
-    await expect(new RemoteOpenStrap(list.api).collect(order)).rejects.toThrow(/not a snapshot/);
+    await expect(new RemoteOpenStrap(list.api).collect(order)).rejects.toThrow(/Not a snapshot/);
   });
 
   it("refuses a snapshot in a shape it does not read", async () => {
     const target = fakeTarget({ answer: answering({ ...snapshot, schemaVersion: "facts.v2" }) });
 
     await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(/facts\.v2/);
+  });
+
+  it("refuses a snapshot whose name does not follow from what is in it", async () => {
+    const renamed = { ...snapshot, id: "snap_something-else_20260608T100000000Z" };
+    const target = fakeTarget({ answer: answering(renamed) });
+
+    await expect(new RemoteOpenStrap(target.api).collect(order)).rejects.toThrow(/is not what/);
   });
 
   it("works out what the target is before choosing a build for it", async () => {

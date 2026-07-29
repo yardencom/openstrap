@@ -5,7 +5,7 @@ import { loadavg, userInfo } from "node:os";
 import si from "systeminformation";
 import which from "which";
 
-import type { FactData, Network, NetworkInterface, PortFact } from "../../domain/FactModel.js";
+import type { FactSections, Network, NetworkInterface, PortFact } from "../../domain/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** A package manager is recognised by the executable that drives it. */
@@ -34,7 +34,7 @@ const packageManagers: readonly { name: string; executable: string }[] = [
 export class SystemFacts {
   constructor(private readonly platform: Platform) {}
 
-  async read(): Promise<Omit<FactData, "processes" | "services" | "transports" | "runtimes" | "paths" | "tools" | "env" | "commands" | "artifacts" | "users" | "groups">> {
+  async read(): Promise<Omit<FactSections, "processes" | "services" | "transports" | "runtimes" | "paths" | "tools" | "env" | "commands" | "artifacts" | "users" | "groups">> {
     const [operatingSystem, cpu, memory, filesystems, interfaces, connections] = await Promise.all([
       si.osInfo(),
       si.cpu(),
@@ -84,7 +84,7 @@ export class SystemFacts {
    * macOS has no such file and needs none: the product version is already the
    * version anyone writes down.
    */
-  private operatingSystem(reported: si.Systeminformation.OsData): FactData["os"] {
+  private operatingSystem(reported: si.Systeminformation.OsData): FactSections["os"] {
     const declared = this.platform.is("linux") ? osRelease() : new Map<string, string>();
     const pretty = declared.get("PRETTY_NAME") ?? `${reported.distro} ${reported.release}`.trim();
 
@@ -110,7 +110,7 @@ export class SystemFacts {
    * mount point, so a caller that cares about a particular directory can find
    * the filesystem holding it.
    */
-  private storage(filesystems: si.Systeminformation.FsSizeData[]): FactData["storage"] {
+  private storage(filesystems: si.Systeminformation.FsSizeData[]): FactSections["storage"] {
     const root = filesystems.find((filesystem) => filesystem.mount === "/") ?? filesystems[0];
 
     return {
@@ -140,7 +140,7 @@ export class SystemFacts {
    * Not whether it is one. A blueprint asks the first question, because that is
    * what decides if a target can be created here at all.
    */
-  private virtualization(): FactData["virtualization"] {
+  private virtualization(): FactSections["virtualization"] {
     if (this.platform.is("macos")) {
       return { supported: true, enabled: true, type: "hvf" };
     }
@@ -271,7 +271,7 @@ export class SystemFacts {
    * A manager is present when its driving executable resolves on PATH — that is
    * what "this machine has apt" means to anyone about to install something.
    */
-  private async packageManagers(): Promise<FactData["packages"]["managers"]> {
+  private async packageManagers(): Promise<FactSections["packages"]["managers"]> {
     const found = await Promise.all(packageManagers.map(async (manager) => {
       const path = await which(manager.executable, { nothrow: true });
 
@@ -290,7 +290,7 @@ export class SystemFacts {
    * one. A cached credential from an earlier prompt can therefore make this read
    * `present` on a machine that would normally ask.
    */
-  private privileges(): FactData["privileges"] {
+  private privileges(): FactSections["privileges"] {
     const root = userInfo().uid === 0;
 
     if (root) {

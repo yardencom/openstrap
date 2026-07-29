@@ -34,12 +34,12 @@ describe("Facts public API", () => {
       .map((match) => ({ kind: match[1], name: match[2] }));
 
     expect(exported.filter((entry) => entry.kind !== "type")).toEqual([{ kind: "class", name: "Facts" }]);
-    // Re-exports carry the names a caller has to spell, and nothing that can be constructed: a
-    // snapshot assembled by a caller out of whatever it liked would be a snapshot nothing is
-    // entitled to trust.
-    for (const line of source.split("\n").filter((text) => /^export\s+\{/.test(text))) {
-      expect(line).toMatch(/^export\s+type\s+\{/);
-    }
+    // Re-exports carry the names a caller has to spell. The one that is not a type is FactSnapshot,
+    // because a snapshot openstrap took on another machine comes back as text and has to be read
+    // into these types again.
+    const values = source.split("\n").filter((text) => /^export\s+\{/.test(text));
+
+    expect(values).toEqual(['export { FactSnapshot } from "./domain/FactSnapshot.js";']);
   });
 
   it("reads a machine through a method, because reaching one means waiting", async () => {
