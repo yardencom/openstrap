@@ -49,8 +49,8 @@ function builtBinariesDirectory(): string {
  * inside it — so that reading a machine installs nothing on it: no runtime, no
  * package manager, nothing left behind but a file in `/tmp`.
  *
- * A build for the target's platform has to exist, because a Mach-O binary cannot
- * be sent to Linux. That is the same set of builds a release has to produce
+ * A build for the machine's platform has to exist, because a build for one does
+ * not run on another. That is the same set of builds a release has to produce
  * anyway, which is the point of sending openstrap rather than something written
  * to be sent.
  *
@@ -79,7 +79,7 @@ export class OpenStrapBinary {
   }
 
   /**
-   * Puts the agent on the target if it is not already there, and says where it is.
+   * Puts openstrap on the target if it is not already there, and says where it landed.
    *
    * The one it replaces is deleted as the new one lands. A target used to keep every
    * version it had ever been sent — five of them, 315 MB of `/tmp`, on the machine
