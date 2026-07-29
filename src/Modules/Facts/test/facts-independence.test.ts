@@ -12,7 +12,7 @@ const doors = ["/Facts.js"];
  */
 const openstrapModules = [
   "Blueprint", "Plugin", "Requirements", "ConfigCore", "Transport", "RemoteOpenStrap",
-  "StateStore", "Create", "Connect", "LockFile", "Secrets", "RunLock", "CLI",
+  "StateStore", "Create", "Connect", "LockFile", "Secrets", "utils", "CLI",
 ];
 
 describe("Facts is a module of its own", () => {
