@@ -39,24 +39,24 @@ export class Collecting {
 
     return {
       ...scalars,
-      packages: {
-        ...scalars.packages,
-        installed: this.packages.packages(this.asked(declaration, "packages") ? declaration.packages ?? {} : {}),
-      },
-      users: this.accounts.accounts(this.asked(declaration, "users") ? declaration.users ?? {} : {}),
-      groups: this.asked(declaration, "groups") ? this.accounts.members(declaration.groups ?? {}) : {},
+      // Nothing declared is nothing to answer: every section below is made of the names it was
+      // given, so an empty declaration produces an empty section without being asked about first.
+      packages: { ...scalars.packages, installed: this.packages.packages(declaration.packages ?? {}) },
+      users: this.accounts.accounts(declaration.users ?? {}),
+      groups: this.accounts.members(declaration.groups ?? {}),
+      services: await this.services.services(declaration.services ?? {}),
+      paths: this.paths.paths(declaration.paths ?? {}),
+      artifacts: this.paths.artifacts(declaration.artifacts ?? {}),
+      commands: await this.commands.commands(declaration.commands ?? {}),
+      env: this.commands.env(declaration.env ?? {}),
+      // These three are the ones that answer without being given a name — the process table, the
+      // tools a machine has anyway, and the runtimes those turn out to be — so these are the ones
+      // there is something to ask about.
       processes: this.asked(declaration, "processes")
         ? await this.processes.processes(declaration.processes ?? {})
         : {},
-      services: this.asked(declaration, "services")
-        ? await this.services.services(declaration.services ?? {})
-        : {},
       tools: this.asked(declaration, "tools") ? tools : {},
       runtimes: this.asked(declaration, "runtimes") ? this.tools.runtimes(tools) : {},
-      paths: this.asked(declaration, "paths") ? this.paths.paths(declaration.paths ?? {}) : {},
-      artifacts: this.asked(declaration, "artifacts") ? this.paths.artifacts(declaration.artifacts ?? {}) : {},
-      commands: this.asked(declaration, "commands") ? await this.commands.commands(declaration.commands ?? {}) : {},
-      env: this.asked(declaration, "env") ? this.commands.env(declaration.env ?? {}) : {},
       transports: this.transports(request.channel),
     };
   }
@@ -102,7 +102,11 @@ export class Collecting {
   }
 
   /**
-   * Whether a caller asked about a section.
+   * Whether a caller asked about a section that answers without being given a name.
+   *
+   * Only three sections have anything to ask about. Every other one is made of the names it was
+   * given, so a caller that named nothing gets nothing whether it is asked about or not — the check
+   * used to be written out for all of them and could not change a single answer.
    *
    * Three ways of asking, and they are one question. Naming something in the section asks for it — a
    * caller that declares a process should not also have to list `processes`. Listing the section by
