@@ -13,7 +13,7 @@ import type {
   ProcessAPI,
   ProcessOutput,
   SystemCommand,
-} from "../../domain/Process.js";
+} from "../../types/Process.js";
 
 export class LocalProcesses implements ProcessAPI {
   async capture(command: CapturedSystemCommand): Promise<ProcessOutput> {

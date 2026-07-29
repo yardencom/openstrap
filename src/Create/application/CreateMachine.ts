@@ -1,4 +1,4 @@
-import { ProviderUnavailableError } from "./ProviderUnavailableError.js";
+import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineHandle, Provider, ProviderAvailability } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";

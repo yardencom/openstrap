@@ -1,10 +1,10 @@
-import { MissingBinaryError } from "./MissingBinaryError.js";
+import { MissingBinaryError } from "../errors/MissingBinaryError.js";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { FileSystemAPI } from "../../../Transport/index.js";
-import type { MachinePlatform } from "../domain/MachinePlatform.js";
+import type { MachinePlatform } from "../types/MachinePlatform.js";
 
 /**
  * Where openstrap lands on a target.

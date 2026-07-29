@@ -1,8 +1,8 @@
 import si from "systeminformation";
 import which from "which";
 
-import type { ToolDeclaration } from "../../domain/FactDeclaration.js";
-import type { RuntimeFact, ToolFact } from "../../domain/FactModel.js";
+import type { ToolDeclaration } from "../../types/FactDeclaration.js";
+import type { RuntimeFact, ToolFact } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /**

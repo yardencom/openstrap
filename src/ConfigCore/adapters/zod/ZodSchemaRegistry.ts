@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ConfigSchemaNode } from "../../domain/ConfigSchemaNode.js";
+import { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 
 export class ZodSchemaRegistry {
   private readonly schemas = new WeakMap<ConfigSchemaNode<unknown>, z.ZodType<unknown>>();

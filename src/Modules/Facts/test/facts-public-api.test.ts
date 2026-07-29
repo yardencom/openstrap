@@ -80,7 +80,7 @@ describe("Facts public API", () => {
     // One thing is re-exported as a value, and it is not a class: what "every section" means, which
     // is the whole of what `openstrap facts collect` asks for.
     expect(source.split("\n").filter((line) => /^export\s+\{/.test(line)))
-      .toEqual(['export { everySection, type FactDeclaration, type Asked } from "./domain/FactDeclaration.js";']);
+      .toEqual(['export { everySection, type FactDeclaration, type Asked } from "./types/FactDeclaration.js";']);
   });
 
   it("keeps one class to a file across the module", () => {

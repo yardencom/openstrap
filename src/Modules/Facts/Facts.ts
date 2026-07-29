@@ -1,17 +1,17 @@
-import type { FactOrder } from "./domain/FactOrder.js";
-import type { FactSections } from "./domain/FactModel.js";
-import type { Immutable } from "./domain/Immutable.js";
-import type { FactsStatus } from "./domain/FactStatus.js";
+import type { FactOrder } from "./types/FactOrder.js";
+import type { FactSections } from "./types/FactModel.js";
+import type { Immutable } from "./types/Immutable.js";
+import type { FactsStatus } from "./types/FactStatus.js";
 import { Collecting } from "./collect/Collecting.js";
 import { FactSnapshot, schemaVersion } from "./FactSnapshot.js";
-import { Moment } from "./domain/Moment.js";
+import { Moment } from "./Moment.js";
 
 /** What a caller has to name to ask for facts. */
-export type { FactOrder, FactChannel } from "./domain/FactOrder.js";
-export type { FactTarget } from "./domain/FactTarget.js";
-export { everySection, type FactDeclaration, type Asked } from "./domain/FactDeclaration.js";
-export type { FactSections } from "./domain/FactModel.js";
-export type { FactsStatus } from "./domain/FactStatus.js";
+export type { FactOrder, FactChannel } from "./types/FactOrder.js";
+export type { FactTarget } from "./types/FactTarget.js";
+export { everySection, type FactDeclaration, type Asked } from "./types/FactDeclaration.js";
+export type { FactSections } from "./types/FactModel.js";
+export type { FactsStatus } from "./types/FactStatus.js";
 export type { FactSnapshot } from "./FactSnapshot.js";
 
 

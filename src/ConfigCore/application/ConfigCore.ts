@@ -1,5 +1,5 @@
-import { ConfigNotFoundError } from "../domain/ConfigNotFoundError.js";
-import type { ConfigDefinition } from "../domain/ConfigDefinition.js";
+import { ConfigNotFoundError } from "../errors/ConfigNotFoundError.js";
+import type { ConfigDefinition } from "../ConfigDefinition.js";
 import type { ConfigLoadRequest } from "../ports/ConfigLoaderBackend.js";
 import type { ConfigSchemaBackend } from "../ports/ConfigSchemaBackend.js";
 import type { JsonSchema } from "../ports/ConfigJsonSchemaBackend.js";

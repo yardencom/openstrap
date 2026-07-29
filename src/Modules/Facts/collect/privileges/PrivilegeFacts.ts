@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { userInfo } from "node:os";
 
-import type { FactSections } from "../../domain/FactModel.js";
+import type { FactSections } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** What the account this is running as is allowed to do. */

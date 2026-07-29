@@ -1,5 +1,5 @@
-import { ConfigValidationError } from "../../domain/ConfigValidationError.js";
-import type { ConfigDefinition } from "../../domain/ConfigDefinition.js";
+import { ConfigValidationError } from "../../errors/ConfigValidationError.js";
+import type { ConfigDefinition } from "../../ConfigDefinition.js";
 import type { LoadedConfig } from "../../ports/ConfigLoaderBackend.js";
 import type { ValidatedConfig } from "../../ports/ConfigValidatorBackend.js";
 import type { ZodSchemaRegistry } from "./ZodSchemaRegistry.js";

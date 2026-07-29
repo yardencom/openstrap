@@ -1,4 +1,4 @@
-import type { Blueprint, BlueprintTarget, TargetScope, TargetType } from "../domain/Blueprint.js";
+import type { Blueprint, BlueprintTarget, TargetScope, TargetType } from "../types/Blueprint.js";
 import type { BlueprintConfig, BlueprintTargetConfig } from "../schema/BlueprintConfig.js";
 
 /**

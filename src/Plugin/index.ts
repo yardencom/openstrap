@@ -28,17 +28,17 @@ export type {
   ResolvedImage,
   TargetScope,
   TargetType,
-} from "./domain/Provider.js";
+} from "./types/Provider.js";
 export type {
   TransportConnection,
   TransportConnectionRequest,
   TransportConnector,
   TransportEndpoint,
-} from "./domain/Transport.js";
+} from "./types/Transport.js";
 export type {
   SecretReference,
   SecretStore,
-} from "./domain/Secret.js";
+} from "./types/Secret.js";
 export {
   loadOpenStrapPlugin,
   loadOpenStrapPluginConfig,
@@ -60,5 +60,5 @@ export {
   type OpenStrapPluginConfig,
   type OpenStrapPluginOption,
   type OpenStrapPluginOrder,
-} from "./domain/OpenStrapPlugin.js";
-export { OpenStrapPluginError } from "./domain/OpenStrapPluginError.js";
+} from "./types/OpenStrapPlugin.js";
+export { OpenStrapPluginError } from "./errors/OpenStrapPluginError.js";

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 describe("Plugin boundaries", () => {
   it("keeps Plugin domain free of application and core code", () => {
-    const offenders = listSourceFiles(join(process.cwd(), "src/Plugin/Domain")).filter((filePath: string) => {
+    const offenders = listSourceFiles(join(process.cwd(), "src/Plugin/types")).filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
       return /from\s+["']\.\.\/(Application|Core)\//.test(source);
     });
@@ -25,8 +25,8 @@ describe("Plugin boundaries", () => {
   });
 
   it("offers no slot for reading a machine, because openstrap owns that", () => {
-    const api = readFileSync(join(process.cwd(), "src/Plugin/domain/OpenStrapPlugin.ts"), "utf8");
-    const contracts = readdirSync(join(process.cwd(), "src/Plugin/Domain"));
+    const api = readFileSync(join(process.cwd(), "src/Plugin/types/OpenStrapPlugin.ts"), "utf8");
+    const contracts = readdirSync(join(process.cwd(), "src/Plugin/types"));
 
     expect(api).not.toMatch(/registerFactsBackend|facts\?:/);
     expect(contracts).not.toContain("FactsBackend.ts");
@@ -35,7 +35,7 @@ describe("Plugin boundaries", () => {
 
   it("keeps every plugin contract method asynchronous", () => {
     const contracts = ["Provider.ts", "Transport.ts", "Secret.ts"].map((name) =>
-      readFileSync(join(process.cwd(), "src/Plugin/Domain", name), "utf8"),
+      readFileSync(join(process.cwd(), "src/Plugin/types", name), "utf8"),
     );
     const methods = contracts.flatMap((source) => [...source.matchAll(/^\s{2}(\w+)\((.*?)\):\s*(.+);$/gm)]);
     const offenders = methods

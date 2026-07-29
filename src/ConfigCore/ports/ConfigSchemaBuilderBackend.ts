@@ -1,4 +1,4 @@
-import type { ConfigSchemaNode } from "../domain/ConfigSchemaNode.js";
+import type { ConfigSchemaNode } from "../ConfigSchemaNode.js";
 
 export type ConfigEnumValues<TValue extends string> = readonly TValue[] | Record<string, TValue>;
 

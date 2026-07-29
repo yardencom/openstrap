@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { FactDeclaration } from "../domain/FactDeclaration.js";
+import type { FactDeclaration } from "../types/FactDeclaration.js";
 import { Facts, everySection, type FactSnapshot } from "../Facts.js";
-import { Moment } from "../domain/Moment.js";
+import { Moment } from "../Moment.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 

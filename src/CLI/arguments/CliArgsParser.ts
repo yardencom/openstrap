@@ -1,4 +1,4 @@
-import { CliUsageError } from "./CliUsageError.js";
+import { CliUsageError } from "../errors/CliUsageError.js";
 import type { CommandArgsParser, ParsedArgs } from "./types.js";
 import { ConnectArgsParser } from "./parsers/ConnectArgs.js";
 import { CreateArgsParser } from "./parsers/CreateArgs.js";

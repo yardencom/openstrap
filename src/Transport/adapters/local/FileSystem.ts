@@ -12,7 +12,7 @@ import type {
   FileSystemWriteOptions,
   RemovePathOptions,
   TextFileWriteOptions,
-} from "../../domain/FileSystem.js";
+} from "../../types/FileSystem.js";
 
 const fileModes: Record<FileAccess, number> = {
   executable: 0o755,

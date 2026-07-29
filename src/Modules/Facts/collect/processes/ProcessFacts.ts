@@ -1,7 +1,7 @@
 import si from "systeminformation";
 
-import type { ProcessDeclaration } from "../../domain/FactDeclaration.js";
-import type { ProcessFact } from "../../domain/FactModel.js";
+import type { ProcessDeclaration } from "../../types/FactDeclaration.js";
+import type { ProcessFact } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /**

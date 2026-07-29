@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import si from "systeminformation";
 
-import type { FactSections, Network, NetworkInterface, PortFact } from "../../domain/FactModel.js";
+import type { FactSections, Network, NetworkInterface, PortFact } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** How this machine is reachable, and what is listening on it. */

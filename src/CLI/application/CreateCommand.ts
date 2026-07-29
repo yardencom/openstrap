@@ -1,5 +1,5 @@
-import { MissingProviderError } from "./MissingProviderError.js";
-import { UnknownTargetError } from "./UnknownTargetError.js";
+import { MissingProviderError } from "../errors/MissingProviderError.js";
+import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 import { join } from "node:path";
 
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";

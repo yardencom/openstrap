@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ConfigDefinition } from "../../domain/ConfigDefinition.js";
+import type { ConfigDefinition } from "../../ConfigDefinition.js";
 import type { JsonSchema } from "../../ports/ConfigJsonSchemaBackend.js";
 import { removeDefaultedFieldsFromRequired } from "./ZodJsonSchemaPolicy.js";
 import type { ZodSchemaRegistry } from "./ZodSchemaRegistry.js";

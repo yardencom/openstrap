@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { userInfo } from "node:os";
 
-import type { GroupDeclaration, UserDeclaration } from "../../domain/FactDeclaration.js";
-import type { FactSections, GroupFact, UserFact } from "../../domain/FactModel.js";
+import type { GroupDeclaration, UserDeclaration } from "../../types/FactDeclaration.js";
+import type { FactSections, GroupFact, UserFact } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 const passwdFile = "/etc/passwd";

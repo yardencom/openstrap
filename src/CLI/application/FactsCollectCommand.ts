@@ -1,7 +1,7 @@
 import { ConnectToTarget } from "../../Connect/index.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
-import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/domain/UnknownMachinePlatformError.js";
+import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";

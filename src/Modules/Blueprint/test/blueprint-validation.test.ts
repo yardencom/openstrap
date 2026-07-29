@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   Blueprints,
 } from "../index.js";
-import { BlueprintReadError } from "../application/BlueprintReadError.js";
+import { BlueprintReadError } from "../errors/BlueprintReadError.js";
 
 const blueprints = new Blueprints();
 

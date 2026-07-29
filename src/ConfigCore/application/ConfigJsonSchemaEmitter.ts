@@ -1,4 +1,4 @@
-import type { ConfigDefinition } from "../domain/ConfigDefinition.js";
+import type { ConfigDefinition } from "../ConfigDefinition.js";
 import type { ConfigJsonSchemaBackend, JsonSchema } from "../ports/ConfigJsonSchemaBackend.js";
 
 export class ConfigJsonSchemaEmitter {

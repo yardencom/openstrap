@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { BinaryFileWriteOptions, FileSystemAPI } from "../../../Transport/index.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
-import { MissingBinaryError } from "./MissingBinaryError.js";
+import { MissingBinaryError } from "../errors/MissingBinaryError.js";
 
 const platform = { platform: "linux", architecture: "arm64" };
 const contents = Buffer.from("an agent, for the purposes of this test");

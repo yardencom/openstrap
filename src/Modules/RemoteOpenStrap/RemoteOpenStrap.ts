@@ -1,8 +1,8 @@
-import { RemoteOpenStrapError } from "./RemoteOpenStrapError.js";
+import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";
 import type { Transport } from "../../Transport/index.js";
 import { Facts, type FactOrder, type FactSnapshot } from "../Facts/Facts.js";
 import { OpenStrapBinary } from "./deliver/OpenStrapBinary.js";
-import type { MachinePlatform } from "./domain/MachinePlatform.js";
+import type { MachinePlatform } from "./types/MachinePlatform.js";
 
 
 /**

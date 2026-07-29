@@ -9,4 +9,4 @@ export type {
   RunStepRecord,
   SecretReferenceRecord,
   TargetRecord,
-} from "./domain/StateRecords.js";
+} from "./types/StateRecords.js";

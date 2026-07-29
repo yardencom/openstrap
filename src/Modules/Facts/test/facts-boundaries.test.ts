@@ -24,7 +24,7 @@ describe("Facts boundaries", () => {
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
-    expect(factsEntries).toEqual(expect.arrayContaining(["domain", "collect"]));
+    expect(factsEntries).toEqual(expect.arrayContaining(["types", "collect"]));
     expect(publicBarrel).toBe("export {};\n");
     expect(factsEntries).not.toContain("Application");
     // No local case and no remote case: there is one way to collect, so there is nothing to choose

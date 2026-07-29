@@ -38,7 +38,7 @@ describe("Transport public API", () => {
   });
 
   it("describes a transport as filesystem, network and process access", () => {
-    const source = readFileSync(join(process.cwd(), "src/Transport/domain/Transport.ts"), "utf8");
+    const source = readFileSync(join(process.cwd(), "src/Transport/types/Transport.ts"), "utf8");
     const members = [...source.matchAll(/^\s{2}(\w+):/gm)].map((match) => match[1]);
 
     expect(members).toEqual(["fileSystem", "network", "processes"]);

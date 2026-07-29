@@ -3,11 +3,11 @@ import { createRequire } from "node:module";
 import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { OpenStrapPluginError } from "../domain/OpenStrapPluginError.js";
+import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 import type {
   OpenStrapPlugin,
   OpenStrapPluginConfig,
-} from "../domain/OpenStrapPlugin.js";
+} from "../types/OpenStrapPlugin.js";
 
 const defaultConfigFiles = [
   "openstrap.config.mjs",

@@ -11,7 +11,7 @@ import type {
   NetworkAPI,
   NetworkRequest,
   NetworkResponse,
-} from "../../domain/Network.js";
+} from "../../types/Network.js";
 
 export class LocalNetwork implements NetworkAPI {
   constructor() {

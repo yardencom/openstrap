@@ -1,5 +1,5 @@
-import type { Provider } from "../domain/Provider.js";
-import { OpenStrapPluginError } from "../domain/OpenStrapPluginError.js";
+import type { Provider } from "../types/Provider.js";
+import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredProvider = {
   provider: Provider;

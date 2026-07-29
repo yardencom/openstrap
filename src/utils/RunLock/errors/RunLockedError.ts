@@ -1,4 +1,4 @@
-import type { RunLockHolder } from "./RunLockHolder.js";
+import type { RunLockHolder } from "../RunLockHolder.js";
 
 export class RunLockedError extends Error {
   constructor(readonly holder: RunLockHolder) {

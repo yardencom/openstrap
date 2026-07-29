@@ -1,9 +1,9 @@
-import type { FactSections } from "./domain/FactModel.js";
-import type { Immutable } from "./domain/Immutable.js";
-import type { FactTarget } from "./domain/FactTarget.js";
-import type { FactsStatus } from "./domain/FactStatus.js";
-import type { Moment } from "./domain/Moment.js";
-import { SnapshotId } from "./domain/SnapshotId.js";
+import type { FactSections } from "./types/FactModel.js";
+import type { Immutable } from "./types/Immutable.js";
+import type { FactTarget } from "./types/FactTarget.js";
+import type { FactsStatus } from "./types/FactStatus.js";
+import type { Moment } from "./Moment.js";
+import { SnapshotId } from "./SnapshotId.js";
 
 /**
  * Facts as a snapshot needs them: the sections, and their own answer about whether everything asked

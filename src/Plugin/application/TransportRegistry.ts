@@ -1,5 +1,5 @@
-import type { TransportConnector } from "../domain/Transport.js";
-import { OpenStrapPluginError } from "../domain/OpenStrapPluginError.js";
+import type { TransportConnector } from "../types/Transport.js";
+import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredTransport = {
   connector: TransportConnector;

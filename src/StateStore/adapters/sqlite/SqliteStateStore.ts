@@ -11,7 +11,7 @@ import type {
   RunStepRecord,
   SecretReferenceRecord,
   TargetRecord,
-} from "../../domain/StateRecords.js";
+} from "../../types/StateRecords.js";
 import { stateStoreSchema } from "./Schema.js";
 
 export class SqliteStateStore {

@@ -1,4 +1,4 @@
-import { UnsupportedPlatformError } from "./UnsupportedPlatformError.js";
+import { UnsupportedPlatformError } from "../../errors/UnsupportedPlatformError.js";
 import { arch, platform } from "node:os";
 
 export type PlatformName = "linux" | "macos" | "windows";

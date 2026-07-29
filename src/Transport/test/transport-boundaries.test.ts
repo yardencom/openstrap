@@ -14,7 +14,7 @@ describe("Transport boundaries", () => {
   });
 
   it("keeps the transport ports free of any implementation dependency", () => {
-    const domainPath = join(process.cwd(), "src/Transport/Domain");
+    const domainPath = join(process.cwd(), "src/Transport/types");
     const offenders = listSourceFiles(domainPath).filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
       const imports = [...source.matchAll(/from\s+["']([^"']+)["']/g)];
@@ -26,7 +26,7 @@ describe("Transport boundaries", () => {
   });
 
   it("keeps progress output and the openstrap process environment out of the port", () => {
-    const transport = readFileSync(join(process.cwd(), "src/Transport/domain/Transport.ts"), "utf8");
+    const transport = readFileSync(join(process.cwd(), "src/Transport/types/Transport.ts"), "utf8");
     const barrel = readFileSync(join(process.cwd(), "src/Transport/index.ts"), "utf8");
 
     for (const absent of ["OutputAPI", "EnvironmentAPI", "stateHome", "prependPathDirectory", "progress"]) {

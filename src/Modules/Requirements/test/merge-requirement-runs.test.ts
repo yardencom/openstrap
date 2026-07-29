@@ -4,7 +4,7 @@ import {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
 } from "../application/MergeRequirementRuns.js";
-import type { CheckStatus, RequirementRun } from "../domain/Requirements.js";
+import type { CheckStatus, RequirementRun } from "../types/Requirements.js";
 
 describe("merging one evaluation per target", () => {
   it("refuses to merge nothing, because a run cannot be made out of nothing", () => {

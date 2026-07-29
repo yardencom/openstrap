@@ -1,4 +1,4 @@
-export { CliUsageError } from "./CliUsageError.js";
+export { CliUsageError } from "../errors/CliUsageError.js";
 export type {
   CommandArgsParser,
   ConnectArgs,

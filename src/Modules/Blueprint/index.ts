@@ -4,4 +4,4 @@ export type {
   BlueprintTarget,
   TargetScope,
   TargetType,
-} from "./domain/Blueprint.js";
+} from "./types/Blueprint.js";

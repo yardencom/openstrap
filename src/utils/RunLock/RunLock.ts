@@ -1,5 +1,5 @@
 import type { RunLockHolder } from "./RunLockHolder.js";
-import { RunLockedError } from "./RunLockedError.js";
+import { RunLockedError } from "./errors/RunLockedError.js";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 

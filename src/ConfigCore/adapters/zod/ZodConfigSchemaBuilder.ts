@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ConfigSchemaNode } from "../../domain/ConfigSchemaNode.js";
+import { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 import type {
   ConfigArrayOptions,
   ConfigEnumValues,

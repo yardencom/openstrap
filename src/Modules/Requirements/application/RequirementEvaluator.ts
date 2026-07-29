@@ -10,7 +10,7 @@ import type {
   RequirementRun,
   RequirementTarget,
   TargetlessRequirement,
-} from "../domain/Requirements.js";
+} from "../types/Requirements.js";
 
 type ObservedStatus = "present" | "absent" | "unknown" | "unsupported" | "error";
 

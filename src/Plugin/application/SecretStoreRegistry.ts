@@ -1,5 +1,5 @@
-import type { SecretStore } from "../domain/Secret.js";
-import { OpenStrapPluginError } from "../domain/OpenStrapPluginError.js";
+import type { SecretStore } from "../types/Secret.js";
+import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredSecretStore = {
   store: SecretStore;

@@ -1,5 +1,5 @@
-import { MachineNotRunningError } from "./MachineNotRunningError.js";
-import { UnknownMachineError } from "./UnknownMachineError.js";
+import { MachineNotRunningError } from "../errors/MachineNotRunningError.js";
+import { UnknownMachineError } from "../errors/UnknownMachineError.js";
 import type { MachineAccess, TransportConnection, OpenStrapRuntime } from "../../Plugin/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";

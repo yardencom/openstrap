@@ -1,4 +1,4 @@
-import type { ConfigFormat } from "../domain/ConfigFormat.js";
+import type { ConfigFormat } from "../types/ConfigFormat.js";
 
 export type ConfigLoadRequest =
   | {

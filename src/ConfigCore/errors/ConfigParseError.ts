@@ -1,4 +1,4 @@
-import type { ConfigIssue } from "./ConfigIssue.js";
+import type { ConfigIssue } from "../types/ConfigIssue.js";
 
 export class ConfigParseError extends Error {
   readonly issues: ConfigIssue[];

@@ -3,8 +3,8 @@ import { lilconfigSync } from "lilconfig";
 import { relative, resolve } from "node:path";
 import { parseDocument } from "yaml";
 
-import { ConfigParseError } from "../domain/ConfigParseError.js";
-import { ConfigReadError } from "../domain/ConfigReadError.js";
+import { ConfigParseError } from "../errors/ConfigParseError.js";
+import { ConfigReadError } from "../errors/ConfigReadError.js";
 import type {
   ConfigLoadRequest,
   ConfigLoaderBackend,

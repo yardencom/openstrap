@@ -92,7 +92,7 @@ describe("Collecting facts", () => {
   });
 
   it("is built out of classes", () => {
-    const sources = factsSources().filter((filePath: string) => !filePath.includes("/domain/"));
+    const sources = factsSources().filter((filePath: string) => !filePath.includes("/types/"));
 
     expect(sources.length).toBeGreaterThan(4);
 
@@ -180,7 +180,7 @@ function constructorBodyIn(source: string): string {
 function factsSources(): string[] {
   return [
     join(process.cwd(), "src/Modules/Facts/Facts.ts"),
-    ...listSources(join(process.cwd(), "src/Modules/Facts/domain")),
+    ...listSources(join(process.cwd(), "src/Modules/Facts/types")),
     ...collectSources(),
   ].filter((filePath: string) => !filePath.includes(".test."));
 }

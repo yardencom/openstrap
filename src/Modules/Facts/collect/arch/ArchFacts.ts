@@ -1,4 +1,4 @@
-import type { FactSections } from "../../domain/FactModel.js";
+import type { FactSections } from "../../types/FactModel.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** Which instruction set this machine runs. */

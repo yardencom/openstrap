@@ -1,5 +1,5 @@
 import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
-import type { TargetlessRequirement } from "../domain/Requirements.js";
+import type { TargetlessRequirement } from "../types/Requirements.js";
 
 const factBlockNames = [
   "os",

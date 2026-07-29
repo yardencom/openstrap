@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { RunLock } from "../RunLock.js";
-import { RunLockedError } from "../RunLockedError.js";
+import { RunLockedError } from "../errors/RunLockedError.js";
 
 describe("Run lock", () => {
   let directory: string;

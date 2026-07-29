@@ -1,5 +1,5 @@
-import { ConfigDefinition } from "../domain/ConfigDefinition.js";
-import type { ConfigSchemaNode } from "../domain/ConfigSchemaNode.js";
+import { ConfigDefinition } from "../ConfigDefinition.js";
+import type { ConfigSchemaNode } from "../ConfigSchemaNode.js";
 import type { ConfigArrayOptions, ConfigSchemaBuilderBackend } from "../ports/ConfigSchemaBuilderBackend.js";
 
 export class ConfigSchema {

@@ -1,4 +1,4 @@
-import type { ConfigDefinition } from "../domain/ConfigDefinition.js";
+import type { ConfigDefinition } from "../ConfigDefinition.js";
 
 export type JsonSchema = Record<string, unknown> & {
   $schema?: string;

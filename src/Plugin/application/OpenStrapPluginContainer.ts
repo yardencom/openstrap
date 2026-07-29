@@ -1,12 +1,12 @@
 import { ProviderRegistry } from "./ProviderRegistry.js";
 import { SecretStoreRegistry } from "./SecretStoreRegistry.js";
 import { TransportRegistry } from "./TransportRegistry.js";
-import { OpenStrapPluginError } from "../domain/OpenStrapPluginError.js";
+import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 import type {
   OpenStrapPlugin,
   OpenStrapPluginApi,
   OpenStrapPluginOption,
-} from "../domain/OpenStrapPlugin.js";
+} from "../types/OpenStrapPlugin.js";
 
 export type OpenStrapPluginContainerCreateRequest = {
   plugins?: readonly OpenStrapPluginOption[];

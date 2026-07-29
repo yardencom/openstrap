@@ -1,4 +1,4 @@
-import type { Transport } from "../../domain/Transport.js";
+import type { Transport } from "../../types/Transport.js";
 import { LocalFileSystem } from "./FileSystem.js";
 import { LocalNetwork } from "./Network.js";
 import { LocalProcesses } from "./Processes.js";

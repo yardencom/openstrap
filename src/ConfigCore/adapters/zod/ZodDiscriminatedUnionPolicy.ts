@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ConfigSchemaNode } from "../../domain/ConfigSchemaNode.js";
+import type { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 import type { ZodSchemaMetadataRegistry } from "./ZodSchemaMetadataRegistry.js";
 
 export function createZodDiscriminatedUnion(

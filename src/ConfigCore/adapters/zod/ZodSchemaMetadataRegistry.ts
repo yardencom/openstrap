@@ -1,4 +1,4 @@
-import type { ConfigSchemaNode } from "../../domain/ConfigSchemaNode.js";
+import type { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 
 export type ZodSchemaValueKind = "primitive" | "object" | "unknown";
 export type ZodSchemaLiteralValue = string | number | boolean | null;
