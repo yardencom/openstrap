@@ -133,12 +133,14 @@ describe("openstrap delivering itself", () => {
   });
 
   it("delivers what a person installs, so there is no second program to keep in step", () => {
-    const build = readFileSync(join(process.cwd(), "build/binaries.ts"), "utf8");
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
 
     // One build, one list of platforms: the machine openstrap is installed on and the machines it
     // delivers itself to are built the same way, from the entry point a person runs.
-    expect(build).toMatch(/"src",\s*"CLI",\s*"index\.ts"/);
-    expect(build).toMatch(/darwin-arm64[\s\S]*linux-arm64/);
+    expect(manifest.scripts.bundle).toContain("src/CLI/index.ts");
+    expect(manifest.pkg.targets).toEqual([
+      "node24-macos-arm64", "node24-macos-x64", "node24-linuxstatic-arm64", "node24-linuxstatic-x64",
+    ]);
   });
 });
 
