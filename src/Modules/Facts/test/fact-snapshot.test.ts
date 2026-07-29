@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { FactSnapshot } from "../FactSnapshot.js";
 import type { FactDeclaration } from "../domain/FactDeclaration.js";
-import { Moment } from "../domain/Moment.js";
-import { Facts } from "../Facts.js";
+import { Facts, type FactSnapshot } from "../Facts.js";
 
 const host = { name: "host", scope: "host", type: "host", transport: "local" } as const;
 
-describe("making a snapshot", () => {
+describe("a snapshot openstrap took elsewhere and printed", () => {
   it("names it after the machine and the moment it was taken", () => {
     const snapshot = snapshotOf();
 
@@ -37,8 +35,32 @@ describe("making a snapshot", () => {
   it("calls a reading a warning when any section reports a failure", () => {
     const failed = snapshotOf({ users: { root: { status: "error", name: "root" } } });
 
+    // Worked out from the facts rather than taken from the text: the printed snapshot said "success".
     expect(failed.reading.status).toBe("warning");
     expect(snapshotOf().reading.status).toBe("success");
+  });
+
+  it("refuses one whose name does not follow from what is in it", () => {
+    expect(() => Facts.printed({
+      id: "snap_something-else_20260608T100000000Z",
+      schemaVersion: "facts.v1",
+      scope: "host",
+      target: { type: "host", id: "host" },
+      facts: { arch: "x64" },
+      reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
+    })).toThrow(/is not what/);
+  });
+
+  it("refuses one in a shape it does not read, or with no facts in it", () => {
+    expect(() => Facts.printed({ schemaVersion: "facts.v2" })).toThrow(/facts\.v2/);
+    expect(() => Facts.printed("Welcome to Ubuntu")).toThrow(/Not a snapshot/);
+    expect(() => Facts.printed({
+      id: "snap_host_20260608T100000000Z",
+      schemaVersion: "facts.v1",
+      scope: "host",
+      target: { type: "host", id: "host" },
+      reading: { takenAt: "2026-06-08T10:00:00.000Z" },
+    })).toThrow(/no facts in it/);
   });
 });
 
@@ -99,22 +121,30 @@ describe("reading a machine", () => {
   });
 
   it("gives every snapshot a name of its own", async () => {
-    const first = await snapshotOfThisMachine({ sections: ["os"] }, new Moment(new Date("2026-01-01T00:00:00Z")));
-    const second = await snapshotOfThisMachine({ sections: ["os"] }, new Moment(new Date("2026-01-02T00:00:00Z")));
+    const first = await snapshotOfThisMachine({ sections: ["os"] }, new Date("2026-01-01T00:00:00Z"));
+    const second = await snapshotOfThisMachine({ sections: ["os"] }, new Date("2026-01-02T00:00:00Z"));
 
     expect(String(first.id)).not.toBe(String(second.id));
   });
 });
 
-/** What every caller does: collect the facts, then name the machine they are about. */
-async function snapshotOfThisMachine(declare?: FactDeclaration, takenAt = Moment.now()): Promise<FactSnapshot> {
-  return new FactSnapshot(host, await Facts.collect({ declare }), takenAt);
+function snapshotOfThisMachine(declare?: FactDeclaration, now?: Date): Promise<FactSnapshot> {
+  return Facts.collect({ target: host, declare, now });
 }
 
+/**
+ * A snapshot as it arrives from a machine openstrap delivered itself to: text.
+ *
+ * The only way to hold a snapshot of facts this process did not collect — which is the point, because
+ * facts assembled by a caller out of whatever it liked would be facts nothing is entitled to trust.
+ */
 function snapshotOf(sections: Record<string, unknown> = { arch: "x64" }): FactSnapshot {
-  return new FactSnapshot(
-    host,
-    Facts.of(sections),
-    new Moment(new Date("2026-06-08T10:00:00.000Z")),
-  );
+  return Facts.printed({
+    id: "snap_host_20260608T100000000Z",
+    schemaVersion: "facts.v1",
+    scope: "host",
+    target: { type: "host", id: "host" },
+    facts: sections,
+    reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
+  });
 }

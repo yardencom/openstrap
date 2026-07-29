@@ -1,6 +1,5 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
-import { Facts } from "../../Modules/Facts/Facts.js";
-import { FactSnapshot, Moment } from "../../Modules/Facts/FactSnapshot.js";
+import { Facts, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import {
   mergeRequirementRuns,
   RequiredFacts,
@@ -56,17 +55,14 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
     for (const target of Object.values(blueprint.targets)) {
       // Every target of a plain run is the machine openstrap is on, so every one of them is read
       // here, and each reading is named after the target it was asked about.
-      const facts = await Facts.collect({
+      const snapshot = await Facts.collect({
+        target: { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
         declare: new RequiredFacts({
           requirements: target.requirements,
           workspaceRoot: context.workspaceRoot,
         }).declaration,
+        now: context.now,
       });
-      const snapshot = new FactSnapshot(
-        { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
-        facts,
-        context.now === undefined ? Moment.now() : new Moment(context.now),
-      );
 
       collected.push(snapshot);
       runs.push(this.evaluator.evaluate({

@@ -1,5 +1,4 @@
-import { Facts, type FactOrder } from "../../Modules/Facts/Facts.js";
-import { FactSnapshot, Moment } from "../../Modules/Facts/FactSnapshot.js";
+import { Facts, type FactOrder, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -27,14 +26,7 @@ export type FactsCollectResult = FactSnapshot;
  */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
-    const order = args.order ?? thisMachine(context.now);
-    // Collect the facts, then name what was collected: the facts are about a machine, and what the
-    // caller calls that machine is not something the machine can answer.
-    const snapshot = new FactSnapshot(
-      order.target,
-      await Facts.collect({ declare: order.declare, channel: order.channel }),
-      order.now === undefined ? Moment.now() : new Moment(order.now),
-    );
+    const snapshot = await Facts.collect(args.order ?? thisMachine(context.now));
 
     return {
       result: snapshot,

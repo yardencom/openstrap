@@ -1,6 +1,5 @@
 import type { Transport } from "../Transport/index.js";
-import type { FactOrder } from "../Modules/Facts/Facts.js";
-import { FactSnapshot } from "../Modules/Facts/FactSnapshot.js";
+import { Facts, type FactOrder, type FactSnapshot } from "../Modules/Facts/Facts.js";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { TargetPlatform } from "./TargetPlatform.js";
 
@@ -64,7 +63,7 @@ export class RemoteOpenStrap {
     }
 
     try {
-      return FactSnapshot.printed(parsed);
+      return Facts.printed(parsed);
     } catch (error) {
       throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
     }

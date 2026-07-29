@@ -1,5 +1,8 @@
-import type { FactChannel } from "./domain/FactOrder.js";
+import type { FactChannel, FactOrder } from "./domain/FactOrder.js";
 import type { FactDeclaration } from "./domain/FactDeclaration.js";
+import type { FactTarget } from "./domain/FactTarget.js";
+import { Moment } from "./domain/Moment.js";
+import { SnapshotId } from "./domain/SnapshotId.js";
 import type { FactSections, ToolFact, TransportFact } from "./domain/FactModel.js";
 import { AccountFacts } from "./collect/accounts/AccountFacts.js";
 import { CommandFacts } from "./collect/commands/CommandFacts.js";
@@ -22,12 +25,6 @@ type DeclaredSection = Exclude<keyof FactDeclaration, "sections">;
 
 /** Whether the collecting got everything it was asked for. */
 export type FactsStatus = "success" | "warning" | "error";
-
-/** What to collect, and what the caller knows that the machine cannot know about itself. */
-export type FactsRequest = {
-  declare?: FactDeclaration;
-  channel?: FactChannel;
-};
 
 /**
  * The facts about the machine this is running on.
@@ -63,26 +60,55 @@ export class Facts {
   }
 
   /**
-   * Reads this machine.
+   * Reads this machine, and hands back a snapshot of it.
+   *
+   * The way into this module and the only one. It runs every collector, makes the facts out of what
+   * they answered, and names them: which machine the caller was asking about and when. A caller left
+   * to do the naming itself is a caller that can name the same collection two ways.
    *
    * A method and not a constructor, because reading waits and a constructor cannot.
    */
-  static async collect(request: FactsRequest = {}): Promise<Facts> {
-    return new Facts(await new Collecting().read(request));
+  static async collect(order: FactOrder): Promise<FactSnapshot> {
+    const facts = new Facts(await new Collecting().read(order));
+
+    return new FactSnapshot(
+      order.target,
+      facts,
+      order.now === undefined ? Moment.now() : new Moment(order.now),
+    );
   }
 
   /**
-   * Facts as they came back from JSON, which openstrap on another machine collected.
+   * A snapshot openstrap took on another machine and printed, read back into these types.
    *
-   * They are not judged again here — openstrap collected them, and a second opinion would be a second
-   * implementation — but they are made facts again, because text cannot answer for itself.
+   * The other way facts reach this openstrap, and it is the same module's job: openstrap delivers
+   * itself to a machine it cannot read from here, and what comes back over the channel is text. Text
+   * is not a snapshot — the id that knows how it is spelled, the moment with both of its spellings,
+   * the facts that can say whether they are complete are all lost in it — so it is put back together
+   * rather than passed on as a lookalike.
    */
-  static of(sections: unknown): Facts {
-    if (!sections || typeof sections !== "object" || Array.isArray(sections)) {
-      throw new TypeError("Not a set of fact sections");
+  static printed(output: unknown): FactSnapshot {
+    const printed = shapeOf(output);
+    const snapshot = new FactSnapshot(
+      {
+        name: String(printed.target?.id),
+        scope: String(printed.scope),
+        type: String(printed.target?.type),
+        displayName: printed.target?.displayName === undefined ? undefined : String(printed.target.displayName),
+      },
+      // Made facts again, and not judged again: openstrap collected them, and a second opinion here
+      // would be a second implementation.
+      new Facts(printed.facts),
+      Moment.of(printed.takenAt),
+    );
+
+    // A snapshot whose name does not follow from its own contents is one the state store and a
+    // requirement result would disagree about.
+    if (String(snapshot.id) !== printed.id) {
+      throw new TypeError(`A snapshot called ${JSON.stringify(printed.id)}, which is not what ${snapshot.id} is called`);
     }
 
-    return new Facts(sections as FactSections);
+    return snapshot;
   }
 
   /**
@@ -120,7 +146,7 @@ class Collecting {
   private readonly paths = new PathFacts(this.platform);
   private readonly commands = new CommandFacts(this.platform);
 
-  async read(request: FactsRequest): Promise<FactSections> {
+  async read(request: FactOrder): Promise<FactSections> {
     const declaration = request.declare ?? {};
     const scalars = await this.system.read();
     const tools = await this.readTools(declaration);
@@ -232,4 +258,115 @@ function freeze(value: unknown): void {
   for (const property of Object.values(value)) {
     freeze(property);
   }
+}
+
+/** Which shape of snapshot this is. Every reader compares against it before trusting one. */
+const schemaVersion = "facts.v1";
+
+/**
+ * How the snapshot came to be: when it was taken, and whether the taking went cleanly.
+ *
+ * One moment and not a pair. A start and a finish look like an interval, but no interval is kept
+ * anywhere: the finish was `takenAt` and the start only spelled out the snapshot's own name a second
+ * time. How long collecting took is nobody's question yet, and if it becomes one it is a duration and
+ * not two stamps to subtract.
+ */
+export type SnapshotReading = {
+  takenAt: Moment;
+  status: FactsStatus;
+};
+
+/**
+ * A machine as it was read, once.
+ *
+ * Facts on their own are not something anyone can act on: two collections of the same machine look
+ * alike, nothing says which shape they are in, and nothing says which machine anyone was asking
+ * about. This is what makes them usable —
+ *
+ * - an identity, so it can be stored, referred to by a requirement result and named in a report;
+ * - the schema it claims, so a reader can tell whether it understands the shape before trusting it;
+ * - when it was taken, and how the taking went;
+ * - which machine it is about, under the name the caller knows it by.
+ *
+ * Each of those is a type of its own rather than a string: an id knows how it is spelled, a moment
+ * knows both of its spellings, and the facts know whether they are complete. What is left here is the
+ * putting together, and then it is frozen — everything downstream reads it as it was taken.
+ *
+ * A constructor rather than a method, because nothing here waits: the machine has already answered
+ * and this only turns the answer into something that can be trusted.
+ */
+export class FactSnapshot {
+  readonly id: SnapshotId;
+  readonly schemaVersion = schemaVersion;
+  readonly scope: string;
+  readonly target: { type: string; id: string; displayName?: string };
+  readonly facts: Facts;
+  readonly reading: SnapshotReading;
+
+  /**
+   * @param takenAt When the machine was read. Given rather than read from the clock here, because
+   * what waited for the collection knows when it came back, and a constructor that stamped itself
+   * would be dating the paperwork instead. It also names the snapshot, so the name and the time can
+   * never disagree. The outcome is not given, because the facts answer it and nobody should be able
+   * to disagree with them.
+   */
+  constructor(target: FactTarget, facts: Facts, takenAt: Moment) {
+    this.id = SnapshotId.for(target.name, takenAt);
+    this.scope = target.scope;
+    this.target = { type: target.type, id: target.name, displayName: target.displayName };
+    this.facts = facts;
+    this.reading = { takenAt, status: facts.status() };
+
+    Object.freeze(this.target);
+    Object.freeze(this.reading);
+    Object.freeze(this);
+  }
+
+}
+
+/**
+ * What openstrap printed, checked far enough to be worth rebuilding.
+ *
+ * Only what a reader could otherwise be wrong about: the shape it claims, and that the pieces a
+ * snapshot cannot exist without are there. Anything more would be judging facts openstrap collected.
+ */
+function shapeOf(output: unknown): {
+  id: string;
+  takenAt: string;
+  scope: unknown;
+  target?: { type?: unknown; id?: unknown; displayName?: unknown };
+  facts: FactSections;
+} {
+  if (!output || typeof output !== "object" || Array.isArray(output)) {
+    throw new TypeError("Not a snapshot");
+  }
+
+  const printed = output as {
+    schemaVersion?: unknown;
+    id?: unknown;
+    scope?: unknown;
+    target?: { type?: unknown; id?: unknown; displayName?: unknown };
+    facts?: unknown;
+    reading?: { takenAt?: unknown };
+  };
+
+  if (printed.schemaVersion !== schemaVersion) {
+    throw new TypeError(`A snapshot in ${JSON.stringify(printed.schemaVersion)}, which this openstrap does not read`);
+  }
+
+  if (typeof printed.id !== "string" || typeof printed.reading?.takenAt !== "string") {
+    throw new TypeError("A snapshot with no name, or none of the moment it was taken");
+  }
+
+  if (!printed.facts || typeof printed.facts !== "object" || Array.isArray(printed.facts)) {
+    throw new TypeError("A snapshot with no facts in it");
+  }
+
+  return {
+    id: printed.id,
+    takenAt: printed.reading.takenAt,
+    scope: printed.scope,
+    target: printed.target,
+    facts: printed.facts as FactSections,
+  };
 }

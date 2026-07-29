@@ -3,12 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-/**
- * The two names the module answers to: the facts, and a snapshot naming what was collected. Two and
- * not one because they are two things — collecting a machine, and saying which machine and when — and
- * two and not more because everything else the module holds is reached through them.
- */
-const doors = ["/Facts.js", "/FactSnapshot.js"];
+/** The one name the module answers to. */
+const doors = ["/Facts.js"];
 
 describe("Facts boundaries", () => {
   it("keeps Facts independent from Zod and concrete adapters", () => {
