@@ -6,6 +6,11 @@ It follows the build-system shape used by Vite/Webpack: a user provides plugin o
 
 ## Current Runtime Contract
 
+A plugin depends on `@openstrap/plugin-contract` and never on openstrap itself (ADR 0008). The
+contract is declarations only, so nothing of openstrap ends up inside a built plugin, and a plugin
+is a plain object — there is nothing to call to declare one. openstrap checks the shape when it
+loads it, which is the only place the check can be trusted: a plugin is built separately.
+
 A plugin registers capabilities through `setup(api)`:
 
 ```text
@@ -46,16 +51,15 @@ The core owns secrets. A plugin receives a `SecretReference`, never a value; the
 `openstrap.config.mjs` is runtime configuration, not a blueprint and not a facts definition.
 
 ```js
-import { defineOpenStrapConfig } from "openstrap/Plugin";
 import utm from "@openstrap/utm";
 import ssh from "@openstrap/ssh";
 
-export default defineOpenStrapConfig({
+export default {
   plugins: [
     utm(),
     ssh(),
   ],
-});
+};
 ```
 
 ## CLI Runtime

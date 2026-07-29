@@ -12,7 +12,7 @@ import type {
   FileSystemWriteOptions,
   RemovePathOptions,
   TextFileWriteOptions,
-} from "../../types/FileSystem.js";
+} from "@openstrap/plugin-contract";
 
 const fileModes: Record<FileAccess, number> = {
   executable: 0o755,

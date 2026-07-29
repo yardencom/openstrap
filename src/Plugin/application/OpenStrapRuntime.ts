@@ -1,4 +1,4 @@
-import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "../types/OpenStrapPlugin.js";
+import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "@openstrap/plugin-contract";
 import { loadOpenStrapPlugin, loadOpenStrapPluginConfig } from "./OpenStrapPluginLoader.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
 import type { ProviderRegistry } from "./ProviderRegistry.js";

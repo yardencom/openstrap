@@ -1,4 +1,4 @@
-import type { TransportConnector } from "../types/Transport.js";
+import type { TransportConnector } from "@openstrap/plugin-contract";
 import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredTransport = {

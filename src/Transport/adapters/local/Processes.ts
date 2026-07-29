@@ -13,7 +13,7 @@ import type {
   ProcessAPI,
   ProcessOutput,
   SystemCommand,
-} from "../../types/Process.js";
+} from "@openstrap/plugin-contract";
 
 export class LocalProcesses implements ProcessAPI {
   async capture(command: CapturedSystemCommand): Promise<ProcessOutput> {

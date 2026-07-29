@@ -11,7 +11,7 @@ import type {
   NetworkAPI,
   NetworkRequest,
   NetworkResponse,
-} from "../../types/Network.js";
+} from "@openstrap/plugin-contract";
 
 export class LocalNetwork implements NetworkAPI {
   constructor() {

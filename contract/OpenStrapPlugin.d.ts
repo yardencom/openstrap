@@ -34,10 +34,3 @@ export type OpenStrapPluginConfig = {
   plugins?: readonly OpenStrapPluginOption[];
 };
 
-export function defineOpenStrapPlugin(plugin: OpenStrapPlugin): OpenStrapPlugin {
-  return plugin;
-}
-
-export function defineOpenStrapConfig(config: OpenStrapPluginConfig): OpenStrapPluginConfig {
-  return config;
-}

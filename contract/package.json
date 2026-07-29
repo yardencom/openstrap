@@ -1,0 +1,15 @@
+{
+  "name": "@openstrap/plugin-contract",
+  "version": "0.1.0",
+  "description": "The shape an OpenStrap plugin has. Types only: no runtime code, so a plugin depends on the contract and never on OpenStrap.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "*.d.ts",
+    "README.md"
+  ]
+}

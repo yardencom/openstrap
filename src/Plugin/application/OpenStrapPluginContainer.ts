@@ -6,7 +6,7 @@ import type {
   OpenStrapPlugin,
   OpenStrapPluginApi,
   OpenStrapPluginOption,
-} from "../types/OpenStrapPlugin.js";
+} from "@openstrap/plugin-contract";
 
 export type OpenStrapPluginContainerCreateRequest = {
   plugins?: readonly OpenStrapPluginOption[];

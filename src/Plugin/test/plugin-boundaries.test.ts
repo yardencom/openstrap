@@ -3,16 +3,10 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+/** Where the shape a plugin implements lives: a package of its own, so a plugin needs no openstrap. */
+const contractRoot = join(process.cwd(), "contract");
+
 describe("Plugin boundaries", () => {
-  it("keeps Plugin domain free of application and core code", () => {
-    const offenders = listSourceFiles(join(process.cwd(), "src/Plugin/types")).filter((filePath: string) => {
-      const source = readFileSync(filePath, "utf8");
-      return /from\s+["']\.\.\/(Application|Core)\//.test(source);
-    });
-
-    expect(offenders).toEqual([]);
-  });
-
   it("reaches the transport ports only through the Transport barrel", () => {
     const offenders = pluginSourceFiles().filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
@@ -25,17 +19,16 @@ describe("Plugin boundaries", () => {
   });
 
   it("offers no slot for reading a machine, because openstrap owns that", () => {
-    const api = readFileSync(join(process.cwd(), "src/Plugin/types/OpenStrapPlugin.ts"), "utf8");
-    const contracts = readdirSync(join(process.cwd(), "src/Plugin/types"));
+    const api = readFileSync(join(contractRoot, "OpenStrapPlugin.d.ts"), "utf8");
 
     expect(api).not.toMatch(/registerFactsBackend|facts\?:/);
-    expect(contracts).not.toContain("FactsBackend.ts");
-    expect(readdirSync(join(process.cwd(), "src/Plugin/Application"))).not.toContain("FactsBackendRegistry.ts");
+    expect(readdirSync(contractRoot)).not.toContain("FactsBackend.d.ts");
+    expect(readdirSync(join(process.cwd(), "src/Plugin/application"))).not.toContain("FactsBackendRegistry.ts");
   });
 
   it("keeps every plugin contract method asynchronous", () => {
-    const contracts = ["Provider.ts", "Transport.ts", "Secret.ts"].map((name) =>
-      readFileSync(join(process.cwd(), "src/Plugin/types", name), "utf8"),
+    const contracts = ["Provider.d.ts", "Transport.d.ts", "Secret.d.ts"].map((name) =>
+      readFileSync(join(contractRoot, name), "utf8"),
     );
     const methods = contracts.flatMap((source) => [...source.matchAll(/^\s{2}(\w+)\((.*?)\):\s*(.+);$/gm)]);
     const offenders = methods

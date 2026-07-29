@@ -1,4 +1,4 @@
-import type { SecretStore } from "../types/Secret.js";
+import type { SecretStore } from "@openstrap/plugin-contract";
 import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredSecretStore = {

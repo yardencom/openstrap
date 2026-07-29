@@ -1,4 +1,4 @@
-import type { Transport } from "../../Transport/index.js";
+import type { Transport } from "./ports/Transport.js";
 import type { SecretReference } from "./Secret.js";
 
 export type TransportEndpoint = {

@@ -4,16 +4,18 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import type {
+  Provider,
+  SecretStore,
+  TransportConnector,
+} from "@openstrap/plugin-contract";
+
 import {
   createOpenStrapRuntime,
-  defineOpenStrapPlugin,
   loadOpenStrapPlugin,
   loadOpenStrapPluginConfig,
   OpenStrapPluginContainer,
   OpenStrapPluginError,
-  type Provider,
-  type SecretStore,
-  type TransportConnector,
 } from "../index.js";
 
 describe("OpenStrap plugin system", () => {
@@ -22,26 +24,26 @@ describe("OpenStrap plugin system", () => {
 
     await OpenStrapPluginContainer.create({
       plugins: [
-        defineOpenStrapPlugin({
+        {
           name: "normal",
           setup: () => {
             order.push("normal");
           },
-        }),
-        defineOpenStrapPlugin({
+        },
+        {
           name: "post",
           enforce: "post",
           setup: () => {
             order.push("post");
           },
-        }),
-        defineOpenStrapPlugin({
+        },
+        {
           name: "pre",
           enforce: "pre",
           setup: () => {
             order.push("pre");
           },
-        }),
+        },
       ],
     });
 
@@ -51,14 +53,14 @@ describe("OpenStrap plugin system", () => {
   it("registers a provider, a transport and a secret store from one plugin", async () => {
     const container = await OpenStrapPluginContainer.create({
       plugins: [
-        defineOpenStrapPlugin({
+        {
           name: "test:utm",
           setup(api) {
             api.registerProvider(createNoopProvider("utm"));
             api.registerTransport(createNoopTransport("ssh"));
             api.registerSecretStore(createNoopSecretStore("keychain"));
           },
-        }),
+        },
       ],
     });
 
@@ -71,15 +73,15 @@ describe("OpenStrap plugin system", () => {
   it("rejects duplicate provider and transport ids", async () => {
     await expect(OpenStrapPluginContainer.create({
       plugins: [
-        defineOpenStrapPlugin({ name: "first", setup: (api) => api.registerProvider(createNoopProvider("utm")) }),
-        defineOpenStrapPlugin({ name: "second", setup: (api) => api.registerProvider(createNoopProvider("utm")) }),
+        { name: "first", setup: (api) => api.registerProvider(createNoopProvider("utm")) },
+        { name: "second", setup: (api) => api.registerProvider(createNoopProvider("utm")) },
       ],
     })).rejects.toThrow(OpenStrapPluginError);
 
     await expect(OpenStrapPluginContainer.create({
       plugins: [
-        defineOpenStrapPlugin({ name: "first", setup: (api) => api.registerTransport(createNoopTransport("ssh")) }),
-        defineOpenStrapPlugin({ name: "second", setup: (api) => api.registerTransport(createNoopTransport("ssh")) }),
+        { name: "first", setup: (api) => api.registerTransport(createNoopTransport("ssh")) },
+        { name: "second", setup: (api) => api.registerTransport(createNoopTransport("ssh")) },
       ],
     })).rejects.toThrow(OpenStrapPluginError);
   });
@@ -89,13 +91,13 @@ describe("OpenStrap plugin system", () => {
     delete (incomplete as Partial<Provider>).restart;
 
     await expect(OpenStrapPluginContainer.create({
-      plugins: [defineOpenStrapPlugin({ name: "broken", setup: (api) => api.registerProvider(incomplete) })],
+      plugins: [{ name: "broken", setup: (api) => api.registerProvider(incomplete) }],
     })).rejects.toThrow(/must expose restart\(\)/);
   });
 
   it("names the registered ids when a required one is missing", async () => {
     const container = await OpenStrapPluginContainer.create({
-      plugins: [defineOpenStrapPlugin({ name: "test:utm", setup: (api) => api.registerProvider(createNoopProvider("utm")) })],
+      plugins: [{ name: "test:utm", setup: (api) => api.registerProvider(createNoopProvider("utm")) }],
     });
 
     expect(() => container.providers.require("virtualbox")).toThrow(/Available providers: utm/);
@@ -106,12 +108,12 @@ describe("OpenStrap plugin system", () => {
     let slots: string[] = [];
 
     const container = await OpenStrapPluginContainer.create({
-      plugins: [defineOpenStrapPlugin({
+      plugins: [{
         name: "capture",
         setup: (api) => {
           slots = Object.keys(api);
         },
-      })],
+      }],
     });
 
     expect(runtime).not.toHaveProperty("factsBackend");

@@ -1,4 +1,4 @@
-import type { Provider } from "../types/Provider.js";
+import type { Provider } from "@openstrap/plugin-contract";
 import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 export type RegisteredProvider = {

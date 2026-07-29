@@ -7,7 +7,7 @@ import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 import type {
   OpenStrapPlugin,
   OpenStrapPluginConfig,
-} from "../types/OpenStrapPlugin.js";
+} from "@openstrap/plugin-contract";
 
 const defaultConfigFiles = [
   "openstrap.config.mjs",
