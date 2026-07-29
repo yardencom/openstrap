@@ -70,9 +70,14 @@ export class ToolFacts {
 
   private async look(declared: Record<string, ToolDeclaration>): Promise<Record<string, ToolFact>> {
 
-    const wanted = Object.keys(declared).length > 0
-      ? Object.entries(declared).map(([id, declaration]) => ({ id, name: declaration.name ?? id, declaration }))
-      : commonTools.map((name) => ({ id: name, name, declaration: {} as ToolDeclaration }));
+    // Only what was named. openstrap used to answer a declaration with no names in it with four tools
+    // of its own choosing — node, npm, python3, git — which is a fact nobody asked for, and no API
+    // can list every program on a machine anyway.
+    const wanted = Object.entries(declared).map(([id, declaration]) => ({
+      id,
+      name: declaration.name ?? id,
+      declaration,
+    }));
     const versions = await si.versions(wanted.map((tool) => versionAliases[tool.name] ?? tool.name).join(","));
     const facts = await Promise.all(wanted.map(async (tool) => {
       if (!this.platform.matches(tool.declaration.platforms)) {

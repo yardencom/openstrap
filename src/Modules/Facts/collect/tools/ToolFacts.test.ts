@@ -21,10 +21,8 @@ describe("tools", () => {
     });
   });
 
-  it("reads the tools every blueprint asks about when nothing is declared", async () => {
-    const answered = await asking().tools({});
-
-    expect(Object.keys(answered)).toEqual(["node", "npm", "python3", "git"]);
+  it("answers nothing when no tool was named, because it names none of its own", async () => {
+    expect(await asking().tools({})).toEqual({});
   });
 
   it("answers under the caller's key rather than the tool's name", async () => {
@@ -37,8 +35,8 @@ describe("tools", () => {
 describe("runtimes", () => {
   it("derives a runtime from the tool that provides it, so the two cannot disagree", async () => {
     const facts = asking();
-    const tools = await facts.tools({});
-    const runtimes = await facts.runtimes({});
+    const tools = await facts.tools({ node: {} });
+    const runtimes = await facts.runtimes({ node: {} });
 
     expect(runtimes.node).toMatchObject({ status: "present", type: "node", ready: true });
     expect(runtimes.node!.version).toBe(tools.node!.version);
@@ -46,7 +44,7 @@ describe("runtimes", () => {
 
   it("looks the tools up once, however many sections turn out to need them", async () => {
     const facts = asking();
-    const [tools, runtimes] = await Promise.all([facts.tools({}), facts.runtimes({})]);
+    const [tools, runtimes] = await Promise.all([facts.tools({ node: {} }), facts.runtimes({ node: {} })]);
 
     expect(Object.keys(runtimes).every((name) => name in tools)).toBe(true);
   });
@@ -56,10 +54,6 @@ describe("runtimes", () => {
   });
 
   it("offers no runtime for a tool that is not one", async () => {
-    const facts = asking();
-
-    await facts.tools({ git: {} });
-
-    expect(await facts.runtimes({})).toEqual({});
+    expect(await asking().runtimes({ git: {} })).toEqual({});
   });
 });
