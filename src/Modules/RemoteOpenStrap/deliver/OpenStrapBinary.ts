@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { FileSystemAPI } from "../../../Transport/index.js";
-import type { MachinePlatform } from "../../../types/Machine.js";
+import type { MachinePlatform } from "#types/Machine.js";
 
 /**
  * Where openstrap lands on a target.

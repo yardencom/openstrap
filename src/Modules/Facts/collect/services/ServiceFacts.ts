@@ -1,7 +1,7 @@
 import si from "systeminformation";
 
-import type { ServiceDeclaration } from "../../../../types/FactDeclaration.js";
-import type { ServiceFact } from "../../../../types/Facts.js";
+import type { ServiceDeclaration } from "#types/FactDeclaration.js";
+import type { ServiceFact } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** Which services are running, one declared name at a time. */

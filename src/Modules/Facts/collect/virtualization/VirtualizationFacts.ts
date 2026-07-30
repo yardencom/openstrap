@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 
-import type { FactSections } from "../../../../types/Facts.js";
+import type { FactSections } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** Whether this machine is itself a guest, and of what. */

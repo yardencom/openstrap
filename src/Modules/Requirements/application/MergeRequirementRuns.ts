@@ -1,4 +1,4 @@
-import type { CheckStatus, RequirementRun } from "../../../types/Requirements.js";
+import type { CheckStatus, RequirementRun } from "#types/Requirements.js";
 
 /**
  * Folds one evaluation per target into a single run.

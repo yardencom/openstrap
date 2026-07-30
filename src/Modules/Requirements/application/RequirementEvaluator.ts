@@ -9,10 +9,10 @@ import type {
   RequirementResult,
   RequirementRun,
   TargetlessRequirement,
-} from "../../../types/Requirements.js";
-import type { FactSnapshot } from "../../../types/FactSnapshot.js";
-import type { Target } from "../../../types/Target.js";
-import type { Observed, ObservedStatus } from "../../../types/Facts.js";
+} from "#types/Requirements.js";
+import type { FactSnapshot } from "#types/FactSnapshot.js";
+import type { Target } from "#types/Target.js";
+import type { Observed, ObservedStatus } from "#types/Facts.js";
 
 const requirementMetaFields = new Set(["id", "optional"]);
 const assertionKeys = new Set([

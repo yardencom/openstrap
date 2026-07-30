@@ -1,6 +1,6 @@
 import si from "systeminformation";
 
-import type { FactSections } from "../../../../types/Facts.js";
+import type { FactSections } from "#types/Facts.js";
 
 /** How much memory this machine has, and how much of it is free. */
 export class MemoryFacts {

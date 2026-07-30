@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { FactRedaction } from "../../../../types/FactDeclaration.js";
+import type { FactRedaction } from "#types/FactDeclaration.js";
 
 /**
  * What a snapshot is allowed to carry from output that may hold a secret.

@@ -1,4 +1,4 @@
-import type { TargetScope, TargetType } from "../../types/Target.js";
+import type { TargetScope, TargetType } from "#types/Target.js";
 
 export type TargetRecord = {
   name: string;

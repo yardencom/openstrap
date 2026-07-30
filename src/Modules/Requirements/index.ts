@@ -4,7 +4,7 @@ export {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
 } from "./application/MergeRequirementRuns.js";
-export { runSucceeded } from "../../types/Requirements.js";
+export { runSucceeded } from "#types/Requirements.js";
 export type {
   CheckStatus,
   RequirementCheckNode,
@@ -13,4 +13,4 @@ export type {
   RequirementResult,
   RequirementRun,
   TargetlessRequirement,
-} from "../../types/Requirements.js";
+} from "#types/Requirements.js";

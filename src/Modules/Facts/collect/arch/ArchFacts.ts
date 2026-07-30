@@ -1,4 +1,4 @@
-import type { FactSections } from "../../../../types/Facts.js";
+import type { FactSections } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** Which instruction set this machine runs. */

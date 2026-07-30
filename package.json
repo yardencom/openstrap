@@ -28,12 +28,15 @@
       "import": "./dist/Modules/Requirements/index.js"
     }
   },
+  "imports": {
+    "#types/*": "./src/types/*"
+  },
   "workspaces": [
     "contract"
   ],
   "scripts": {
     "binaries": "rm -rf bin && npm run bundle && pkg bin/openstrap.cjs --config pkg.config.mjs && rm bin/openstrap.cjs",
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'module',imports:{'#types/*':'./types/*'}},null,2))\"",
     "bundle": "esbuild src/CLI/index.ts --bundle --platform=node --target=node24 --format=cjs --minify --define:import.meta.url=undefined --outfile=bin/openstrap.cjs",
     "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
     "test": "vitest run",

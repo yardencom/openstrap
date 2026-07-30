@@ -2,7 +2,7 @@ import { loadavg } from "node:os";
 
 import si from "systeminformation";
 
-import type { FactSections } from "../../../../types/Facts.js";
+import type { FactSections } from "#types/Facts.js";
 
 /** What this machine computes with. */
 export class CpuFacts {
