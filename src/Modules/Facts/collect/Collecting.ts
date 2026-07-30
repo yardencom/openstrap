@@ -1,5 +1,5 @@
-import type { FactChannel, FactOrder } from "../types/FactOrder.js";
-import type { FactSections, TransportFact } from "../types/FactModel.js";
+import type { FactChannel, FactOrder } from "../../../types/FactOrder.js";
+import type { FactSections, TransportFact } from "../../../types/Facts.js";
 import { AccountFacts } from "./accounts/AccountFacts.js";
 import { ArchFacts } from "./arch/ArchFacts.js";
 import { CommandFacts } from "./commands/CommandFacts.js";

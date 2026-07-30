@@ -7,8 +7,17 @@ import { describe, expect, it } from "vitest";
 const doors = ["/Facts.js"];
 
 /**
- * The rule this file exists for: imagine openstrap does not exist. Does the module still make sense?
- * It has to be liftable into a package of its own without a line rewritten.
+ * The rule this file exists for: a module depends on what the project is, and on no other module.
+ *
+ * `src/types` says what openstrap is about — a target, a blueprint, facts, a requirement — and every
+ * module is an implementation of some of it. Facts is how facts are collected; what facts *are* is
+ * not this module's private property, which is why requirements could not read a snapshot without
+ * copying its shape by hand.
+ *
+ * The rule used to be stricter — reach outside yourself for nothing at all, so the module could be
+ * lifted into a package of its own untouched. That independence was real, and it was paid for in
+ * copies: `ObservedStatus` written twice word for word, the snapshot's shape written again inside
+ * the evaluator, `scope` typed in one place out of four.
  */
 const openstrapModules = [
   "Blueprint", "Plugin", "Requirements", "ConfigCore", "Transport", "RemoteOpenStrap",
@@ -26,14 +35,15 @@ describe("Facts is a module of its own", () => {
     expect(offenders.map(relative)).toEqual([]);
   });
 
-  it("reaches outside itself for nothing at all", () => {
+  it("reaches outside itself for the project's vocabulary and nothing else", () => {
     const factsRoot = join(process.cwd(), "src/Modules/Facts");
+    const vocabulary = join(process.cwd(), "src/types");
     const offenders = factsSources().filter((filePath: string) => {
       const source = readFileSync(filePath, "utf8");
 
       return [...source.matchAll(/from\s+["'](\.[^"']+)["']/g)]
         .map((match) => resolve(dirname(filePath), match[1]!))
-        .some((target) => !target.startsWith(`${factsRoot}/`));
+        .some((target) => !target.startsWith(`${factsRoot}/`) && !target.startsWith(`${vocabulary}/`));
     });
 
     expect(offenders.map(relative)).toEqual([]);
@@ -92,7 +102,8 @@ describe("Collecting facts", () => {
   });
 
   it("is built out of classes", () => {
-    const sources = factsSources().filter((filePath: string) => !filePath.includes("/types/"));
+    // The barrel is not one: it offers nothing, so that `Facts.ts` stays the one way in.
+    const sources = factsSources().filter((filePath: string) => !filePath.endsWith("/index.ts"));
 
     expect(sources.length).toBeGreaterThan(4);
 
@@ -176,13 +187,10 @@ function constructorBodyIn(source: string): string {
   return "";
 }
 
-/** Everything the module is made of: the facade, the model and the collectors. */
+/** Everything the module is made of: the facade, the snapshot it hands back, and the collectors. */
 function factsSources(): string[] {
-  return [
-    join(process.cwd(), "src/Modules/Facts/Facts.ts"),
-    ...listSources(join(process.cwd(), "src/Modules/Facts/types")),
-    ...collectSources(),
-  ].filter((filePath: string) => !filePath.includes(".test."));
+  return listSources(join(process.cwd(), "src/Modules/Facts"))
+    .filter((filePath: string) => !filePath.includes(".test.") && !filePath.includes("/test/"));
 }
 
 /** What reads the machine. */

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { RequirementEvaluator, type RequirementLeafCheck, type TargetlessRequirement } from "../index.js";
+import { Facts } from "../../Facts/Facts.js";
 
 describe("RequirementEvaluator", () => {
   it("passes when all leaf checks match normalized facts", () => {
@@ -50,7 +51,7 @@ describe("RequirementEvaluator", () => {
           },
         },
       ],
-      target: { name: "host", type: "machine" },
+      target: { name: "host", scope: "host", type: "host" },
       snapshots: snapshots(),
       now: new Date("2026-06-08T10:00:00.000Z"),
     });
@@ -143,17 +144,25 @@ describe("RequirementEvaluator", () => {
 function evaluate(requirements: TargetlessRequirement[]) {
   return new RequirementEvaluator().evaluate({
     requirements,
-    target: { name: "guest", type: "vm" },
+    target: { name: "guest", scope: "guest", type: "vm" },
     snapshots: snapshots(),
     now: new Date("2026-06-08T10:00:00.000Z"),
   });
 }
 
+/**
+ * A snapshot as the evaluator receives one: taken by openstrap somewhere and read back.
+ *
+ * Built the way a real one is rather than hand-assembled here. A fixture shaped like a snapshot can
+ * be shaped like an old one, and then these tests would pass against something no machine produces.
+ */
 function snapshots() {
   return [
-    {
-      id: "snap_guest",
-      target: { id: "guest" },
+    Facts.snapshotFrom({
+      schemaVersion: "facts.v1",
+      scope: "guest",
+      target: { type: "vm", id: "guest" },
+      reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },
       facts: {
         users: {
           openstrap: {
@@ -175,7 +184,7 @@ function snapshots() {
           error: { status: "error" },
         },
       },
-    },
+    }),
   ];
 }
 

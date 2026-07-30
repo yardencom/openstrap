@@ -60,8 +60,10 @@ export class SqliteStateStore {
 
     return {
       name: String(row.name),
-      scope: String(row.scope),
-      type: String(row.type),
+      // The row was written from a blueprint that had already been validated against these words, so
+      // it is read back as what was stored rather than checked again against the same list.
+      scope: String(row.scope) as TargetRecord["scope"],
+      type: String(row.type) as TargetRecord["type"],
       provider: row.provider ?? undefined,
       transport: String(row.transport),
     };
@@ -74,8 +76,10 @@ export class SqliteStateStore {
 
     return rows.map((row) => ({
       name: String(row.name),
-      scope: String(row.scope),
-      type: String(row.type),
+      // The row was written from a blueprint that had already been validated against these words, so
+      // it is read back as what was stored rather than checked again against the same list.
+      scope: String(row.scope) as TargetRecord["scope"],
+      type: String(row.type) as TargetRecord["type"],
       provider: row.provider ?? undefined,
       transport: String(row.transport),
     }));

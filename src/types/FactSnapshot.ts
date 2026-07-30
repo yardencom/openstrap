@@ -1,7 +1,7 @@
-import type { FactSections } from "./types/FactModel.js";
-import type { Immutable } from "./types/Immutable.js";
-import type { FactTarget } from "./types/FactTarget.js";
-import type { FactsStatus } from "./types/FactStatus.js";
+import type { FactSections } from "./Facts.js";
+import type { Immutable } from "./Immutable.js";
+import type { Target } from "./Target.js";
+import type { FactsStatus } from "./FactsStatus.js";
 import type { Moment } from "./Moment.js";
 import { SnapshotId } from "./SnapshotId.js";
 
@@ -66,7 +66,7 @@ export class FactSnapshot {
    * never disagree. The outcome is not given, because the facts answer it and nobody should be able
    * to disagree with them.
    */
-  constructor(target: FactTarget, facts: SnapshotFacts, takenAt: Moment) {
+  constructor(target: Target, facts: SnapshotFacts, takenAt: Moment) {
     this.id = SnapshotId.for(target.name, takenAt);
     this.scope = target.scope;
     this.target = { type: target.type, id: target.name, displayName: target.displayName };

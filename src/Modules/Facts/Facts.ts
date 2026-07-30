@@ -1,18 +1,19 @@
-import type { FactOrder } from "./types/FactOrder.js";
-import type { FactSections } from "./types/FactModel.js";
-import type { Immutable } from "./types/Immutable.js";
-import type { FactsStatus } from "./types/FactStatus.js";
+import type { FactOrder } from "../../types/FactOrder.js";
+import type { TargetScope, TargetType } from "../../types/Target.js";
+import type { FactSections } from "../../types/Facts.js";
+import type { Immutable } from "../../types/Immutable.js";
+import type { FactsStatus } from "../../types/FactsStatus.js";
 import { Collecting } from "./collect/Collecting.js";
-import { FactSnapshot, schemaVersion } from "./FactSnapshot.js";
-import { Moment } from "./Moment.js";
+import { FactSnapshot, schemaVersion } from "../../types/FactSnapshot.js";
+import { Moment } from "../../types/Moment.js";
 
 /** What a caller has to name to ask for facts. */
-export type { FactOrder, FactChannel } from "./types/FactOrder.js";
-export type { FactTarget } from "./types/FactTarget.js";
-export { everySection, type FactDeclaration, type Asked } from "./types/FactDeclaration.js";
-export type { FactSections } from "./types/FactModel.js";
-export type { FactsStatus } from "./types/FactStatus.js";
-export type { FactSnapshot } from "./FactSnapshot.js";
+export type { FactOrder, FactChannel } from "../../types/FactOrder.js";
+export type { Target } from "../../types/Target.js";
+export { everySection, type FactDeclaration, type Asked } from "../../types/FactDeclaration.js";
+export type { FactSections } from "../../types/Facts.js";
+export type { FactsStatus } from "../../types/FactsStatus.js";
+export type { FactSnapshot } from "../../types/FactSnapshot.js";
 
 
 /**
@@ -93,8 +94,8 @@ export class Facts {
 
     const printed = json as {
       schemaVersion?: unknown;
-      scope: string;
-      target: { type: string; id: string; displayName?: string };
+      scope: TargetScope;
+      target: { type: TargetType; id: string; displayName?: string };
       facts: FactSections;
       reading: { takenAt: string };
     };

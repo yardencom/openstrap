@@ -2,7 +2,7 @@ import {
   ConfigCore,
   type ConfigLoadRequest,
 } from "../../ConfigCore/index.js";
-import type { Blueprint } from "./types/Blueprint.js";
+import type { Blueprint } from "../../types/Blueprint.js";
 import { BlueprintReadError } from "./errors/BlueprintReadError.js";
 import { declaredTargets } from "./application/DeclaredTargets.js";
 import { BlueprintSchema } from "./schema/BlueprintSchema.js";

@@ -11,7 +11,7 @@ import { RemoteOpenStrap } from "./RemoteOpenStrap.js";
 import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";
 
 const order: FactOrder = {
-  target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
+  target: { name: "ubuntu-vm", scope: "guest", type: "vm" },
   declare: { paths: { home: { path: "$HOME" } } },
   channel: { type: "ssh", authMethods: ["publickey"] },
 };
@@ -20,7 +20,7 @@ const order: FactOrder = {
 const snapshot = {
   id: "snap_ubuntu-vm_20260608T100000000Z",
   schemaVersion: "facts.v1",
-  scope: "machine",
+  scope: "guest",
   target: { type: "vm", id: "ubuntu-vm" },
   facts: { arch: "arm64" },
   reading: { takenAt: "2026-06-08T10:00:00.000Z", status: "success" },

@@ -78,11 +78,11 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       const connection = await new ConnectToTarget().execute({ target, runtime, store });
 
       try {
-        return await new RemoteOpenStrap(
-          connection.transport,
-        machine,
-        ).collect({
-          target: { name: target, scope: recorded?.scope ?? "machine", type: recorded?.type ?? "vm" },
+        return await new RemoteOpenStrap(connection.transport, machine).collect({
+          // A machine openstrap had to travel to is a guest, which is what it is recorded as. The
+          // fallback used to say `machine`, a word no scope has ever been, and it reached the
+          // snapshot unnoticed because the field was a string.
+          target: { name: target, scope: recorded?.scope ?? "guest", type: recorded?.type ?? "vm" },
           declare: everySection,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
           now: context.now,

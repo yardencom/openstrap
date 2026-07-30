@@ -1,7 +1,9 @@
+import type { TargetScope, TargetType } from "../../types/Target.js";
+
 export type TargetRecord = {
   name: string;
-  scope: string;
-  type: string;
+  scope: TargetScope;
+  type: TargetType;
   provider?: string;
   transport: string;
 };

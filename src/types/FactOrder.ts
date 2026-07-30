@@ -1,5 +1,5 @@
 import type { FactDeclaration } from "./FactDeclaration.js";
-import type { FactTarget } from "./FactTarget.js";
+import type { Target } from "./Target.js";
 
 /**
  * The channel a snapshot was read through, as the thing that opened it reported.
@@ -22,7 +22,7 @@ export type FactChannel = {
  * in them and inventing entries would be inventing facts.
  */
 export type FactOrder = {
-  target: FactTarget;
+  target: Target;
   declare?: FactDeclaration;
   channel?: FactChannel;
   /**

@@ -1,7 +1,7 @@
 import which from "which";
 
-import type { PackageDeclaration } from "../../types/FactDeclaration.js";
-import type { FactSections, PackageFact } from "../../types/FactModel.js";
+import type { PackageDeclaration } from "../../../../types/FactDeclaration.js";
+import type { FactSections, PackageFact } from "../../../../types/Facts.js";
 
 /** A package manager is recognised by the executable that drives it. */
 const packageManagers: readonly { name: string; executable: string }[] = [

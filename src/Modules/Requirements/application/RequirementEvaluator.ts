@@ -8,29 +8,11 @@ import type {
   RequirementLeafCheck,
   RequirementResult,
   RequirementRun,
-  RequirementTarget,
   TargetlessRequirement,
-} from "../types/Requirements.js";
-
-type ObservedStatus = "present" | "absent" | "unknown" | "unsupported" | "error";
-
-type Observed = {
-  status: ObservedStatus;
-  reason?: string;
-  message?: string;
-};
-
-/**
- * A snapshot as this module needs to read one.
- *
- * Spelled here rather than imported, so a requirement check depends on the shape it compares
- * against and not on the module that produces it.
- */
-type FactSnapshot = {
-  id: { toString(): string };
-  target: { id: string };
-  facts: unknown;
-};
+} from "../../../types/Requirements.js";
+import type { FactSnapshot } from "../../../types/FactSnapshot.js";
+import type { Target } from "../../../types/Target.js";
+import type { Observed, ObservedStatus } from "../../../types/Facts.js";
 
 const requirementMetaFields = new Set(["id", "optional"]);
 const assertionKeys = new Set([
@@ -50,7 +32,7 @@ const terminalObservedStatuses = new Set<ObservedStatus>(["unknown", "unsupporte
 
 export class RequirementEvaluator {
   evaluate(params: {
-    target: RequirementTarget;
+    target: Target;
     requirements: readonly TargetlessRequirement[];
     snapshots: readonly FactSnapshot[];
     now?: Date;

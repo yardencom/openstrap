@@ -1,4 +1,4 @@
-import type { TargetlessRequirement } from "../types/Requirements.js";
+import type { TargetlessRequirement } from "../../../types/Requirements.js";
 
 /** Fields of a requirement that name the requirement, not a fact section. */
 const metaFields = new Set(["id", "optional"]);

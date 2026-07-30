@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import si from "systeminformation";
 
-import type { FactSections } from "../../types/FactModel.js";
+import type { FactSections } from "../../../../types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
 /** Which operating system this is. */

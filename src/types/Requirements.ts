@@ -1,3 +1,5 @@
+import type { Target } from "./Target.js";
+
 export type CheckStatus = "passed" | "failed" | "error" | "skipped";
 
 /**
@@ -15,11 +17,6 @@ export type TargetlessRequirement = {
   id: string;
   optional?: boolean;
 } & Record<string, unknown>;
-
-export type RequirementTarget = {
-  name: string;
-  type: string;
-};
 
 export type RequirementExpected =
   | {

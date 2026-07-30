@@ -24,7 +24,10 @@ describe("Facts boundaries", () => {
     const factsEntries = readdirSync(factsPath);
     const publicBarrel = readFileSync(join(factsPath, "index.ts"), "utf8");
 
-    expect(factsEntries).toEqual(expect.arrayContaining(["types", "collect"]));
+    // No `types` of its own: what facts are is the project's vocabulary, in `src/types`. What is
+    // here is how they are collected.
+    expect(factsEntries).toEqual(expect.arrayContaining(["collect"]));
+    expect(factsEntries).not.toContain("types");
     expect(publicBarrel).toBe("export {};\n");
     expect(factsEntries).not.toContain("Application");
     // No local case and no remote case: there is one way to collect, so there is nothing to choose
@@ -52,7 +55,7 @@ describe("Facts boundaries", () => {
 
   it("lets consumers import only what the facade offers", () => {
     const offered = new Set([
-      "Facts", "FactOrder", "FactChannel", "FactTarget", "FactDeclaration", "FactSnapshot",
+      "Facts", "FactOrder", "FactChannel", "Target", "FactDeclaration", "FactSnapshot",
       "Asked", "FactSections", "FactsStatus", "everySection",
     ]);
     const nonFactsSourcePaths = listSourceFiles(join(process.cwd(), "src")).filter(
