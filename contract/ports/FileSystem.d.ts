@@ -23,7 +23,6 @@ export interface FileSystemAPI {
   createDirectory(path: string, options?: FileSystemWriteOptions): Promise<void>;
   createExclusiveDirectory(path: string): Promise<boolean>;
   executable(path: string): Promise<boolean>;
-  extractTarGz(archivePath: string, destination: string, strip: number): Promise<void>;
   mode(path: string): Promise<number | null>;
   joinPath(...parts: string[]): string;
   parentPath(path: string): string;
