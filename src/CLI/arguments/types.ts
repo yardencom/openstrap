@@ -38,6 +38,8 @@ export type CreateArgs = {
   target: string;
   configPath?: string;
   hostPort?: number;
+  /** Moves the image pin to whatever the target's image name resolves to now. */
+  repin: boolean;
   json: boolean;
 } & RuntimeArgs;
 

@@ -10,7 +10,7 @@ export class CreateArgsParser implements CommandArgsParser {
   parse(args: readonly string[]): CreateArgs {
     const read = new CommandArguments(args, {
       ...runtimeOptions,
-      flags: ["json"],
+      flags: ["json", "repin"],
       values: [...(runtimeOptions.values ?? []), "config", "host-port"],
     });
     const [kind, target] = read.positionals;
@@ -33,6 +33,7 @@ export class CreateArgsParser implements CommandArgsParser {
       target,
       configPath: read.value("config"),
       hostPort: hostPortIn(read.value("host-port")),
+      repin: read.flag("repin"),
       json: read.flag("json"),
       ...runtimeArgsIn(read),
     };

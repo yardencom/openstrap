@@ -124,6 +124,7 @@ describe("State store", () => {
       "desired_state",
       "fact_snapshot",
       "machine_platform",
+      "pinned_image",
       "provider_resource",
       "run",
       "run_step",

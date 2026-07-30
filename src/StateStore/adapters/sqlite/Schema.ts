@@ -1,10 +1,10 @@
 /**
  * The state store holds what is true of this machine only.
  *
- * Allocated ports, provider resource ids, runs and fact snapshots are correct
- * on one machine and meaningless on another, so they never reach the lock
- * file. The machine's actual state is not stored either — that is read back
- * from the provider, so there is only ever one source of truth for it.
+ * Allocated ports, provider resource ids, runs, fact snapshots and the image a
+ * target is pinned to are all true of the machine openstrap ran on. The
+ * machine's actual state is not stored — that is read back from the provider,
+ * so there is only ever one source of truth for it.
  */
 export const stateStoreSchema = [
   `CREATE TABLE IF NOT EXISTS target (
@@ -29,6 +29,29 @@ export const stateStoreSchema = [
      platform    TEXT NOT NULL,
      architecture TEXT NOT NULL,
      created_at  TEXT NOT NULL
+   )`,
+
+  /**
+   * The image a target is pinned to.
+   *
+   * Written the first time a target is created and read before every create after that, so the
+   * second run is made from the same file as the first. `ubuntu:24.04` is not a file: the URL it
+   * names serves whatever is current, and without a pin a machine recreated a month later is a
+   * different machine that answers to the same name.
+   *
+   * Here rather than in a file in the repository, because a pin is true of this machine: it says
+   * what was actually built here, and the next person to clone the repository has built nothing.
+   */
+  `CREATE TABLE IF NOT EXISTS pinned_image (
+     target       TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
+     reference    TEXT NOT NULL,
+     url          TEXT NOT NULL,
+     sha256       TEXT NOT NULL,
+     platform     TEXT NOT NULL,
+     architecture TEXT NOT NULL,
+     format       TEXT NOT NULL,
+     boot         TEXT NOT NULL,
+     created_at   TEXT NOT NULL
    )`,
 
   `CREATE TABLE IF NOT EXISTS desired_state (

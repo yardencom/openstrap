@@ -30,6 +30,19 @@ export type ProviderAvailability = {
 export type ImageRequest = {
   name: string;
   architecture: string;
+  /**
+   * Resolve to exactly this file, rather than to whatever the name means today.
+   *
+   * A name is not a file: `ubuntu:24.04` points at a URL that serves whatever is current, so a
+   * machine recreated a month later would be made from something else. When openstrap has created
+   * this target before it passes back what that machine was made from, and the provider is expected
+   * to produce that file and nothing else — a checksum that no longer matches is a failure, not a
+   * newer image.
+   */
+  pinned?: {
+    url: string;
+    sha256: string;
+  };
 };
 
 export type ResolvedImage = {

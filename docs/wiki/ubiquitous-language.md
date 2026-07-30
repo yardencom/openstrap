@@ -90,8 +90,8 @@
 | **Target Type** | Тип доменного объекта target; со `scope` совпадать не обязан. Допустимо `vm`, `container`, `host`. | `type: vm` |
 | **Provider** | Внешний инструмент, который создает и ведет жизненный цикл машины. | UTM, VirtualBox |
 | **Secret Store** | Порт ядра для хранения секретов; плагин получает ссылку на секрет, не значение. | keychain, GPG |
-| **State Store** | Хранилище желаемого состояния, истории прогонов и машинно-локальных данных: портов, id ресурсов провайдера, снимков facts. | SQLite |
-| **Lock File** | Сгенерированный файл с вычисленными значениями, одинаковыми у всех, кто склонирует репозиторий. | `openstrap.lock.yaml` |
+| **State Store** | Хранилище желаемого состояния, истории прогонов и машинно-локальных данных: портов, id ресурсов провайдера, снимков facts, закрепленного образа. | SQLite |
+| **Pinned Image** | Файл, из которого сделана цель: url и sha, записанные при первом `create` и требуемые у провайдера при каждом следующем. Не имя образа, а то, во что имя разрешилось. | `pinned_image` в state store |
 
 ## Fact Collection
 
@@ -225,4 +225,4 @@
 | **Execution User** vs **Target User** | Программа запущена как `openstrap`; config проверяет `users: [{ name: root }]` | **Execution User** запускает процесс; **Target User** является объектом описания или проверки. |
 | **Provider** vs **Port** vs **Adapter** vs **Facade** | `FactsProvider` vs `ConfigValidator` vs `ZodConfigValidator` vs `Facts` | **Port** - интерфейс; **Adapter** реализует port; **Facade** - публичный API модуля; **Provider** допустим только для реального внешнего ресурса. |
 | **Scope** vs **Target Type** | `scope: guest`, `type: container` | **Scope** выбирает схему данных facts; **Target Type** говорит, чем объект является. Совпадать не обязаны. |
-| **Lock File** vs **State Store** | `openstrap.lock.yaml` с sha образа vs выделенный порт и id машины в UTM | **Lock File** хранит переносимое между людьми и коммитится; **State Store** хранит машинно-локальное. Lock file не является отчетом из state store. |
+| **Pinned Image** vs **Image** | `pinned_image.url` с sha vs `image: ubuntu:24.04` в блюпринте | **Image** - имя, которое человек написал, и оно означает разное в разные дни. **Pinned Image** - файл, в который имя разрешилось здесь. Общее между людьми - имя; пин машинно-локален и живет в state store (ADR 0003). |

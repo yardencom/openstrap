@@ -61,3 +61,19 @@ export type MachinePlatformRecord = {
   platform: string;
   architecture: string;
 };
+
+/**
+ * The image a target is pinned to: the file it was made from, not the name that was asked for.
+ *
+ * `reference` is kept beside the file so a changed blueprint is visible as such — asking for
+ * `ubuntu:26.04` where the pin says `ubuntu:24.04` is a different intention, not a moved image.
+ */
+export type PinnedImageRecord = {
+  reference: string;
+  url: string;
+  sha256: string;
+  platform: string;
+  architecture: string;
+  format: string;
+  boot: string;
+};

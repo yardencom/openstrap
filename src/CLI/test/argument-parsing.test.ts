@@ -98,6 +98,7 @@ describe("openstrap create", () => {
       target: "ubuntu-vm",
       configPath: "bp.yaml",
       hostPort: 2223,
+      repin: false,
       json: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,

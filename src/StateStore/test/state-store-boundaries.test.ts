@@ -39,6 +39,27 @@ describe("State store boundaries", () => {
     expect(schema).not.toMatch(/private_key|secret_value|password/);
   });
 
+  /**
+   * openstrap writes its own files where a program keeps its files, never into the project.
+   *
+   * The project holds what a person wrote — the blueprint, the facts definition — and openstrap only
+   * reads it. What openstrap works out is its own, and it goes under `StateHome`, which honours
+   * `XDG_STATE_HOME`. There used to be one exception, `openstrap.lock.yaml`, and it was a file the
+   * program wrote and never read (ADR 0003).
+   */
+  it("writes nothing into the project it was pointed at", () => {
+    const writes = /writeFile|writeFileSync|writeTextFile|mkdirSync|createDirectory|appendFile|openSync/;
+    const offenders = listSourceFiles(join(process.cwd(), "src"))
+      .filter((filePath: string) => !filePath.includes("/test/") && !filePath.includes(".test."))
+      .filter((filePath: string) => {
+        const source = readFileSync(filePath, "utf8");
+
+        return source.includes("workspaceRoot") && writes.test(source);
+      });
+
+    expect(offenders.map((filePath: string) => filePath.slice(process.cwd().length + 1))).toEqual([]);
+  });
+
   it("reaches the state store only through its barrel", () => {
     const outsideStore = listSourceFiles(join(process.cwd(), "src")).filter(
       (filePath: string) => !filePath.includes("/src/StateStore/"),

@@ -1,11 +1,8 @@
 import { MissingProviderError } from "../errors/MissingProviderError.js";
 import { UnknownTargetError } from "../errors/UnknownTargetError.js";
-import { join } from "node:path";
 
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import { CreateMachine, VerifyMachine, type CreateMachineResult } from "../../Create/index.js";
-import { LockFile } from "../../LockFile/index.js";
-import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { runSucceeded, type RequirementRun } from "../../Modules/Requirements/index.js";
 import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
@@ -73,8 +70,7 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
         target: target as BlueprintTarget,
         provider,
         store,
-        lockFile: new LockFile(join(context.workspaceRoot, "openstrap.lock.yaml")),
-        pluginVersions: pluginVersions(runtime),
+        repin: args.repin,
         hostPort: args.hostPort ?? 2222,
       }));
 
@@ -99,18 +95,4 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
       store.close();
     }
   }
-}
-
-/**
- * Versions of the plugins a run used, for the lock file.
- *
- * They belong there because they are the same for everyone who clones the repository —
- * unlike a reserved port or a provider resource id.
- */
-function pluginVersions(runtime: OpenStrapRuntime): Record<string, string> {
-  return Object.fromEntries(
-    runtime.pluginNames
-      .filter((name) => name.startsWith("openstrap:"))
-      .map((name) => [`@openstrap/${name.slice("openstrap:".length)}`, "0.1.0"]),
-  );
 }

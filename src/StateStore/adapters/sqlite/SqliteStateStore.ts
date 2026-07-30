@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import type {
   MachinePlatformRecord,
+  PinnedImageRecord,
   AllocatedPortRecord,
   FactSnapshotRecord,
   ProviderResourceRecord,
@@ -257,6 +258,39 @@ export class SqliteStateStore {
       INSERT INTO machine_platform (target, platform, architecture, created_at) VALUES (?, ?, ?, ?)
       ON CONFLICT(target) DO UPDATE SET platform = excluded.platform, architecture = excluded.architecture
     `).run(target, platform.platform, platform.architecture, now);
+  }
+
+  /** Pins a target to the image it was made from. Re-pinning replaces it, which only `--repin` asks for. */
+  savePinnedImage(target: string, image: PinnedImageRecord, now: string): void {
+    this.database.prepare(`
+      INSERT INTO pinned_image (target, reference, url, sha256, platform, architecture, format, boot, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(target) DO UPDATE SET
+        reference = excluded.reference, url = excluded.url, sha256 = excluded.sha256,
+        platform = excluded.platform, architecture = excluded.architecture,
+        format = excluded.format, boot = excluded.boot, created_at = excluded.created_at
+    `).run(
+      target, image.reference, image.url, image.sha256,
+      image.platform, image.architecture, image.format, image.boot, now,
+    );
+  }
+
+  readPinnedImage(target: string): PinnedImageRecord | null {
+    const row = this.database.prepare(`
+      SELECT reference, url, sha256, platform, architecture, format, boot FROM pinned_image WHERE target = ?
+    `).get(target) as Record<string, string> | undefined;
+
+    return row
+      ? {
+        reference: String(row.reference),
+        url: String(row.url),
+        sha256: String(row.sha256),
+        platform: String(row.platform),
+        architecture: String(row.architecture),
+        format: String(row.format),
+        boot: String(row.boot),
+      }
+      : null;
   }
 
   readMachinePlatform(target: string): MachinePlatformRecord | null {

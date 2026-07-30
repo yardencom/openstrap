@@ -1,16 +1,20 @@
+import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
 import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
-import type { MachineHandle, Provider, ProviderAvailability } from "../../Plugin/index.js";
+import type { MachineHandle, Provider, ProviderAvailability, ResolvedImage } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";
-import { LockFile } from "../../LockFile/index.js";
-import type { SqliteStateStore } from "../../StateStore/index.js";
+import type { PinnedImageRecord, SqliteStateStore } from "../../StateStore/index.js";
 
 export type CreateMachineRequest = {
   target: BlueprintTarget;
   provider: Provider;
   store: SqliteStateStore;
-  lockFile?: LockFile;
-  pluginVersions?: Record<string, string>;
+  /**
+   * Replaces the image this target is pinned to with whatever its name resolves to now.
+   *
+   * Off by default: a pin that moves on its own is not a pin, so moving it is a person's decision.
+   */
+  repin?: boolean;
   hostPort: number;
   user?: string;
   now?: Date;
@@ -90,10 +94,7 @@ export class CreateMachine {
     request.store.startRun({ id: runId, target: target.name, command: "create", startedAt: timestamp });
 
     try {
-      const image = await request.provider.resolveImage({
-        name: target.image ?? "ubuntu:24.04",
-        architecture: process.arch,
-      });
+      const image = await this.image(request, timestamp);
       done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
 
       // What kind of machine this will be is settled here, by the image it is made from. Writing it
@@ -105,18 +106,6 @@ export class CreateMachine {
         timestamp,
       );
 
-      request.lockFile?.record(target.name, {
-        image: {
-          resolved: image.url,
-          sha256: image.sha256,
-          signature: "verified",
-          arch: image.architecture,
-          format: image.format,
-          boot: image.boot,
-        },
-        plugins: request.pluginVersions ?? {},
-      });
-      done({ name: "write lock file", status: "succeeded" });
 
       const existing = await request.provider.find(target.name);
 
@@ -192,6 +181,40 @@ export class CreateMachine {
   }
 
   /**
+   * The image this target is made from — the same file every time, once there has been a first time.
+   *
+   * A pin is read before the provider is asked, and handed to it, so the provider fetches that file
+   * rather than whatever the name means today. What comes back is checked against the pin anyway: a
+   * provider is a plugin, and a rule that only holds while every plugin obeys it is not a rule.
+   *
+   * With no pin — the first create of this target, or `--repin` — what the name resolves to now
+   * becomes the pin.
+   */
+  private async image(request: CreateMachineRequest, timestamp: string): Promise<ResolvedImage> {
+    const reference = request.target.image ?? "ubuntu:24.04";
+    const pinned = request.repin ? null : request.store.readPinnedImage(request.target.name);
+    const image = await request.provider.resolveImage({
+      name: reference,
+      architecture: process.arch,
+      pinned: pinned ? { url: pinned.url, sha256: pinned.sha256 } : undefined,
+    });
+
+    if (pinned && (image.sha256 !== pinned.sha256 || reference !== pinned.reference)) {
+      throw new PinnedImageChangedError(
+        request.target.name,
+        { reference: pinned.reference, sha256: pinned.sha256 },
+        { reference, sha256: image.sha256 },
+      );
+    }
+
+    if (!pinned) {
+      request.store.savePinnedImage(request.target.name, pinOf(reference, image), timestamp);
+    }
+
+    return image;
+  }
+
+  /**
    * Leaves an adopted machine in the state a created one would be left in.
    *
    * `create` promises a machine you can connect to, and it has to keep that
@@ -226,4 +249,17 @@ export class CreateMachine {
       });
     });
   }
+}
+
+/** What is written down about an image: the file, and the name that was asked for. */
+function pinOf(reference: string, image: ResolvedImage): PinnedImageRecord {
+  return {
+    reference,
+    url: image.url,
+    sha256: image.sha256,
+    platform: image.platform,
+    architecture: image.architecture,
+    format: image.format,
+    boot: image.boot,
+  };
 }
