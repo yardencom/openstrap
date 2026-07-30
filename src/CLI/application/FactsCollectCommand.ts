@@ -1,4 +1,4 @@
-import { ConnectToTarget } from "../../Connect/index.js";
+import { Connect } from "#features/Connect/Connect.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
@@ -75,7 +75,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
         throw new UnknownMachinePlatformError(target);
       }
 
-      const connection = await new ConnectToTarget().execute({ target, runtime, store });
+      const connection = await new Connect().execute({ target, runtime, store });
 
       try {
         return await new RemoteOpenStrap(connection.transport, machine).collect({

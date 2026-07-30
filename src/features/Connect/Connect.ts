@@ -1,5 +1,5 @@
-import { MachineNotRunningError } from "../errors/MachineNotRunningError.js";
-import { UnknownMachineError } from "../errors/UnknownMachineError.js";
+import { MachineNotRunningError } from "./errors/MachineNotRunningError.js";
+import { UnknownMachineError } from "./errors/UnknownMachineError.js";
 import type { MachineAccess, TransportConnection, OpenStrapRuntime } from "../../Plugin/index.js";
 import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
@@ -33,7 +33,7 @@ export type Connection = {
  * a forwarded port can be reassigned and an address can change, and a stored
  * endpoint would be a second truth that drifts from the first.
  */
-export class ConnectToTarget {
+export class Connect {
   constructor(private readonly secrets = new KeychainSecretStore()) {}
 
   async execute(request: ConnectRequest): Promise<Connection> {

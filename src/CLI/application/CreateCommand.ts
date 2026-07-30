@@ -1,9 +1,8 @@
-import { MissingProviderError } from "../errors/MissingProviderError.js";
 import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
-import { CreateMachine, VerifyMachine, type CreateMachineResult } from "../../Create/index.js";
-import { runSucceeded, type RequirementRun } from "../../Modules/Requirements/index.js";
+import { Create, type CreateResult } from "#features/Create/Create.js";
+import { runSucceeded } from "../../Modules/Requirements/index.js";
 import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../arguments/types.js";
@@ -18,9 +17,8 @@ import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js
  * machine it is about, and asking the caller to remember alongside is how a report ends
  * up naming the wrong one.
  */
-export type CreatedTarget = CreateMachineResult & {
+export type CreatedTarget = CreateResult & {
   target: string;
-  requirementRun?: RequirementRun;
 };
 
 /**
@@ -56,41 +54,20 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
       throw new UnknownTargetError(args.target, Object.keys(blueprint.targets));
     }
 
-    if (!target.provider) {
-      throw new MissingProviderError(args.target);
-    }
-
     const runtime = await context.runtime();
-    const provider = runtime.providers.require(target.provider);
     const store = new SqliteStateStore(this.stateHome.database());
     const lock = new RunLock(this.stateHome.locks());
 
     try {
-      const created = await lock.during(args.target, "create", () => new CreateMachine().execute({
+      const created = await lock.during(args.target, "create", () => new Create().execute({
         target: target as BlueprintTarget,
-        provider,
+        runtime,
         store,
         repin: args.repin,
         hostPort: args.hostPort ?? 2222,
       }));
 
-      // Nothing was required of it, so there is nothing to verify and nothing to
-      // report: the machine is up, which is all that was asked.
-      if (target.requirements.length === 0) {
-        return { ...created, target: args.target };
-      }
-
-      const identity = store.readSecretReference(args.target, "ssh-identity");
-      const verified = await new VerifyMachine().execute({
-        target: target as BlueprintTarget,
-        access: { transport: "ssh", endpoint: created.endpoint },
-        identity: identity ? { store: identity.store, name: identity.name } : undefined,
-        runtime,
-        store,
-        runId: created.runId,
-      });
-
-      return { ...created, target: args.target, requirementRun: verified.requirementRun };
+      return { ...created, target: args.target };
     } finally {
       store.close();
     }

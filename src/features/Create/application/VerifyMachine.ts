@@ -1,12 +1,12 @@
 import { connect } from "node:net";
 
-import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
-import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../Plugin/index.js";
-import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../Modules/Requirements/index.js";
-import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
-import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
-import { KeychainSecretStore } from "../../Secrets/index.js";
-import type { SqliteStateStore } from "../../StateStore/index.js";
+import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
+import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../Plugin/index.js";
+import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../../Modules/Requirements/index.js";
+import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
+import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
+import { KeychainSecretStore } from "../../../Secrets/index.js";
+import type { SqliteStateStore } from "../../../StateStore/index.js";
 
 export type VerifyRequest = {
   target: BlueprintTarget;

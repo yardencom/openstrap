@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ImageRequest, MachineHandle, Provider, ResolvedImage } from "../../Plugin/index.js";
-import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
+import type { ImageRequest, MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
+import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import { CreateMachine } from "../application/CreateMachine.js";
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
-import { SqliteStateStore } from "../../StateStore/index.js";
+import { SqliteStateStore } from "../../../StateStore/index.js";
 
 /**
  * Each create is given its own instant.

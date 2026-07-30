@@ -1,4 +1,4 @@
-import { ConnectToTarget, type Connection } from "../../Connect/index.js";
+import { Connect, type Connection } from "#features/Connect/Connect.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { ConnectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
@@ -24,7 +24,7 @@ export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
     const store = new SqliteStateStore(this.stateHome.database());
 
     try {
-      const connection = await new ConnectToTarget().execute({
+      const connection = await new Connect().execute({
         target: args.target,
         runtime,
         store,

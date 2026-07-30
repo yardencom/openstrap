@@ -1,4 +1,4 @@
-import type { ProviderAvailability } from "../../Plugin/index.js";
+import type { ProviderAvailability } from "../../../Plugin/index.js";
 
 export class ProviderUnavailableError extends Error {
   constructor(providerId: string, availability: ProviderAvailability) {
