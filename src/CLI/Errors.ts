@@ -1,7 +1,12 @@
-import { OpenStrapPluginError } from "../Plugin/index.js";
 import { CliUsageError } from "./arguments/index.js";
 
 export class CliErrors {
+  /**
+   * @param usage One line per command the run has, which is not a list openstrap can write down:
+   * the commands are whatever the plugins in force registered, its own among them.
+   */
+  constructor(private readonly commandUsage: readonly string[] = []) {}
+
   /**
    * How an error reads on the command line.
    *
@@ -16,12 +21,6 @@ export class CliErrors {
   }
 
   private usage(): string {
-    return [
-      "Usage:",
-      "  openstrap run [configPath] [--host-port n] [--json] [--runtime-config path] [--plugin specifier]",
-      "  openstrap create vm <target> [--config path] [--host-port n] [--repin] [--json] [--plugin specifier]",
-      "  openstrap connect <target> [--run command] [--plugin specifier]",
-      "  openstrap facts collect <host|target> [--json] [--plugin specifier]",
-    ].join("\n");
+    return ["Usage:", ...this.commandUsage.map((line) => `  ${line}`)].join("\n");
   }
 }

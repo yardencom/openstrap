@@ -6,11 +6,12 @@ export type CommandContext = {
   workspaceRoot: string;
   now?: Date;
   /**
-   * The plugins this invocation asked for.
+   * The plugins this invocation has.
    *
-   * A function rather than a value, because only the commands that create or reach a
-   * machine need one: loading a plugin runs its module, and `run` and `facts collect`
-   * read the machine openstrap is on, where nothing is pluggable.
+   * Already loaded by the time any command runs, because which words the command line even has is
+   * decided by the plugins: openstrap looks the first word up among the commands they registered.
+   * Still a function, so a command that has no use for a plugin never asks and the shape stays the
+   * one a command written against it expects.
    */
   runtime(): Promise<OpenStrapRuntime>;
 };

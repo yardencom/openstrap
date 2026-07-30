@@ -120,7 +120,7 @@ describe("OpenStrap plugin system", () => {
     expect(runtime).not.toHaveProperty("factsBackendId");
     expect(runtime.pluginNames).toEqual([]);
     expect(container).not.toHaveProperty("factsBackends");
-    expect(slots).toEqual(["registerProvider", "registerTransport", "registerSecretStore"]);
+    expect(slots).toEqual(["registerCommand", "registerProvider", "registerTransport", "registerSecretStore"]);
   });
 
   it("loads plugin config and external plugin modules", async () => {

@@ -1,4 +1,9 @@
 export type {
+  OpenStrapCommand,
+  OpenStrapCommandContext,
+  OpenStrapCommandOutcome,
+} from "./OpenStrapCommand.js";
+export type {
   OpenStrapPlugin,
   OpenStrapPluginApi,
   OpenStrapPluginConfig,

@@ -131,6 +131,69 @@ targets:
     expect(output.stderr).toBe("");
   });
 
+  /**
+   * A command openstrap did not write, reached without openstrap knowing it existed.
+   *
+   * The point of the whole mechanism: no branch here names `workloads`, no type lists it, and the
+   * usage openstrap prints has a line it did not write. What decided all three is one line in the
+   * project's own configuration.
+   */
+  it("answers to a word a plugin brought, and prints it in the plugin's own words", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "openstrap-cli-plugin-"));
+
+    writeFileSync(join(directory, "workloads.mjs"), `
+      export default {
+        name: "workloads",
+        setup(api) {
+          api.registerCommand({
+            name: "workloads",
+            usage: "openstrap workloads run <manifest>",
+            parse: (args) => ({ sub: args[0] }),
+            execute: async (args, context) => ({
+              result: { did: args.sub, where: context.workspaceRoot },
+              exitCode: args.sub === "run" ? 0 : 3,
+            }),
+            text: (result) => \`workloads \${result.did}\n\`,
+          });
+        },
+      };
+    `);
+    writeFileSync(join(directory, "openstrap.config.mjs"), `
+      import workloads from "./workloads.mjs";
+
+      export default { plugins: [workloads] };
+    `);
+
+    const ran = await captureCli(["workloads", "run"], directory);
+    const other = await captureCli(["workloads", "discover"], directory);
+    const asJson = await captureCli(["workloads", "run", "--json"], directory);
+
+    expect(ran.exitCode).toBe(0);
+    expect(ran.stdout).toBe("workloads run\n");
+    // The command's own exit code, because only the command knows what its result means.
+    expect(other.exitCode).toBe(3);
+    // `--json` is the one thing openstrap answers for every command, its own and anyone else's.
+    expect(JSON.parse(asJson.stdout)).toMatchObject({ did: "run", where: directory });
+
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it("says what it answers to when asked for nothing at all", async () => {
+    const output = await captureCli([]);
+
+    expect(output.exitCode).toBe(2);
+    expect(output.stderr).toContain("Missing command");
+    expect(output.stderr).toContain("openstrap create vm <target>");
+  });
+
+  it("says what it does answer to when the word belongs to a plugin the project does not have", async () => {
+    const output = await captureCli(["workloads", "run"]);
+
+    expect(output.exitCode).toBe(2);
+    expect(output.stderr).toContain('Unknown command "workloads"');
+    expect(output.stderr).toContain("Known commands: run, create, connect, facts");
+  });
+
 });
 
 async function captureCli(argv: readonly string[], cwd = process.cwd()) {

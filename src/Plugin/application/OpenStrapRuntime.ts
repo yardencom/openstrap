@@ -1,3 +1,5 @@
+import type { OpenStrapPluginOption } from "@openstrap/plugin-contract";
+import type { CommandRegistry } from "./CommandRegistry.js";
 import { OpenStrapConfig } from "./OpenStrapConfig.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
 import { PluginModule } from "./PluginModule.js";
@@ -7,6 +9,8 @@ import type { TransportRegistry } from "./TransportRegistry.js";
 
 export type OpenStrapRuntimeRequest = {
   cwd: string;
+  /** Plugins openstrap always has, applied before the project's own. Its own commands are one. */
+  plugins?: readonly OpenStrapPluginOption[];
   /** Where the runtime config is, when it was not left to be discovered. */
   configPath?: string;
   /** Plugin modules named on the command line, applied after the ones the project always has. */
@@ -24,12 +28,14 @@ export type OpenStrapRuntimeRequest = {
  * because which plugins a project has is a property of the project.
  */
 export class OpenStrapRuntime {
+  readonly commands: CommandRegistry;
   readonly providers: ProviderRegistry;
   readonly transports: TransportRegistry;
   readonly secretStores: SecretStoreRegistry;
   readonly pluginNames: readonly string[];
 
   constructor(plugins: OpenStrapPluginContainer) {
+    this.commands = plugins.commands;
     this.providers = plugins.providers;
     this.transports = plugins.transports;
     this.secretStores = plugins.secretStores;
@@ -49,7 +55,7 @@ export class OpenStrapRuntime {
     );
 
     return new OpenStrapRuntime(await OpenStrapPluginContainer.create({
-      plugins: [...(config.plugins ?? []), ...named],
+      plugins: [...(request.plugins ?? []), ...(config.plugins ?? []), ...named],
     }));
   }
 }

@@ -1,9 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import { CliArgsParser } from "../arguments/index.js";
 import { CommandArguments } from "../arguments/CommandArguments.js";
+import { ConnectArgsParser } from "../arguments/parsers/ConnectArgs.js";
+import { CreateArgsParser } from "../arguments/parsers/CreateArgs.js";
+import { FactsArgsParser } from "../arguments/FactsArgsParser.js";
+import { RunArgsParser } from "../arguments/parsers/RunArgs.js";
 
-const parse = (...args: string[]) => new CliArgsParser().parse(["node", "openstrap", ...args]);
+/**
+ * A command reading its own arguments, which is all a parser does.
+ *
+ * Which parser reads which word is not decided here and no longer decided anywhere in openstrap:
+ * a command is looked up among the ones registered, its own among a plugin's (see the CLI test).
+ */
+const parsers = [new RunArgsParser(), new FactsArgsParser(), new CreateArgsParser(), new ConnectArgsParser()];
+
+const parse = (...args: string[]) => {
+  const [word, ...rest] = args;
+  const parser = parsers.find((candidate) => candidate.command === word);
+
+  if (!parser) {
+    throw new Error(`Unknown command "${word}"`);
+  }
+
+  return parser.parse(rest);
+};
 
 describe("reading the options of a command", () => {
   it("accepts an option written either way", () => {
@@ -56,14 +76,6 @@ describe("reading the options of a command", () => {
 });
 
 describe("choosing who reads the command line", () => {
-  it("refuses a command line with no command", () => {
-    expect(() => parse()).toThrow("Missing command");
-  });
-
-  it("names the command it does not know", () => {
-    expect(() => parse("nonsense")).toThrow('Unknown command "nonsense"');
-  });
-
   it("names the facts command it does not know", () => {
     expect(() => parse("facts", "sprinkle")).toThrow('Unknown facts command "sprinkle"');
     expect(() => parse("facts")).toThrow("Missing facts command");

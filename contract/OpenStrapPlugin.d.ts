@@ -1,3 +1,4 @@
+import type { OpenStrapCommand } from "./OpenStrapCommand.js";
 import type { Provider } from "./Provider.js";
 import type { SecretStore } from "./Secret.js";
 import type { TransportConnector } from "./Transport.js";
@@ -12,6 +13,14 @@ export type OpenStrapPluginOrder = "pre" | "post";
  * transport at once.
  */
 export type OpenStrapPluginApi = {
+  /**
+   * A word of the command line, and what it does.
+   *
+   * openstrap's own commands are registered through this same method, by a plugin of its own, so
+   * that the one openstrap wrote and the one it did not travel the same road. A road that only ever
+   * carried its author's traffic is a road nobody has driven.
+   */
+  registerCommand(command: OpenStrapCommand): void;
   registerProvider(provider: Provider): void;
   registerTransport(connector: TransportConnector): void;
   registerSecretStore(store: SecretStore): void;

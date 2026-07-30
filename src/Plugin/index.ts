@@ -3,6 +3,10 @@ export {
   type OpenStrapPluginContainerCreateRequest,
 } from "./application/OpenStrapPluginContainer.js";
 export {
+  CommandRegistry,
+  type RegisteredCommand,
+} from "./application/CommandRegistry.js";
+export {
   ProviderRegistry,
   type RegisteredProvider,
 } from "./application/ProviderRegistry.js";
@@ -25,6 +29,9 @@ export { OpenStrapPluginError } from "./errors/OpenStrapPluginError.js";
 // openstrap's own code (ADR 0008). Nothing to call: a plugin is an object, and openstrap checks it.
 export type {
   ImageRequest,
+  OpenStrapCommand,
+  OpenStrapCommandContext,
+  OpenStrapCommandOutcome,
   MachineAccess,
   MachineHandle,
   MachineRequest,
