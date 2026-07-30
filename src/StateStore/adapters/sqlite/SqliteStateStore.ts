@@ -229,6 +229,32 @@ export class SqliteStateStore {
     `).run(port.hostPort, port.target, port.guestPort, port.protocol, now);
   }
 
+  /**
+   * The port this target already holds, or the first free one at or above `from`.
+   *
+   * Asked for rather than chosen by the caller, because who else is listening is what this table is
+   * for. A run creating every machine a blueprint declares used to hand each of them the same
+   * number, and the second one failed with the first one's reservation.
+   */
+  hostPortFor(target: string, from: number): number {
+    const held = this.database.prepare(
+      "SELECT host_port FROM allocated_port WHERE target = ? ORDER BY host_port LIMIT 1",
+    ).get(target) as { host_port: number } | undefined;
+
+    if (held) {
+      return Number(held.host_port);
+    }
+
+    const taken = new Set(this.listAllocatedPorts().map((port) => port.hostPort));
+    let candidate = from;
+
+    while (taken.has(candidate)) {
+      candidate += 1;
+    }
+
+    return candidate;
+  }
+
   releasePorts(target: string): void {
     this.database.prepare("DELETE FROM allocated_port WHERE target = ?").run(target);
   }

@@ -96,3 +96,21 @@ export function runtimeArgsIn(read: CommandArguments): { runtimeConfigPath?: str
     pluginSpecifiers: read.values("plugin"),
   };
 }
+
+/**
+ * A host port as a command line gives one.
+ *
+ * Shared, because two commands take it: `create` names the port one machine gets, and `run` names
+ * where to start looking for free ones.
+ */
+export function hostPortIn(value: string | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    throw new Error("Option --host-port needs a port number");
+  }
+
+  return Number(value);
+}

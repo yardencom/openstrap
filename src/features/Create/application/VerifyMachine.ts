@@ -4,6 +4,7 @@ import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../Plugin/index.js";
 import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
+import type { FactSnapshot } from "#types/FactSnapshot.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import { KeychainSecretStore } from "../../../Secrets/index.js";
 import type { SqliteStateStore } from "../../../StateStore/index.js";
@@ -20,7 +21,8 @@ export type VerifyRequest = {
 
 export type VerifyResult = {
   requirementRun: RequirementRun;
-  snapshotId: string;
+  /** What was read, so a caller can report the machine rather than the name of a reading of it. */
+  snapshot: FactSnapshot;
 };
 
 /**
@@ -88,7 +90,7 @@ export class VerifyMachine {
       });
 
       return {
-        snapshotId: String(snapshot.id),
+        snapshot,
         requirementRun: this.evaluator.evaluate({
           target: request.target,
           requirements: request.target.requirements,

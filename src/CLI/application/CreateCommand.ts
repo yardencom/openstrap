@@ -3,7 +3,6 @@ import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import { Create, type CreateResult } from "#features/Create/Create.js";
 import { runSucceeded } from "../../Modules/Requirements/index.js";
-import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
@@ -24,9 +23,9 @@ export type CreatedTarget = CreateResult & {
 /**
  * `openstrap create` — bring a declared target into being and check what it promised.
  *
- * The whole of it runs under a lock named after the target: creating a machine reserves
- * a port and writes provider state, and two runs doing that at once would each believe
- * they owned both.
+ * One target, named on the command line. `openstrap run` is the same thing for every target a
+ * blueprint declares, and both ask the same feature, so a machine made either way is made the
+ * same way.
  */
 export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
   constructor(
@@ -56,16 +55,15 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
 
     const runtime = await context.runtime();
     const store = new SqliteStateStore(this.stateHome.database());
-    const lock = new RunLock(this.stateHome.locks());
 
     try {
-      const created = await lock.during(args.target, "create", () => new Create().execute({
+      const created = await new Create().execute({
         target: target as BlueprintTarget,
         runtime,
         store,
         repin: args.repin,
         hostPort: args.hostPort ?? 2222,
-      }));
+      });
 
       return { ...created, target: args.target };
     } finally {

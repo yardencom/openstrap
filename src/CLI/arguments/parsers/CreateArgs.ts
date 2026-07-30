@@ -1,5 +1,5 @@
 import type { CommandArgsParser, CreateArgs } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
+import { CommandArguments, hostPortIn, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 /** What openstrap knows how to create. */
 const kinds = ["vm"] as const;
@@ -38,16 +38,4 @@ export class CreateArgsParser implements CommandArgsParser {
       ...runtimeArgsIn(read),
     };
   }
-}
-
-function hostPortIn(value: string | undefined): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!/^\d+$/.test(value)) {
-    throw new Error("Option --host-port needs a port number");
-  }
-
-  return Number(value);
 }

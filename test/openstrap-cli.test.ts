@@ -1,9 +1,26 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { main } from "../src/CLI/Main.js";
+
+/**
+ * Where this run keeps what it writes.
+ *
+ * `openstrap run` records the targets it read and the snapshots it took, and a test that recorded
+ * them into the state of the machine it runs on would be leaving its subjects behind.
+ */
+const stateHome = mkdtempSync(join(tmpdir(), "openstrap-cli-state-"));
+
+beforeAll(() => {
+  process.env.OPENSTRAP_STATE_HOME = stateHome;
+});
+
+afterAll(() => {
+  delete process.env.OPENSTRAP_STATE_HOME;
+  rmSync(stateHome, { recursive: true, force: true });
+});
 
 describe("openstrap CLI", () => {
   it("runs the local sample and prints human output", async () => {

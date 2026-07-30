@@ -14,6 +14,8 @@ export type RuntimeArgs = {
 export type RunArgs = {
   command: "run";
   configPath?: string;
+  /** Where to start looking for a free host port, for targets a run has to create. */
+  hostPort?: number;
   json: boolean;
 } & RuntimeArgs;
 
