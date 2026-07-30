@@ -4,3 +4,4 @@ coverage/
 .openstrap/
 .DS_Store
 bin/
+openstrap.config.mjs
