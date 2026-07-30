@@ -11,11 +11,11 @@ import type {
 } from "@openstrap/plugin-contract";
 
 import {
-  createOpenStrapRuntime,
-  loadOpenStrapPlugin,
-  loadOpenStrapPluginConfig,
+  OpenStrapConfig,
   OpenStrapPluginContainer,
   OpenStrapPluginError,
+  OpenStrapRuntime,
+  PluginModule,
 } from "../index.js";
 
 describe("OpenStrap plugin system", () => {
@@ -104,7 +104,7 @@ describe("OpenStrap plugin system", () => {
   });
 
   it("offers no facts registry, because there is one way to read a machine", async () => {
-    const runtime = await createOpenStrapRuntime();
+    const runtime = new OpenStrapRuntime(await OpenStrapPluginContainer.create());
     let slots: string[] = [];
 
     const container = await OpenStrapPluginContainer.create({
@@ -149,15 +149,9 @@ describe("OpenStrap plugin system", () => {
       };
     `);
 
-    const plugin = await loadOpenStrapPlugin({
-      cwd: directory,
-      specifier: "./plugin.mjs",
-    });
-    const config = await loadOpenStrapPluginConfig({
-      cwd: directory,
-      configPath,
-    });
-    const runtime = await createOpenStrapRuntime({ config });
+    const plugin = await new PluginModule(directory, "./plugin.mjs").plugin();
+    const config = await new OpenStrapConfig(directory, configPath).read();
+    const runtime = new OpenStrapRuntime(await OpenStrapPluginContainer.create({ plugins: config.plugins }));
 
     expect(plugin.name).toBe("external-plugin");
     expect(runtime.pluginNames).toEqual(["external-plugin"]);

@@ -1,76 +1,55 @@
-import type { OpenStrapPluginConfig, OpenStrapPluginOption } from "@openstrap/plugin-contract";
-import { loadOpenStrapPlugin, loadOpenStrapPluginConfig } from "./OpenStrapPluginLoader.js";
+import { OpenStrapConfig } from "./OpenStrapConfig.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
+import { PluginModule } from "./PluginModule.js";
 import type { ProviderRegistry } from "./ProviderRegistry.js";
 import type { SecretStoreRegistry } from "./SecretStoreRegistry.js";
 import type { TransportRegistry } from "./TransportRegistry.js";
 
-export type OpenStrapRuntimeCreateRequest = {
-  config?: OpenStrapPluginConfig;
-  plugins?: readonly OpenStrapPluginOption[];
-};
-
-/**
- * What a run can reach.
- *
- * Only the things a plugin can genuinely provide another implementation of:
- * providers that create machines, transports that reach them, stores that hold
- * secrets. Facts are not among them — there is one way to read a machine, and it
- * is the facts module, which openstrap owns.
- */
-export type OpenStrapRuntime = {
-  providers: ProviderRegistry;
-  transports: TransportRegistry;
-  secretStores: SecretStoreRegistry;
-  pluginNames: readonly string[];
-};
-
-export async function createOpenStrapRuntime(
-  request: OpenStrapRuntimeCreateRequest = {},
-): Promise<OpenStrapRuntime> {
-  const config = request.config ?? {};
-  const container = await OpenStrapPluginContainer.create({
-    plugins: [
-      ...(config.plugins ?? []),
-      ...(request.plugins ?? []),
-    ],
-  });
-
-  return {
-    providers: container.providers,
-    transports: container.transports,
-    secretStores: container.secretStores,
-    pluginNames: container.listPluginNames(),
-  };
-}
-
-export type LoadOpenStrapRuntimeRequest = {
+export type OpenStrapRuntimeRequest = {
   cwd: string;
   /** Where the runtime config is, when it was not left to be discovered. */
   configPath?: string;
-  /** Plugin modules named on the command line, applied after the config's own. */
+  /** Plugin modules named on the command line, applied after the ones the project always has. */
   specifiers?: readonly string[];
 };
 
 /**
- * A runtime built from what a command line can give: a directory, a path and some
- * module specifiers.
+ * What one run can reach.
  *
- * The order is the only sensible one — the config decides which plugins a project
- * always has, and the specifiers add to it — so it is settled here rather than left
- * for every caller to get right. `createOpenStrapRuntime` still takes already-loaded
- * objects, because a test that had to write plugin modules to disk to check the
- * registry would be testing the loader instead.
+ * Only the things a plugin can genuinely provide another implementation of: providers that create
+ * machines, transports that reach them, stores that hold secrets. Reading a machine is not among
+ * them — there is one way to do it, and it is the facts module, which openstrap owns (ADR 0007).
+ *
+ * Built from the project's own configuration first and from what a command line adds second,
+ * because which plugins a project has is a property of the project.
  */
-export async function loadOpenStrapRuntime(request: LoadOpenStrapRuntimeRequest): Promise<OpenStrapRuntime> {
-  const config = await loadOpenStrapPluginConfig({
-    cwd: request.cwd,
-    configPath: request.configPath,
-  });
-  const plugins = await Promise.all((request.specifiers ?? []).map((specifier) => loadOpenStrapPlugin({
-    cwd: request.cwd,
-    specifier,
-  })));
+export class OpenStrapRuntime {
+  readonly providers: ProviderRegistry;
+  readonly transports: TransportRegistry;
+  readonly secretStores: SecretStoreRegistry;
+  readonly pluginNames: readonly string[];
 
-  return createOpenStrapRuntime({ config, plugins });
+  constructor(plugins: OpenStrapPluginContainer) {
+    this.providers = plugins.providers;
+    this.transports = plugins.transports;
+    this.secretStores = plugins.secretStores;
+    this.pluginNames = plugins.listPluginNames();
+  }
+
+  /**
+   * The runtime a command line asks for: a directory, a path and some module specifiers.
+   *
+   * The order is the only sensible one — the config says which plugins a project always has, and
+   * the specifiers add to it — so it is settled here rather than left for every caller to get right.
+   */
+  static async load(request: OpenStrapRuntimeRequest): Promise<OpenStrapRuntime> {
+    const config = await new OpenStrapConfig(request.cwd, request.configPath).read();
+    const named = await Promise.all(
+      (request.specifiers ?? []).map((specifier) => new PluginModule(request.cwd, specifier).plugin()),
+    );
+
+    return new OpenStrapRuntime(await OpenStrapPluginContainer.create({
+      plugins: [...(config.plugins ?? []), ...named],
+    }));
+  }
 }

@@ -1,4 +1,4 @@
-import { loadOpenStrapRuntime } from "../Plugin/index.js";
+import { OpenStrapRuntime } from "../Plugin/index.js";
 import { CliArgsParser, type ParsedArgs } from "./arguments/index.js";
 import { CliErrors } from "./Errors.js";
 import { output } from "./output/index.js";
@@ -31,7 +31,7 @@ export async function main(argv: readonly string[], io: CliIo = {
     const args = new CliArgsParser().parse(argv);
     const outcome = await run(args, {
       workspaceRoot: io.cwd,
-      runtime: () => loadOpenStrapRuntime({
+      runtime: () => OpenStrapRuntime.load({
         cwd: io.cwd,
         configPath: args.runtimeConfigPath,
         specifiers: args.pluginSpecifiers,
