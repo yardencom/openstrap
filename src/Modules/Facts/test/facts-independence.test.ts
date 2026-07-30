@@ -20,7 +20,7 @@ const doors = ["/Facts.js"];
  * the evaluator, `scope` typed in one place out of four.
  */
 const openstrapModules = [
-  "Blueprint", "Plugin", "Requirements", "ConfigCore", "Transport", "RemoteOpenStrap",
+  "Blueprint", "Plugin", "Requirements", "ConfigCore", "RemoteOpenStrap",
   "StateStore", "Create", "Connect", "Secrets", "utils", "CLI",
 ];
 

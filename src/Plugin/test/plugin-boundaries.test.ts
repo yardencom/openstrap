@@ -7,15 +7,21 @@ import { describe, expect, it } from "vitest";
 const contractRoot = join(process.cwd(), "contract");
 
 describe("Plugin boundaries", () => {
-  it("reaches the transport ports only through the Transport barrel", () => {
-    const offenders = pluginSourceFiles().filter((filePath: string) => {
-      const source = readFileSync(filePath, "utf8");
-      const imports = [...source.matchAll(/from\s+["']([^"']*Transport\/[^"']+)["']/g)];
+  /**
+   * openstrap owns no implementation of a transport.
+   *
+   * It had one — `LocalTransport`, access to the machine openstrap runs on — and by the time both
+   * of the decisions above had landed nothing called it. Facts are read on the machine through the
+   * machine's own APIs (ADR 0007), so reading the host needs no channel; and a plugin may not take
+   * an implementation out of openstrap (ADR 0008), so the last caller stopped being one. What is
+   * left of a transport in openstrap is the contract, which is where it belongs.
+   */
+  it("keeps no implementation of a transport of its own", () => {
+    const offenders = listSourceFiles(join(process.cwd(), "src")).filter((filePath: string) =>
+      /class \w*(Transport|FileSystem|Processes|Network)\b/.test(readFileSync(filePath, "utf8")),
+    );
 
-      return imports.some((match) => !match[1]!.endsWith("/Transport/index.js"));
-    });
-
-    expect(offenders).toEqual([]);
+    expect(offenders.map(relative)).toEqual([]);
   });
 
   it("offers no slot for reading a machine, because openstrap owns that", () => {
@@ -75,4 +81,8 @@ function listSourceFiles(directoryPath: string): string[] {
 
     return entryPath.endsWith(".ts") ? [entryPath] : [];
   });
+}
+
+function relative(filePath: string): string {
+  return filePath.slice(process.cwd().length + 1);
 }

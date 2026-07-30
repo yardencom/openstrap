@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { BinaryFileWriteOptions, FileSystemAPI } from "../../../Transport/index.js";
+import type { BinaryFileWriteOptions, FileSystemAPI } from "@openstrap/plugin-contract";
 import { OpenStrapBinary } from "./OpenStrapBinary.js";
 import { MissingBinaryError } from "../errors/MissingBinaryError.js";
 

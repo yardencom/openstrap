@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { CapturedSystemCommand, ProcessOutput, Transport } from "../../Transport/index.js";
+import type { CapturedSystemCommand, ProcessOutput, Transport } from "@openstrap/plugin-contract";
 import type { FactOrder } from "../Facts/Facts.js";
 import { RemoteOpenStrap } from "./RemoteOpenStrap.js";
 import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";

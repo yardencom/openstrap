@@ -1,5 +1,5 @@
 import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";
-import type { Transport } from "../../Transport/index.js";
+import type { Transport } from "@openstrap/plugin-contract";
 import { Facts, type FactOrder, type FactSnapshot } from "../Facts/Facts.js";
 import { OpenStrapBinary } from "./deliver/OpenStrapBinary.js";
 import type { MachinePlatform } from "#types/Machine.js";
