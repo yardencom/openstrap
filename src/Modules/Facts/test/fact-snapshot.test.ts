@@ -56,16 +56,11 @@ describe("a snapshot openstrap took elsewhere and printed", () => {
     expect(snapshotOf().reading.status).toBe("success");
   });
 
-  it("refuses one in a shape it does not read, or with no facts in it", () => {
-    expect(() => Facts.printed({ schemaVersion: "facts.v2" })).toThrow(/facts\.v2/);
-    expect(() => Facts.printed("Welcome to Ubuntu")).toThrow(/Not a snapshot/);
-    expect(() => Facts.printed({
-      id: "snap_host_20260608T100000000Z",
-      schemaVersion: "facts.v1",
-      scope: "host",
-      target: { type: "host", id: "host" },
-      reading: { takenAt: "2026-06-08T10:00:00.000Z" },
-    })).toThrow(/no facts in it/);
+  it("refuses what is not openstrap's answer, and what is another version of it", () => {
+    // The two things that can actually go wrong. Everything past them is what openstrap itself
+    // printed, and having it inspect its own fields would be checking the same code against itself.
+    expect(() => Facts.snapshotFrom("Welcome to Ubuntu")).toThrow(/Not a snapshot/);
+    expect(() => Facts.snapshotFrom({ schemaVersion: "facts.v2" })).toThrow(/facts\.v2/);
   });
 });
 
@@ -147,7 +142,7 @@ function snapshotOf(
   sections: Record<string, unknown> = { arch: "x64" },
   id = "snap_host_20260608T100000000Z",
 ): FactSnapshot {
-  return Facts.printed({
+  return Facts.snapshotFrom({
     id,
     schemaVersion: "facts.v1",
     scope: "host",

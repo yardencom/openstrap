@@ -65,7 +65,7 @@ export class RemoteOpenStrap {
     }
 
     try {
-      return Facts.printed(parsed);
+      return Facts.snapshotFrom(parsed);
     } catch (error) {
       throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
     }

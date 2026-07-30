@@ -18,10 +18,10 @@ describe("Facts public API", () => {
   it("is entered by collecting, and facts cannot be made any other way", () => {
     const reachable = [...source.matchAll(/^ {2}(?!private)(?:static )?(?:async )?(\w+)\(/gm)].map((match) => match[1]);
 
-    // `printed` is the other way a snapshot comes to exist here: read back from what openstrap
+    // `snapshotFrom` is the other way a snapshot comes to exist here: built out of the JSON openstrap
     // printed on a machine it delivered itself to. Everything that makes facts goes through the same
     // private constructor, so nothing else can assemble facts out of whatever it liked.
-    expect(reachable).toEqual(["collect", "printed", "status"]);
+    expect(reachable).toEqual(["collect", "snapshotFrom", "status"]);
     expect(source).toMatch(/private constructor\(/);
   });
 

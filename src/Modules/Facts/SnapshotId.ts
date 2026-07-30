@@ -18,15 +18,6 @@ export class SnapshotId {
     return new SnapshotId(`snap_${target}_${takenAt.stamp()}`);
   }
 
-  /** An id as it came back from JSON, which is the text of one. */
-  static of(value: string): SnapshotId {
-    if (!value.startsWith("snap_")) {
-      throw new TypeError(`Not a snapshot id: ${JSON.stringify(value)}`);
-    }
-
-    return new SnapshotId(value);
-  }
-
   toJSON(): string {
     return this.value;
   }

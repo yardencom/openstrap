@@ -69,53 +69,48 @@ export class Facts {
   }
 
   /**
-   * A snapshot openstrap took on another machine, read back into these types.
+   * A snapshot out of the JSON of one.
    *
    * The other way facts reach this openstrap: it delivers itself to a machine it cannot read from
-   * here, and what comes back over the channel is text. Text is not a snapshot — the id that knows
-   * how it is spelled, the moment with both of its spellings, the facts that can answer for their own
-   * completeness are all strings in it, and a reader that cast it into place would find out at the
-   * first method call.
+   * here, and what comes back over the channel is the JSON a snapshot prints as. In it, the id, the
+   * moment and the facts are plain strings and dictionaries, so the snapshot is built again with the
+   * same constructors `collect` uses rather than cast into place — a cast would pass here and fail at
+   * the first `facts.status()`, far from the channel that caused it.
    *
-   * Nothing in it is second-guessed. openstrap put that binary there and knows its digest, so the
-   * answer is its own; checking it would be checking the same code against itself. What is looked at
-   * is whether this is that answer at all — JSON, an object, and a schema this openstrap reads —
-   * because a channel can hand back anything.
+   * Two questions are asked of it and no others: is this openstrap's answer at all, and is it a
+   * version this one reads. The first, because what comes over a channel is that machine's stdout and
+   * it can hold a login banner, a truncated line or nothing. The second, because the build that
+   * answered is a file in `bin/` and not necessarily built from this source — `OPENSTRAP_BINARY_DIR`
+   * can point at a previous release, and then the two ends of the channel are two versions of
+   * openstrap. Past those, the fields are read as the schema promises them. A build that claims this
+   * schema and prints something else is a defect in openstrap, and finding it by having openstrap
+   * inspect its own output field by field is checking the same code against itself.
    */
-  static printed(output: unknown): FactSnapshot {
-    if (!output || typeof output !== "object" || Array.isArray(output)) {
+  static snapshotFrom(json: unknown): FactSnapshot {
+    if (!json || typeof json !== "object" || Array.isArray(json)) {
       throw new TypeError("Not a snapshot");
     }
 
-    const printed = output as {
+    const printed = json as {
       schemaVersion?: unknown;
-      id?: unknown;
-      scope?: unknown;
-      target?: { type?: unknown; id?: unknown; displayName?: unknown };
-      facts?: unknown;
-      reading?: { takenAt?: unknown };
+      scope: string;
+      target: { type: string; id: string; displayName?: string };
+      facts: FactSections;
+      reading: { takenAt: string };
     };
 
     if (printed.schemaVersion !== schemaVersion) {
       throw new TypeError(`A snapshot in ${JSON.stringify(printed.schemaVersion)}, which this openstrap does not read`);
     }
 
-    if (typeof printed.reading?.takenAt !== "string") {
-      throw new TypeError("A snapshot with none of the moment it was taken");
-    }
-
-    if (!printed.facts || typeof printed.facts !== "object" || Array.isArray(printed.facts)) {
-      throw new TypeError("A snapshot with no facts in it");
-    }
-
     return new FactSnapshot(
       {
-        name: String(printed.target?.id),
-        scope: String(printed.scope),
-        type: String(printed.target?.type),
-        displayName: printed.target?.displayName === undefined ? undefined : String(printed.target.displayName),
+        name: printed.target.id,
+        scope: printed.scope,
+        type: printed.target.type,
+        displayName: printed.target.displayName,
       },
-      new Facts(printed.facts as FactSections),
+      new Facts(printed.facts),
       Moment.of(printed.reading.takenAt),
     );
   }
