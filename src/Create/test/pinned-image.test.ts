@@ -43,7 +43,7 @@ describe("The image a target is pinned to", () => {
 
     await create(store, provider);
 
-    expect(store.readPinnedImage("ubuntu-vm")).toEqual({
+    expect(store.readMachineImage("ubuntu-vm")).toEqual({
       reference: "ubuntu:24.04",
       url: "https://images.example/noble-arm64.img",
       sha256: "a".repeat(64),
@@ -77,7 +77,7 @@ describe("The image a target is pinned to", () => {
 
     await expect(create(store, provider)).rejects.toThrow(PinnedImageChangedError);
     await expect(create(store, provider)).rejects.toThrow(/pinned to ubuntu:24\.04 aaaaaaaaaaaa/);
-    expect(store.readPinnedImage("ubuntu-vm")!.sha256).toBe("a".repeat(64));
+    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("a".repeat(64));
   });
 
   it("fails the run when the blueprint asks for another image, which is a decision, not a drift", async () => {
@@ -94,9 +94,48 @@ describe("The image a target is pinned to", () => {
     provider.sha256 = "b".repeat(64);
     await create(store, provider, {}, { repin: true });
 
-    expect(store.readPinnedImage("ubuntu-vm")!.sha256).toBe("b".repeat(64));
+    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("b".repeat(64));
     // Asked for the name, not for the pin it is about to replace.
     expect(provider.asked[1]!.pinned).toBeUndefined();
+  });
+
+  it("is one row, which is also what says which build to deliver to that machine", async () => {
+    const provider = fakeProvider("a".repeat(64));
+
+    await create(store, provider);
+    const image = store.readMachineImage("ubuntu-vm")!;
+
+    // Two questions with one answer: what to build from again, and what openstrap has to be built
+    // for to run there. Two rows saying it would be two rows that can disagree.
+    expect(image).toMatchObject({ sha256: "a".repeat(64), platform: "linux", architecture: "arm64" });
+  });
+
+  it("leaves the run history saying which file that run built with, as data", async () => {
+    const provider = fakeProvider("a".repeat(64));
+
+    await create(store, provider);
+    const [run] = store.listRuns("ubuntu-vm");
+
+    // The step says it as a sentence with the checksum cut to twelve characters, which no one can
+    // compare with anything. The history is asked instead.
+    expect(store.readRunImage(run!.id)).toEqual({
+      reference: "ubuntu:24.04",
+      url: "https://images.example/noble-arm64.img",
+      sha256: "a".repeat(64),
+    });
+  });
+
+  it("keeps what a repinned run built with, because the history is not the pin", async () => {
+    const provider = fakeProvider("a".repeat(64));
+    await create(store, provider);
+    provider.sha256 = "b".repeat(64);
+    await create(store, provider, {}, { repin: true });
+
+    const runs = store.listRuns("ubuntu-vm");
+    const built = runs.map((run) => store.readRunImage(run.id)!.sha256).sort();
+
+    expect(built).toEqual(["a".repeat(64), "b".repeat(64)]);
+    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("b".repeat(64));
   });
 
   it("records the failure as a run that failed, not as no run at all", async () => {

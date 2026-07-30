@@ -91,7 +91,7 @@
 | **Provider** | Внешний инструмент, который создает и ведет жизненный цикл машины. | UTM, VirtualBox |
 | **Secret Store** | Порт ядра для хранения секретов; плагин получает ссылку на секрет, не значение. | keychain, GPG |
 | **State Store** | Хранилище желаемого состояния, истории прогонов и машинно-локальных данных: портов, id ресурсов провайдера, снимков facts, закрепленного образа. | SQLite |
-| **Pinned Image** | Файл, из которого сделана цель: url и sha, записанные при первом `create` и требуемые у провайдера при каждом следующем. Не имя образа, а то, во что имя разрешилось. | `pinned_image` в state store |
+| **Machine Image** | Файл, из которого сделана цель: url и sha, записанные при первом `create` и требуемые у провайдера при каждом следующем. Не имя образа, а то, во что имя разрешилось. Он же говорит, под какую платформу собирать openstrap для доставки. | `machine_image` в state store |
 
 ## Fact Collection
 
@@ -225,4 +225,4 @@
 | **Execution User** vs **Target User** | Программа запущена как `openstrap`; config проверяет `users: [{ name: root }]` | **Execution User** запускает процесс; **Target User** является объектом описания или проверки. |
 | **Provider** vs **Port** vs **Adapter** vs **Facade** | `FactsProvider` vs `ConfigValidator` vs `ZodConfigValidator` vs `Facts` | **Port** - интерфейс; **Adapter** реализует port; **Facade** - публичный API модуля; **Provider** допустим только для реального внешнего ресурса. |
 | **Scope** vs **Target Type** | `scope: guest`, `type: container` | **Scope** выбирает схему данных facts; **Target Type** говорит, чем объект является. Совпадать не обязаны. |
-| **Pinned Image** vs **Image** | `pinned_image.url` с sha vs `image: ubuntu:24.04` в блюпринте | **Image** - имя, которое человек написал, и оно означает разное в разные дни. **Pinned Image** - файл, в который имя разрешилось здесь. Общее между людьми - имя; пин машинно-локален и живет в state store (ADR 0003). |
+| **Machine Image** vs **Image** | `machine_image.url` с sha vs `image: ubuntu:24.04` в блюпринте | **Image** - имя, которое человек написал, и оно означает разное в разные дни. **Machine Image** - файл, в который имя разрешилось здесь. Общее между людьми - имя; файл машинно-локален и живет в state store (ADR 0003). |

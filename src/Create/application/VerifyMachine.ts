@@ -51,7 +51,7 @@ export class VerifyMachine {
     try {
       // Read by openstrap on the machine itself, delivered over this connection. The connection is
       // how it gets there and how it answers; it is not where any fact comes from.
-      const machine = request.store.readMachinePlatform(request.target.name);
+      const machine = request.store.readMachineImage(request.target.name);
 
       if (machine === null) {
         throw new UnknownMachinePlatformError(request.target.name);

@@ -69,7 +69,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
 
     try {
       const recorded = store.readTarget(target);
-      const machine = store.readMachinePlatform(target);
+      const machine = store.readMachineImage(target);
 
       if (machine === null) {
         throw new UnknownMachinePlatformError(target);

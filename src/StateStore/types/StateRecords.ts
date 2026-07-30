@@ -56,19 +56,13 @@ export type FactSnapshotRecord = {
   data: unknown;
 };
 
-/** What kind of machine a target is: what a build for it has to be built for. */
-export type MachinePlatformRecord = {
-  platform: string;
-  architecture: string;
-};
-
 /**
- * The image a target is pinned to: the file it was made from, not the name that was asked for.
+ * The image a target was made from: the file, not the name that was asked for.
  *
- * `reference` is kept beside the file so a changed blueprint is visible as such — asking for
- * `ubuntu:26.04` where the pin says `ubuntu:24.04` is a different intention, not a moved image.
+ * One record for two questions with one answer — what `create` must build from again, and what
+ * openstrap has to be built for to run on that machine.
  */
-export type PinnedImageRecord = {
+export type MachineImageRecord = {
   reference: string;
   url: string;
   sha256: string;
@@ -76,4 +70,11 @@ export type PinnedImageRecord = {
   architecture: string;
   format: string;
   boot: string;
+};
+
+/** The image one run built with, as data rather than as a sentence in a step. */
+export type RunImageRecord = {
+  reference: string;
+  url: string;
+  sha256: string;
 };

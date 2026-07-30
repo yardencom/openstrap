@@ -3,11 +3,11 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type {
-  MachinePlatformRecord,
-  PinnedImageRecord,
+  MachineImageRecord,
   AllocatedPortRecord,
   FactSnapshotRecord,
   ProviderResourceRecord,
+  RunImageRecord,
   RunRecord,
   RunStepRecord,
   SecretReferenceRecord,
@@ -252,18 +252,12 @@ export class SqliteStateStore {
     `).run(reference.target, reference.purpose, reference.store, reference.name, now);
   }
 
-  /** Records what kind of machine a target is, as the provider that created it reported. */
-  saveMachinePlatform(target: string, platform: MachinePlatformRecord, now: string): void {
+  /**
+   * Records the image a target was made from. Replacing it is what `create --repin` asks for.
+   */
+  saveMachineImage(target: string, image: MachineImageRecord, now: string): void {
     this.database.prepare(`
-      INSERT INTO machine_platform (target, platform, architecture, created_at) VALUES (?, ?, ?, ?)
-      ON CONFLICT(target) DO UPDATE SET platform = excluded.platform, architecture = excluded.architecture
-    `).run(target, platform.platform, platform.architecture, now);
-  }
-
-  /** Pins a target to the image it was made from. Re-pinning replaces it, which only `--repin` asks for. */
-  savePinnedImage(target: string, image: PinnedImageRecord, now: string): void {
-    this.database.prepare(`
-      INSERT INTO pinned_image (target, reference, url, sha256, platform, architecture, format, boot, created_at)
+      INSERT INTO machine_image (target, reference, url, sha256, platform, architecture, format, boot, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(target) DO UPDATE SET
         reference = excluded.reference, url = excluded.url, sha256 = excluded.sha256,
@@ -275,9 +269,9 @@ export class SqliteStateStore {
     );
   }
 
-  readPinnedImage(target: string): PinnedImageRecord | null {
+  readMachineImage(target: string): MachineImageRecord | null {
     const row = this.database.prepare(`
-      SELECT reference, url, sha256, platform, architecture, format, boot FROM pinned_image WHERE target = ?
+      SELECT reference, url, sha256, platform, architecture, format, boot FROM machine_image WHERE target = ?
     `).get(target) as Record<string, string> | undefined;
 
     return row
@@ -293,12 +287,23 @@ export class SqliteStateStore {
       : null;
   }
 
-  readMachinePlatform(target: string): MachinePlatformRecord | null {
-    const row = this.database
-      .prepare("SELECT platform, architecture FROM machine_platform WHERE target = ?")
-      .get(target) as { platform?: string; architecture?: string } | undefined;
+  /** Records which file a run built with, so the history says it in a form that can be compared. */
+  recordRunImage(runId: string, image: RunImageRecord): void {
+    this.database.prepare(`
+      INSERT INTO run_image (run_id, reference, url, sha256) VALUES (?, ?, ?, ?)
+      ON CONFLICT(run_id) DO UPDATE SET
+        reference = excluded.reference, url = excluded.url, sha256 = excluded.sha256
+    `).run(runId, image.reference, image.url, image.sha256);
+  }
 
-    return row ? { platform: String(row.platform), architecture: String(row.architecture) } : null;
+  readRunImage(runId: string): RunImageRecord | null {
+    const row = this.database
+      .prepare("SELECT reference, url, sha256 FROM run_image WHERE run_id = ?")
+      .get(runId) as Record<string, string> | undefined;
+
+    return row
+      ? { reference: String(row.reference), url: String(row.url), sha256: String(row.sha256) }
+      : null;
   }
 
   readSecretReference(target: string, purpose: string): SecretReferenceRecord | null {

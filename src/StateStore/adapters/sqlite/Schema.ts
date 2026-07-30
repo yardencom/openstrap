@@ -2,7 +2,7 @@
  * The state store holds what is true of this machine only.
  *
  * Allocated ports, provider resource ids, runs, fact snapshots and the image a
- * target is pinned to are all true of the machine openstrap ran on. The
+ * target was made from are all true of the machine openstrap ran on. The
  * machine's actual state is not stored — that is read back from the provider,
  * so there is only ever one source of truth for it.
  */
@@ -18,31 +18,22 @@ export const stateStoreSchema = [
    )`,
 
   /**
-   * What kind of machine a target is, recorded when it was created.
+   * The image a target was made from: the file, not the name that was asked for.
    *
-   * openstrap has to know before it can deliver itself there, and a build for one platform does not
-   * run on another. It is known at creation — the provider resolved the image — so it is written down
-   * then rather than worked out from the machine afterwards.
+   * Two questions are answered by this one row, because they have one answer. `create` asks it
+   * before it resolves anything, so the second create of a target is made from the first one's file:
+   * `ubuntu:24.04` is a name, and the URL it names serves whatever is current. Delivering openstrap
+   * to the machine asks it too — a build for one platform does not run on another, and what the
+   * machine is was settled when the image was chosen.
+   *
+   * `reference` is kept beside the file so a changed blueprint reads as what it is: asking for
+   * `ubuntu:26.04` where this says `ubuntu:24.04` is a different intention, not an image that moved.
+   *
+   * Here rather than derived from the run history, which records the same thing: a journal is
+   * something one may delete, and deleting it must not unpin a machine. It belongs to the target and
+   * goes when the target goes.
    */
-  `CREATE TABLE IF NOT EXISTS machine_platform (
-     target      TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
-     platform    TEXT NOT NULL,
-     architecture TEXT NOT NULL,
-     created_at  TEXT NOT NULL
-   )`,
-
-  /**
-   * The image a target is pinned to.
-   *
-   * Written the first time a target is created and read before every create after that, so the
-   * second run is made from the same file as the first. `ubuntu:24.04` is not a file: the URL it
-   * names serves whatever is current, and without a pin a machine recreated a month later is a
-   * different machine that answers to the same name.
-   *
-   * Here rather than in a file in the repository, because a pin is true of this machine: it says
-   * what was actually built here, and the next person to clone the repository has built nothing.
-   */
-  `CREATE TABLE IF NOT EXISTS pinned_image (
+  `CREATE TABLE IF NOT EXISTS machine_image (
      target       TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
      reference    TEXT NOT NULL,
      url          TEXT NOT NULL,
@@ -115,6 +106,20 @@ export const stateStoreSchema = [
      schema_version TEXT NOT NULL,
      captured_at    TEXT NOT NULL,
      data           TEXT NOT NULL
+   )`,
+
+  /**
+   * The image one run actually used.
+   *
+   * As data, because the run's steps say it as a sentence for a person to read — with the checksum
+   * cut to twelve characters — and a sentence cannot be compared with anything. This is the history:
+   * which file each run built with, still true after the target has been repinned or deleted.
+   */
+  `CREATE TABLE IF NOT EXISTS run_image (
+     run_id       TEXT PRIMARY KEY REFERENCES run(id) ON DELETE CASCADE,
+     reference    TEXT NOT NULL,
+     url          TEXT NOT NULL,
+     sha256       TEXT NOT NULL
    )`,
 
   "CREATE INDEX IF NOT EXISTS run_by_target ON run(target, started_at)",

@@ -3,7 +3,7 @@ import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js"
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { MachineHandle, Provider, ProviderAvailability, ResolvedImage } from "../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../Secrets/index.js";
-import type { PinnedImageRecord, SqliteStateStore } from "../../StateStore/index.js";
+import type { MachineImageRecord, SqliteStateStore } from "../../StateStore/index.js";
 
 export type CreateMachineRequest = {
   target: BlueprintTarget;
@@ -97,14 +97,12 @@ export class CreateMachine {
       const image = await this.image(request, timestamp);
       done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
 
-      // What kind of machine this will be is settled here, by the image it is made from. Writing it
-      // down is what saves openstrap from working it out again from the machine every time it has to
-      // deliver itself there.
-      request.store.saveMachinePlatform(
-        target.name,
-        { platform: image.platform, architecture: image.architecture },
-        timestamp,
-      );
+      // Which file this run built with, as data. The step above says it as a sentence for a person.
+      request.store.recordRunImage(runId, {
+        reference: image.reference,
+        url: image.url,
+        sha256: image.sha256,
+      });
 
 
       const existing = await request.provider.find(target.name);
@@ -192,7 +190,7 @@ export class CreateMachine {
    */
   private async image(request: CreateMachineRequest, timestamp: string): Promise<ResolvedImage> {
     const reference = request.target.image ?? "ubuntu:24.04";
-    const pinned = request.repin ? null : request.store.readPinnedImage(request.target.name);
+    const pinned = request.repin ? null : request.store.readMachineImage(request.target.name);
     const image = await request.provider.resolveImage({
       name: reference,
       architecture: process.arch,
@@ -208,7 +206,7 @@ export class CreateMachine {
     }
 
     if (!pinned) {
-      request.store.savePinnedImage(request.target.name, pinOf(reference, image), timestamp);
+      request.store.saveMachineImage(request.target.name, madeFrom(reference, image), timestamp);
     }
 
     return image;
@@ -252,7 +250,7 @@ export class CreateMachine {
 }
 
 /** What is written down about an image: the file, and the name that was asked for. */
-function pinOf(reference: string, image: ResolvedImage): PinnedImageRecord {
+function madeFrom(reference: string, image: ResolvedImage): MachineImageRecord {
   return {
     reference,
     url: image.url,

@@ -3,8 +3,9 @@ export { SqliteStateStore } from "./adapters/sqlite/SqliteStateStore.js";
 export type {
   AllocatedPortRecord,
   FactSnapshotRecord,
-  PinnedImageRecord,
+  MachineImageRecord,
   ProviderResourceRecord,
+  RunImageRecord,
   RunRecord,
   RunStatus,
   RunStepRecord,
