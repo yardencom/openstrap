@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RequiredFacts } from "../application/RequiredFacts.js";
+import { RequiredFacts } from "../RequiredFacts.js";
 
 describe("RequiredFacts", () => {
   it("asks only about the sections the requirements mention", () => {

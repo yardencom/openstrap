@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RequirementEvaluator, type RequirementLeafCheck, type TargetlessRequirement } from "../index.js";
+import { Requirements, type RequirementLeafCheck, type TargetlessRequirement } from "../index.js";
 import { Facts } from "../../Facts/Facts.js";
 
 describe("RequirementEvaluator", () => {
@@ -40,17 +40,16 @@ describe("RequirementEvaluator", () => {
   });
 
   it("returns error when target snapshot is missing", () => {
-    const run = new RequirementEvaluator().evaluate({
-      requirements: [
-        {
-          id: "node-runtime",
-          runtimes: {
-            node: {
-              ready: true,
-            },
+    const run = new Requirements([
+      {
+        id: "node-runtime",
+        runtimes: {
+          node: {
+            ready: true,
           },
         },
-      ],
+      },
+    ]).checkedAgainst({
       target: { name: "host", scope: "host", type: "host" },
       snapshots: snapshots(),
       now: new Date("2026-06-08T10:00:00.000Z"),
@@ -142,8 +141,7 @@ describe("RequirementEvaluator", () => {
 });
 
 function evaluate(requirements: TargetlessRequirement[]) {
-  return new RequirementEvaluator().evaluate({
-    requirements,
+  return new Requirements(requirements).checkedAgainst({
     target: { name: "guest", scope: "guest", type: "vm" },
     snapshots: snapshots(),
     now: new Date("2026-06-08T10:00:00.000Z"),

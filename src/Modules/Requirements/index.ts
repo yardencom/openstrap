@@ -1,9 +1,5 @@
-export { RequirementEvaluator } from "./application/RequirementEvaluator.js";
-export { RequiredFacts, type RequiredFactsRequest } from "./application/RequiredFacts.js";
-export {
-  mergeRequirementRuns,
-  MergedRunWithoutTargetsError,
-} from "./application/MergeRequirementRuns.js";
+export { Requirements, type EvaluationRequest } from "./Requirements.js";
+export { mergeRequirementRuns, MergedRunWithoutTargetsError } from "./MergeRequirementRuns.js";
 export { runSucceeded } from "#types/Requirements.js";
 export type {
   CheckStatus,

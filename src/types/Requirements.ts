@@ -3,6 +3,17 @@ import type { Target } from "./Target.js";
 export type CheckStatus = "passed" | "failed" | "error" | "skipped";
 
 /**
+ * How one comparison came out, and what to say about it when it did not pass.
+ *
+ * The smallest unit of judging: one thing a requirement expected against one thing a machine
+ * reported. Every leaf of a requirement's result is built from one of these.
+ */
+export type Comparisons = {
+  status: CheckStatus;
+  message?: string;
+};
+
+/**
  * Whether a run of this status means the thing it checked is fit for use.
  *
  * `skipped` counts as success: nothing was required, so nothing was found wanting.

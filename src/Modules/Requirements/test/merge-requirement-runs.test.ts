@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   mergeRequirementRuns,
   MergedRunWithoutTargetsError,
-} from "../application/MergeRequirementRuns.js";
+} from "../MergeRequirementRuns.js";
 import type { CheckStatus, RequirementRun } from "#types/Requirements.js";
 
 describe("merging one evaluation per target", () => {

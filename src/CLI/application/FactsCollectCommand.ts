@@ -2,7 +2,7 @@ import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Connect } from "#features/Connect/Connect.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
-import { RequiredFacts } from "../../Modules/Requirements/index.js";
+import { Requirements } from "../../Modules/Requirements/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import type { BlueprintTarget } from "#types/Blueprint.js";
@@ -63,10 +63,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     return Facts.collect({
       target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
       declare: declared
-        ? new RequiredFacts({
-          requirements: declared.requirements,
-          workspaceRoot: context.workspaceRoot,
-        }).declaration
+        ? new Requirements(declared.requirements).order(context.workspaceRoot)
         : everySection,
       now: context.now,
     });

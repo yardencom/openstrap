@@ -2,7 +2,7 @@ import { connect } from "node:net";
 
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../Plugin/index.js";
-import { RequiredFacts, RequirementEvaluator, type RequirementRun } from "../../../Modules/Requirements/index.js";
+import { Requirements, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
@@ -34,7 +34,6 @@ export type VerifyResult = {
 export class VerifyMachine {
   constructor(
     private readonly secrets = new KeychainSecretStore(),
-    private readonly evaluator = new RequirementEvaluator(),
   ) {}
 
   async execute(request: VerifyRequest): Promise<VerifyResult> {
@@ -91,9 +90,8 @@ export class VerifyMachine {
 
       return {
         snapshot,
-        requirementRun: this.evaluator.evaluate({
+        requirementRun: new Requirements(request.target.requirements).checkedAgainst({
           target: request.target,
-          requirements: request.target.requirements,
           snapshots: [snapshot],
           trigger: "create",
           profile: "local-vm",

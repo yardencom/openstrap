@@ -3,8 +3,7 @@ import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import {
   mergeRequirementRuns,
-  RequiredFacts,
-  RequirementEvaluator,
+  Requirements,
   type RequirementRun,
 } from "../../Modules/Requirements/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
@@ -44,10 +43,7 @@ export type RunResult = {
  * identity — so what it leaves behind is the snapshot itself.
  */
 export class Run {
-  constructor(
-    private readonly evaluator = new RequirementEvaluator(),
-    private readonly create = new Create(),
-  ) {}
+  constructor(private readonly create = new Create()) {}
 
   async execute(request: RunRequest): Promise<RunResult> {
     const snapshots: FactSnapshot[] = [];
@@ -129,10 +125,7 @@ export class Run {
   private read(target: BlueprintTarget, request: RunRequest): Promise<FactSnapshot> {
     return Facts.collect({
       target: { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
-      declare: new RequiredFacts({
-        requirements: target.requirements,
-        workspaceRoot: request.workspaceRoot,
-      }).declaration,
+      declare: new Requirements(target.requirements).order(request.workspaceRoot),
       now: request.now,
     });
   }
@@ -142,9 +135,8 @@ export class Run {
     snapshots: readonly FactSnapshot[],
     request: RunRequest,
   ): RequirementRun {
-    return this.evaluator.evaluate({
+    return new Requirements(target.requirements).checkedAgainst({
       target,
-      requirements: target.requirements,
       snapshots,
       now: request.now,
       trigger: "manual",
