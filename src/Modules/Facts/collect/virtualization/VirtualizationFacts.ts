@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 
 import type { FactSections } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";

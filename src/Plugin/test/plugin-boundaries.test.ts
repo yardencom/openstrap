@@ -64,12 +64,6 @@ describe("Plugin boundaries", () => {
   });
 });
 
-function pluginSourceFiles(): string[] {
-  return listSourceFiles(join(process.cwd(), "src/Plugin")).filter(
-    (filePath: string) => !filePath.includes("/test/"),
-  );
-}
-
 function listSourceFiles(directoryPath: string): string[] {
   return readdirSync(directoryPath).flatMap((entryName) => {
     const entryPath = join(directoryPath, entryName);

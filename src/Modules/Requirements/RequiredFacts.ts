@@ -106,26 +106,4 @@ export class RequiredFacts {
 
     return sections;
   }
-
-  /**
-   * Which path a requirement about `paths` is actually about.
-   *
-   * `workspace` and `home` are the two a blueprint can rely on without spelling
-   * them out, because openstrap knows where they are. Any other name is taken as
-   * the path itself, which is what a requirement written about `/etc/ssh` means.
-   */
-  private pathOf(name: string): string {
-    if (name === "workspace") {
-      return this.request.workspaceRoot ?? ".";
-    }
-
-    return name === "home" ? "$HOME" : name;
-  }
-}
-
-function named<TDeclaration>(
-  names: Set<string> | undefined,
-  declare: (name: string) => TDeclaration,
-): Record<string, TDeclaration> {
-  return Object.fromEntries([...(names ?? [])].map((name) => [name, declare(name)]));
 }

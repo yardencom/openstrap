@@ -32,9 +32,9 @@ export class Collecting {
   private readonly processor = new CpuFacts();
   private readonly memory = new MemoryFacts();
   private readonly storage = new StorageFacts();
-  private readonly network = new NetworkFacts(this.platform);
+  private readonly network = new NetworkFacts();
   private readonly virtualization = new VirtualizationFacts(this.platform);
-  private readonly privileges = new PrivilegeFacts(this.platform);
+  private readonly privileges = new PrivilegeFacts();
   private readonly packages = new PackageFacts();
   private readonly accounts = new AccountFacts(this.platform);
   private readonly processes = new ProcessFacts(this.platform);

@@ -1,14 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 import si from "systeminformation";
 
 import type { FactSections, Network, NetworkInterface, PortFact } from "#types/Facts.js";
-import type { Platform } from "../platform/Platform.js";
 
 /** How this machine is reachable, and what is listening on it. */
 export class NetworkFacts {
-  constructor(private readonly platform: Platform) {}
-
   async network(declared: Record<string, never> | undefined): Promise<FactSections["network"]> {
     if (declared === undefined) {
       return undefined;

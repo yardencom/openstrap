@@ -4,7 +4,6 @@ import { ToolFacts } from "./ToolFacts.js";
 import { Platform } from "../platform/Platform.js";
 
 const asking = (): ToolFacts => new ToolFacts(Platform.current());
-const otherPlatform = Platform.current().is("linux") ? "macos" : "linux";
 
 describe("tools", () => {
   it("reports where a tool is and what version it says it is", async () => {

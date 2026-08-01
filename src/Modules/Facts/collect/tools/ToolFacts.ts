@@ -11,8 +11,6 @@ import type { Platform } from "../platform/Platform.js";
  * A caller that cares about something else says so; a caller that does not
  * should not have to spell out the obvious.
  */
-const commonTools: readonly string[] = ["node", "npm", "python3", "git"];
-
 /** Tools whose presence makes a runtime available to a blueprint. */
 const runtimeTools: readonly string[] = ["node", "python3"];
 

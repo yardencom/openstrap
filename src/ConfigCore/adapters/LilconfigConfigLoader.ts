@@ -160,7 +160,7 @@ function parseInlineYaml(request: Extract<ConfigLoadRequest, { content: string }
   };
 }
 
-function loadYaml(filepath: string, content: string): unknown {
+function loadYaml(_filepath: string, content: string): unknown {
   const parsedDocument = parseDocument(content);
 
   if (parsedDocument.errors.length > 0) {

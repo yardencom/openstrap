@@ -1,7 +1,7 @@
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
 import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineHandle, Provider, ProviderAvailability, ResolvedImage } from "../../../Plugin/index.js";
+import type { MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../../Secrets/index.js";
 import type { MachineImageRecord, SqliteStateStore } from "../../../StateStore/index.js";
 

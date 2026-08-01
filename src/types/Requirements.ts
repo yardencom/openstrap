@@ -1,5 +1,3 @@
-import type { Target } from "./Target.js";
-
 export type CheckStatus = "passed" | "failed" | "error" | "skipped";
 
 /**

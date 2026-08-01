@@ -1,4 +1,4 @@
-import { generateKeyPairSync, randomBytes, type KeyObject } from "node:crypto";
+import { generateKeyPairSync, randomBytes } from "node:crypto";
 
 export type GeneratedKeyPair = {
   /** OpenSSH private key format. Never leaves the secret store. */

@@ -2,12 +2,9 @@ import { execFileSync } from "node:child_process";
 import { userInfo } from "node:os";
 
 import type { FactSections } from "#types/Facts.js";
-import type { Platform } from "../platform/Platform.js";
 
 /** What the account this is running as is allowed to do. */
 export class PrivilegeFacts {
-  constructor(private readonly platform: Platform) {}
-
   privileges(declared: Record<string, never> | undefined): FactSections["privileges"] {
     if (declared === undefined) {
       return undefined;
