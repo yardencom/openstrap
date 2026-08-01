@@ -29,8 +29,10 @@ describe("RequiredFacts", () => {
       ],
     }).declaration;
 
-    expect(declared.services).toEqual({ sshd: { name: "sshd" } });
-    expect(declared.processes).toEqual({ sshd: { name: "sshd" } });
+    // The name and nothing else. How to find a service called `sshd` is the service collector's
+    // business, and it already has the name.
+    expect(declared.services).toEqual({ sshd: {} });
+    expect(declared.processes).toEqual({ sshd: {} });
   });
 
   it("collects the names across every requirement that asks about a section", () => {
@@ -54,20 +56,15 @@ describe("RequiredFacts", () => {
     expect(declared.paths).toEqual({ workspace: { path: "/workspace/app" } });
   });
 
-  it("leaves the home directory for the machine being read to expand", () => {
+  it("says nothing about where a path is, because the machine knows", () => {
     const declared = new RequiredFacts({
-      requirements: [{ id: "home-ready", paths: { home: { writable: true } } }],
+      requirements: [
+        { id: "home-ready", paths: { home: { writable: true } } },
+        { id: "ssh-config", paths: { "/etc/ssh/sshd_config": { exists: true } } },
+      ],
     }).declaration;
 
-    expect(declared.paths).toEqual({ home: { path: "$HOME" } });
-  });
-
-  it("takes any other path name as the path itself", () => {
-    const declared = new RequiredFacts({
-      requirements: [{ id: "ssh-config", paths: { "/etc/ssh/sshd_config": { exists: true } } }],
-    }).declaration;
-
-    expect(declared.paths).toEqual({ "/etc/ssh/sshd_config": { path: "/etc/ssh/sshd_config" } });
+    expect(declared.paths).toEqual({ home: {}, "/etc/ssh/sshd_config": {} });
   });
 
   it("names a section that holds no named things without naming anything in it", () => {

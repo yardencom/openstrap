@@ -41,7 +41,7 @@ export class CommandFacts {
     }
 
     const facts = await Promise.all(Object.entries(declared).map(async ([id, declaration]) => {
-      return [id, await this.command(declaration)] as const;
+      return [id, await this.command(declaration.name ?? id, declaration)] as const;
     }));
 
     return Object.fromEntries(facts);
@@ -61,18 +61,22 @@ export class CommandFacts {
     }
 
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
+      // A variable is spelled the way it is named, unless the declaration lists the spellings —
+      // `HOME` on Unix and `USERPROFILE` on Windows are one variable under two names.
+      const spellings = declaration.names ?? [id];
+
       if (!this.platform.matches(declaration.platforms)) {
         return [id, {
           status: "unsupported" as const,
-          name: declaration.names[0] ?? id,
+          name: spellings[0] ?? id,
           reason: "platform_not_selected",
         }];
       }
 
-      const name = declaration.names.find((candidate) => process.env[candidate] !== undefined);
+      const name = spellings.find((candidate) => process.env[candidate] !== undefined);
 
       if (name === undefined) {
-        return [id, { status: "absent" as const, name: declaration.names[0] ?? id }];
+        return [id, { status: "absent" as const, name: spellings[0] ?? id }];
       }
 
       const redaction = new Redaction(declaration.redaction);
@@ -86,13 +90,13 @@ export class CommandFacts {
     }));
   }
 
-  private async command(declaration: CommandDeclaration): Promise<CommandFact> {
+  private async command(program: string, declaration: CommandDeclaration): Promise<CommandFact> {
     const args = [...(declaration.args ?? [])];
 
     if (!this.platform.matches(declaration.platforms)) {
       return {
         status: "unsupported",
-        name: declaration.name,
+        name: program,
         args,
         reason: "platform_not_selected",
       };
@@ -102,7 +106,7 @@ export class CommandFacts {
     const limit = declaration.maxOutputBytes ?? defaultOutputLimitBytes;
 
     try {
-      const result = await run(declaration.name, args, {
+      const result = await run(program, args, {
         timeout: declaration.timeoutMs ?? defaultTimeoutMs,
         maxBuffer: readLimitBytes,
         encoding: "utf8",
@@ -110,7 +114,7 @@ export class CommandFacts {
 
       return {
         status: "present",
-        name: declaration.name,
+        name: program,
         args,
         exitCode: 0,
         stdout: redaction.apply(bounded(result.stdout, limit)),
@@ -118,7 +122,7 @@ export class CommandFacts {
     } catch (error) {
       return {
         status: "error",
-        name: declaration.name,
+        name: program,
         args,
         exitCode: exitCodeOf(error),
         stderr: redaction.apply(bounded(stderrOf(error), limit)),

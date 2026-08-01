@@ -35,11 +35,13 @@ export class PathFacts {
     }
 
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
+      const where = wherePathIs(id, declaration.path);
+
       if (!this.platform.matches(declaration.platforms)) {
-        return [id, { status: "unsupported" as const, path: declaration.path, reason: "platform_not_selected" }];
+        return [id, { status: "unsupported" as const, path: where, reason: "platform_not_selected" }];
       }
 
-      return [id, this.path(this.expanded(declaration.path), declaration.require)];
+      return [id, this.path(this.expanded(where), declaration.require)];
     }));
   }
 
@@ -49,11 +51,13 @@ export class PathFacts {
     }
 
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
+      const where = wherePathIs(id, declaration.path);
+
       if (!this.platform.matches(declaration.platforms)) {
-        return [id, { status: "unsupported" as const, path: declaration.path, reason: "platform_not_selected" }];
+        return [id, { status: "unsupported" as const, path: where, reason: "platform_not_selected" }];
       }
 
-      return [id, this.artifact(declaration)];
+      return [id, this.artifact(where, declaration)];
     }));
   }
 
@@ -160,8 +164,8 @@ export class PathFacts {
     });
   }
 
-  private artifact(declaration: ArtifactDeclaration): ArtifactFact {
-    const path = this.expanded(declaration.path);
+  private artifact(where: string, declaration: ArtifactDeclaration): ArtifactFact {
+    const path = this.expanded(where);
     const entry = this.entry(path);
 
     if (entry === undefined) {
@@ -236,4 +240,16 @@ export class PathFacts {
       return false;
     }
   }
+}
+
+/**
+ * Where a declared path is.
+ *
+ * The name usually is the path — `/etc/ssh/sshd_config` is both — so a declaration that says nothing
+ * more is asking about the thing it named. `home` is the one name that is not a path anywhere and
+ * means the same thing everywhere, and it is spelled here rather than by whoever wrote the
+ * declaration because only this machine knows whose home it is.
+ */
+function wherePathIs(name: string, declared: string | undefined): string {
+  return declared ?? (name === "home" ? "$HOME" : name);
 }

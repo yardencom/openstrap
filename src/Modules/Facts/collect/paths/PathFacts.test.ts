@@ -69,6 +69,16 @@ describe("paths", () => {
     });
   });
 
+  it("takes the name as the path when the caller said nothing more", () => {
+    // A requirement can only name a thing, and for a path the name is the path. Filling that in for
+    // the collector was somebody else's guess at what this one already knows.
+    expect(facts.paths({ [file]: {} })[file]).toMatchObject({ status: "present", path: file, type: "file" });
+  });
+
+  it("reads `home` as the home directory of the account doing the reading", () => {
+    expect(facts.paths({ home: {} }).home.path).toBe(homedir());
+  });
+
   it("expands the home directory of the account doing the reading", () => {
     expect(facts.paths({ home: { path: "$HOME" } }).home.path).toBe(homedir());
     expect(facts.paths({ home: { path: "~" } }).home.path).toBe(homedir());

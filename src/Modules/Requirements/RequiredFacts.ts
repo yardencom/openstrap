@@ -57,29 +57,23 @@ export class RequiredFacts {
   }
 
   /**
-   * What the reading has to be told about one name.
+   * What the reading has to be told about one name: the name, and nothing else.
    *
-   * A name in a requirement is a name in the machine, but what a collector needs to go and find it
-   * differs by section: a path and an artifact are found by their path, an environment variable and
-   * a package by names they may be spelled under, and everything else by its name. Producing `name`
-   * for all of them left the collector without the field it reads — reading `path.startsWith` of
-   * nothing, for a requirement about an artifact.
+   * A requirement can only name things — `runtimes.docker`, `paths./etc/ssh/sshd_config`, `env.HOME` —
+   * and how to go and find a thing by its name is knowledge that belongs to whoever collects that
+   * section. This used to decide it here, per section: a path by `path`, a variable by `names`,
+   * everything else by `name`. All three were the key written out again in a different field, and
+   * the one section that was forgotten reached its collector without the field it reads.
+   *
+   * `workspace` is the exception, and it is not a section rule but one name: it means the directory
+   * the run was started in, which the machine being read cannot know — a guest has never heard of
+   * it. So it is the caller that answers, here.
    */
   private namedIn(section: string, names: ReadonlySet<string>): Record<string, unknown> {
-    const declare = (name: string): Record<string, unknown> => {
-      switch (section) {
-        case "paths":
-        case "artifacts":
-          return { path: this.pathOf(name) };
-        case "env":
-        case "packages":
-          return { names: [name] };
-        default:
-          return { name };
-      }
-    };
-
-    return Object.fromEntries([...names].map((name) => [name, declare(name)]));
+    return Object.fromEntries([...names].map((name) => [
+      name,
+      section === "paths" && name === "workspace" ? { path: this.request.workspaceRoot ?? "." } : {},
+    ]));
   }
 
   /**

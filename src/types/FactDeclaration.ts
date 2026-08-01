@@ -65,7 +65,14 @@ export type ToolDeclaration = {
 };
 
 export type PathDeclaration = {
-  path: string;
+  /**
+   * Where to look, when the name is not the answer.
+   *
+   * A declaration names a thing, and for a path the name usually is the path — `/etc/ssh/sshd_config`
+   * is both. This is for the times it is not: `config` meaning something the caller knows the
+   * location of. Left out, the collector takes the name.
+   */
+  path?: string;
   /** Conditions that make the path acceptable; a path that fails them is an error, not an absence. */
   require?: readonly PathRequirement[];
   platforms?: readonly string[];
@@ -81,14 +88,19 @@ export type PathRequirement =
   | "executable";
 
 export type EnvDeclaration = {
-  /** Alternative spellings of one variable: `HOME` on Unix, `USERPROFILE` on Windows. */
-  names: readonly string[];
+  /**
+   * Alternative spellings of one variable: `HOME` on Unix, `USERPROFILE` on Windows.
+   *
+   * Left out, the variable is spelled the way it is named.
+   */
+  names?: readonly string[];
   platforms?: readonly string[];
   redaction?: FactRedaction;
 };
 
 export type CommandDeclaration = {
-  name: string;
+  /** The program to run, when it is not what the declaration calls it. */
+  name?: string;
   args?: readonly string[];
   timeoutMs?: number;
   maxOutputBytes?: number;
@@ -97,7 +109,8 @@ export type CommandDeclaration = {
 };
 
 export type ArtifactDeclaration = {
-  path: string;
+  /** Where the artifact is, when the name is not already the path. */
+  path?: string;
   kind?: string;
   /** How much of the artifact to keep: its shape, a digest of it, or the thing itself. */
   capture?: "metadata" | "hash" | "content";
@@ -119,7 +132,8 @@ export type GroupDeclaration = {
 };
 
 export type PackageDeclaration = {
-  names: readonly string[];
+  /** What the package is called in each manager, when that differs from the name declared. */
+  names?: readonly string[];
   manager?: string;
   platforms?: readonly string[];
 };

@@ -35,8 +35,8 @@ export class PackageFacts {
 
   private installed(declared: Record<string, PackageDeclaration>): Record<string, PackageFact> {
     return Object.fromEntries(
-      Object.entries(declared).flatMap(([id, declaration]) => declaration.names.map((name) => [
-        declaration.names.length === 1 ? id : `${id}.${name}`,
+      Object.entries(declared).flatMap(([id, declaration]) => (declaration.names ?? [id]).map((name) => [
+        (declaration.names ?? [id]).length === 1 ? id : `${id}.${name}`,
         {
           status: "unsupported" as const,
           name,
