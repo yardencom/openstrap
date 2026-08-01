@@ -1,5 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
+import { factSections, shapeOf, type FactSection, type FactShape } from "#types/Facts.js";
+
 import { satisfies, valid, validRange } from "semver";
 
 import type {
@@ -85,12 +87,15 @@ export class RequirementEvaluator {
       };
     }
 
-    const checks = evaluateNode({
-      expected: checkBlocks,
-      actual: snapshot.facts,
-      path: [],
-      observedAncestor: undefined,
-    });
+    const checks = Object.fromEntries(
+      Object.entries(checkBlocks).map(([section, expected]) => [section, evaluateNode({
+        expected,
+        actual: (snapshot.facts as Record<string, unknown> | undefined)?.[section],
+        path: [section],
+        observedAncestor: undefined,
+        shape: isFactSection(section) ? shapeOf(section) : undefined,
+      })]),
+    );
 
     return {
       requirementId: requirement.id,
@@ -107,18 +112,30 @@ function evaluateNode(params: {
   actual: unknown;
   path: readonly string[];
   observedAncestor: Observed | undefined;
+  /** What the facts model says sits here, so a missing name can be told from a missing reading. */
+  shape?: FactShape;
 }): RequirementCheckNode {
   if (isRecord(params.expected) && !isAssertionObject(params.expected)) {
     const currentObserved = asObserved(params.actual) ?? params.observedAncestor;
     const checks: Record<string, RequirementCheckNode> = {};
+    const entries = params.shape && typeof params.shape === "object" && "named" in params.shape
+      ? params.shape.named
+      : undefined;
 
     for (const [key, expectedValue] of Object.entries(params.expected)) {
       const actualValue = isRecord(params.actual) ? params.actual[key] : undefined;
       checks[key] = evaluateNode({
         expected: expectedValue,
-        actual: actualValue,
+        // A name that is not in a map the machine filled in is not an unanswered question: the
+        // machine listed what it found, and this is not among them. `tcp/6443` missing from
+        // `network.ports` means nothing is listening there, which is an answer — and reporting it as
+        // "missing from normalized facts" said instead that openstrap had failed to look.
+        actual: actualValue === undefined && entries !== undefined && isRecord(params.actual)
+          ? { status: "absent" }
+          : actualValue,
         path: [...params.path, key],
         observedAncestor: currentObserved,
+        shape: fieldShape(params.shape, key, entries),
       });
     }
 
@@ -126,6 +143,15 @@ function evaluateNode(params: {
   }
 
   return evaluateLeaf(params.expected, params.actual, params.path, params.observedAncestor);
+}
+
+/** What the model says is under this key: an entry of a map, or a field of an object. */
+function fieldShape(shape: FactShape | undefined, key: string, entries: FactShape | undefined): FactShape | undefined {
+  if (entries !== undefined) {
+    return entries;
+  }
+
+  return shape && typeof shape === "object" && "fields" in shape ? shape.fields[key] : undefined;
 }
 
 function evaluateLeaf(
@@ -397,4 +423,9 @@ function summarizeResults(results: readonly RequirementResult[]): string {
     .filter((result) => result.status !== "passed")
     .map((result) => `${result.requirementId}: ${result.status}`)
     .join("; ");
+}
+
+/** Whether this key of a requirement names a section a machine is read into. */
+function isFactSection(name: string): name is FactSection {
+  return name in factSections;
 }
