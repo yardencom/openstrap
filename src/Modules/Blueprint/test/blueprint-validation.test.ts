@@ -57,6 +57,47 @@ targets:
     expect(blueprint.targets["ubuntu-vm"]!.requirements.map((requirement) => requirement.id)).toEqual(["ssh-ready"]);
   });
 
+  it("takes the key of a named section as the machine spells it", () => {
+    // These are somebody else's names: a variable is written in capitals, a path is a path, a file
+    // is a file name. They were checked as identifiers of this file format — lowercase, no slashes —
+    // so a requirement about `HOME` or `/etc/ssh/sshd_config` was refused before anything ran.
+    const blueprint = loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: real-names
+        env:
+          HOME:
+            status: present
+        paths:
+          /etc/ssh/sshd_config:
+            exists: true
+        artifacts:
+          package.json:
+            status: present
+`);
+
+    const requirement = blueprint.targets.local!.requirements[0] as Record<string, Record<string, unknown>>;
+
+    expect(Object.keys(requirement.env!)).toEqual(["HOME"]);
+    expect(Object.keys(requirement.paths!)).toEqual(["/etc/ssh/sshd_config"]);
+    expect(Object.keys(requirement.artifacts!)).toEqual(["package.json"]);
+  });
+
+  it("refuses a name that could not be one", () => {
+    // A name with a space at the end matches nothing on the machine and would be reported as an
+    // absence, which reads as "the variable is missing" rather than "the blueprint has a typo".
+    expect(() => loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: trailing-space
+        env:
+          "HOME ":
+            status: present
+`)).toThrow(/Invalid key in record/);
+  });
+
   it("accepts a target with nothing required of it", () => {
     const blueprint = loadBlueprint(`
 targets:

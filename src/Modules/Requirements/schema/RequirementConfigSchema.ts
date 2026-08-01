@@ -95,7 +95,7 @@ export class RequirementConfigSchema {
         { requireAtLeastOneField: ["managers", "installed"] },
       )),
       processes: schema.optional(namedObservedMap(schema)),
-      services: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      services: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           manager: schema.optional(stringCondition(schema)),
@@ -107,7 +107,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "manager", "name", "enabled", "running", "state", "version"] },
       ))),
-      transports: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      transports: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           type: schema.optional(stringCondition(schema)),
@@ -127,7 +127,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["mode", "sudo", "become", "admin"] },
       )),
-      runtimes: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      runtimes: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           type: schema.optional(stringCondition(schema)),
@@ -137,7 +137,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "type", "version", "ready", "endpoint"] },
       ))),
-      paths: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      paths: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           path: schema.optional(stringCondition(schema)),
@@ -153,7 +153,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "path", "type", "exists", "readable", "writable", "executable", "sizeBytes"] },
       ))),
-      users: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      users: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           name: schema.optional(stringCondition(schema)),
@@ -165,7 +165,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "uid", "gid", "home", "shell", "groups"] },
       ))),
-      groups: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      groups: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           name: schema.optional(stringCondition(schema)),
@@ -174,7 +174,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "gid", "members"] },
       ))),
-      tools: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      tools: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           name: schema.optional(stringCondition(schema)),
@@ -184,7 +184,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "path", "version", "executable"] },
       ))),
-      env: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      env: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           name: schema.optional(stringCondition(schema)),
@@ -194,7 +194,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "value", "redacted", "sensitive"] },
       ))),
-      commands: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      commands: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           name: schema.optional(stringCondition(schema)),
@@ -205,7 +205,7 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "args", "stdout", "stderr", "exitCode"] },
       ))),
-      artifacts: schema.optional(schema.record(identifier(schema), schema.strictObject(
+      artifacts: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
           path: schema.optional(stringCondition(schema)),
@@ -222,7 +222,7 @@ export class RequirementConfigSchema {
 }
 
 function namedObservedMap(schema: ConfigSchema): ConfigSchemaNode<Record<string, unknown>> {
-  return schema.record(identifier(schema), observedRequirement(schema));
+  return schema.record(nameOnTheMachine(schema), observedRequirement(schema));
 }
 
 function observedRequirement(schema: ConfigSchema): ConfigSchemaNode<unknown> {
@@ -311,6 +311,26 @@ function stringAssertion(schema: ConfigSchema): ConfigSchemaNode<unknown> {
   );
 }
 
+/**
+ * The key of a named section: the name of a thing that is on the machine.
+ *
+ * Not an identifier in this file format, which is what it used to be checked as — lowercase, no
+ * slashes. Environment variables are written in capitals, a path is a path, an artifact is a file
+ * name, so `HOME`, `/etc/ssh/sshd_config` and `package.json` were all rejected before anything ran.
+ * They are somebody else's names and this is not the place to have opinions about them.
+ *
+ * What is still refused is a name that cannot be one: empty, wrapped in spaces, or carrying a line
+ * break — each of those is a typo that would otherwise match nothing and be reported as an absence.
+ */
+function nameOnTheMachine(schema: ConfigSchema): ConfigSchemaNode<string> {
+  return schema.string({
+    minLength: 1,
+    pattern: "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$",
+    patternMessage: "must be a name as the machine spells it, with no line breaks and no space at either end",
+  });
+}
+
+/** The name a requirement is known by in this file, which is ours to have opinions about. */
 function identifier(schema: ConfigSchema): ConfigSchemaNode<string> {
   return schema.string({
     minLength: 1,

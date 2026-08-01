@@ -1812,7 +1812,7 @@
                       "propertyNames": {
                         "type": "string",
                         "minLength": 1,
-                        "pattern": "^[a-z][a-z0-9._-]*$"
+                        "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                       },
                       "additionalProperties": {
                         "type": "object",
@@ -2070,7 +2070,7 @@
                       "propertyNames": {
                         "type": "string",
                         "minLength": 1,
-                        "pattern": "^[a-z][a-z0-9._-]*$"
+                        "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                       },
                       "additionalProperties": {
                         "type": "object",
@@ -2343,7 +2343,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -2601,7 +2601,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -3025,7 +3025,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -4251,7 +4251,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -4578,7 +4578,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -4993,7 +4993,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -5485,7 +5485,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -5771,7 +5771,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -6098,7 +6098,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -6384,7 +6384,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
@@ -6808,7 +6808,7 @@
                   "propertyNames": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^[a-z][a-z0-9._-]*$"
+                    "pattern": "^[^\\s\\x00-\\x1F](?:[^\\x00-\\x1F]*[^\\s\\x00-\\x1F])?$"
                   },
                   "additionalProperties": {
                     "type": "object",
