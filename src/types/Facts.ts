@@ -106,6 +106,68 @@ export type FactSections = {
   artifacts: Record<string, ArtifactFact>;
 };
 
+/**
+ * Every section a machine is read into, and whether its entries are named.
+ *
+ * The one list. It was three: what "collect everything" means, which sections take names when a
+ * requirement asks about them, and which keys a blueprint is allowed to write. Three hand-written
+ * copies of the same twenty words, in three files, kept in step by whoever remembered — and they had
+ * already drifted: `commands` and `artifacts` were readable facts that a blueprint could not ask
+ * about, while `providers` and `caches` were allowed in a blueprint and are not facts at all.
+ *
+ * `entries` says how a section is asked for: `single` answers with one value, so asking is all there
+ * is to say, and `named` needs the names of the things to look for, because no machine can list
+ * every process or every path that might matter.
+ *
+ * `ordered` says whether it can be asked for at all. `transports` cannot: nothing on a machine can
+ * answer which channel someone reached it through, so it is reported by whoever opened the channel
+ * and no reading can be told to go and find it. A requirement may still be written about it.
+ */
+export const factSections = {
+  os: { entries: "single", ordered: true },
+  arch: { entries: "single", ordered: true },
+  cpu: { entries: "single", ordered: true },
+  memory: { entries: "single", ordered: true },
+  storage: { entries: "single", ordered: true },
+  network: { entries: "single", ordered: true },
+  virtualization: { entries: "single", ordered: true },
+  privileges: { entries: "single", ordered: true },
+  packages: { entries: "named", ordered: true },
+  users: { entries: "named", ordered: true },
+  groups: { entries: "named", ordered: true },
+  processes: { entries: "named", ordered: true },
+  services: { entries: "named", ordered: true },
+  transports: { entries: "named", ordered: false },
+  runtimes: { entries: "named", ordered: true },
+  paths: { entries: "named", ordered: true },
+  tools: { entries: "named", ordered: true },
+  env: { entries: "named", ordered: true },
+  commands: { entries: "named", ordered: true },
+  artifacts: { entries: "named", ordered: true },
+} as const satisfies Record<keyof FactSections, { entries: "single" | "named"; ordered: boolean }>;
+
+export type FactSection = keyof typeof factSections;
+
+/** Sections a reading can be told to go and find. */
+export const orderedFactSections: readonly FactSection[] = Object.entries(factSections)
+  .filter(([, section]) => section.ordered)
+  .map(([name]) => name as FactSection);
+
+/** Sections whose entries a caller has to name for a reading to find them. */
+export const namedFactSections: readonly FactSection[] = Object.entries(factSections)
+  .filter(([, section]) => section.entries === "named")
+  .map(([name]) => name as FactSection);
+
+/**
+ * Nothing missing from the list above.
+ *
+ * `satisfies` catches a name that is not a section; this catches a section that is not in the list,
+ * which is the direction that actually went wrong. Adding a section to the model and forgetting it
+ * here stops the build rather than quietly producing a blueprint key nobody accepts.
+ */
+type EverySectionListed = [Exclude<keyof FactSections, FactSection>] extends [never] ? true : never;
+export const everySectionListed: EverySectionListed = true;
+
 export type Network = {
   interfaces: Record<string, NetworkInterface>;
   dns: {

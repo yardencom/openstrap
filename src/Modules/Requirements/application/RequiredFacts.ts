@@ -1,13 +1,26 @@
+import { namedFactSections, orderedFactSections } from "#types/Facts.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
 /** Fields of a requirement that name the requirement, not a fact section. */
 const metaFields = new Set(["id", "optional"]);
 
-/** Sections whose entries a caller has to name for the reading to find them. */
-const namedSections = new Set([
-  "processes", "services", "tools", "runtimes", "paths", "env", "commands", "artifacts", "packages",
-  "users", "groups",
-]);
+/**
+ * Sections whose entries a caller has to name for the reading to find them.
+ *
+ * Taken from the model rather than written out again. This list was a copy, and a copy of it is how
+ * a requirement about `runtimes.node` once lost the name it was about: the section was added to the
+ * facts and not here, so `node` was read as a field instead of a name.
+ */
+const namedSections = new Set<string>(namedFactSections);
+
+/**
+ * Sections a reading can be told to go and find.
+ *
+ * A requirement may be written about `transports`, and nothing can be ordered about it: which
+ * channel a machine was reached through is reported by whoever opened it. Asking for it in an order
+ * is asking a machine a question it has no way to answer.
+ */
+const orderableSections = new Set<string>(orderedFactSections);
 
 export type RequiredFactsRequest = {
   requirements: readonly TargetlessRequirement[];
@@ -43,12 +56,30 @@ export class RequiredFacts {
     );
   }
 
+  /**
+   * What the reading has to be told about one name.
+   *
+   * A name in a requirement is a name in the machine, but what a collector needs to go and find it
+   * differs by section: a path and an artifact are found by their path, an environment variable and
+   * a package by names they may be spelled under, and everything else by its name. Producing `name`
+   * for all of them left the collector without the field it reads — reading `path.startsWith` of
+   * nothing, for a requirement about an artifact.
+   */
   private namedIn(section: string, names: ReadonlySet<string>): Record<string, unknown> {
-    if (section === "paths") {
-      return Object.fromEntries([...names].map((name) => [name, { path: this.pathOf(name) }]));
-    }
+    const declare = (name: string): Record<string, unknown> => {
+      switch (section) {
+        case "paths":
+        case "artifacts":
+          return { path: this.pathOf(name) };
+        case "env":
+        case "packages":
+          return { names: [name] };
+        default:
+          return { name };
+      }
+    };
 
-    return Object.fromEntries([...names].map((name) => [name, { name }]));
+    return Object.fromEntries([...names].map((name) => [name, declare(name)]));
   }
 
   /**
@@ -63,7 +94,7 @@ export class RequiredFacts {
 
     for (const requirement of this.request.requirements) {
       for (const [section, value] of Object.entries(requirement)) {
-        if (metaFields.has(section)) {
+        if (metaFields.has(section) || !orderableSections.has(section)) {
           continue;
         }
 

@@ -1,28 +1,17 @@
+import { factSections, type FactSection } from "#types/Facts.js";
 import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
-const factBlockNames = [
-  "os",
-  "arch",
-  "cpu",
-  "memory",
-  "storage",
-  "virtualization",
-  "network",
-  "users",
-  "groups",
-  "packages",
-  "processes",
-  "services",
-  "transports",
-  "privileges",
-  "runtimes",
-  "paths",
-  "tools",
-  "env",
-  "providers",
-  "caches",
-] as const;
+/**
+ * Which keys a requirement may be written about: the sections a machine is read into, and no
+ * others.
+ *
+ * This was a list of its own, and it had drifted both ways. `commands` and `artifacts` are facts
+ * openstrap collects, and a blueprint asking about them was rejected as an unknown key. `providers`
+ * and `caches` were accepted here and are not facts at all, so a requirement about them passed
+ * validation and then failed for want of something to compare against.
+ */
+const factBlockNames = Object.keys(factSections) as readonly FactSection[];
 
 export class RequirementConfigSchema {
   constructor(private readonly schema: ConfigSchema) {}
@@ -40,7 +29,7 @@ export class RequirementConfigSchema {
     ) as ConfigSchemaNode<TargetlessRequirement>;
   }
 
-  private factBlocks(): Record<typeof factBlockNames[number], ConfigSchemaNode<unknown | undefined>> {
+  private factBlocks(): Record<FactSection, ConfigSchemaNode<unknown | undefined>> {
     const schema = this.schema;
 
     return {
@@ -205,8 +194,29 @@ export class RequirementConfigSchema {
         },
         { requireAtLeastOneField: ["status", "name", "value", "redacted", "sensitive"] },
       ))),
-      providers: schema.optional(namedObservedMap(schema)),
-      caches: schema.optional(schema.unknown()),
+      commands: schema.optional(schema.record(identifier(schema), schema.strictObject(
+        {
+          status: schema.optional(observedStatus(schema)),
+          name: schema.optional(stringCondition(schema)),
+          args: schema.optional(stringListCondition(schema)),
+          stdout: schema.optional(stringCondition(schema)),
+          stderr: schema.optional(stringCondition(schema)),
+          exitCode: schema.optional(numberCondition(schema)),
+        },
+        { requireAtLeastOneField: ["status", "name", "args", "stdout", "stderr", "exitCode"] },
+      ))),
+      artifacts: schema.optional(schema.record(identifier(schema), schema.strictObject(
+        {
+          status: schema.optional(observedStatus(schema)),
+          path: schema.optional(stringCondition(schema)),
+          kind: schema.optional(stringCondition(schema)),
+          type: schema.optional(stringCondition(schema)),
+          sizeBytes: schema.optional(numberCondition(schema)),
+          sha256: schema.optional(stringCondition(schema)),
+          content: schema.optional(stringCondition(schema)),
+        },
+        { requireAtLeastOneField: ["status", "path", "kind", "type", "sizeBytes", "sha256", "content"] },
+      ))),
     };
   }
 }

@@ -72,10 +72,21 @@ describe("RequiredFacts", () => {
 
   it("names a section that holds no named things without naming anything in it", () => {
     const declared = new RequiredFacts({
+      requirements: [{ id: "on-arm", arch: { const: "arm64" } }],
+    }).declaration;
+
+    expect(declared).toEqual({ arch: {} });
+  });
+
+  it("orders nothing for a section no reading can be told to find", () => {
+    // A requirement about the channel is legitimate — it is how a blueprint says "reached by key and
+    // nothing else". But nothing on a machine can answer which channel someone arrived through, so
+    // there is nothing to ask it for: the answer comes from whoever opened it.
+    const declared = new RequiredFacts({
       requirements: [{ id: "transport", transports: { ssh: { ready: true } } }],
     }).declaration;
 
-    expect(declared).toEqual({ transports: {} });
+    expect(declared).toEqual({});
   });
 
   it("asks for nothing when there is nothing to check", () => {

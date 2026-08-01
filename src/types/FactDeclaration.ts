@@ -1,3 +1,5 @@
+import { orderedFactSections } from "./Facts.js";
+
 /**
  * What a caller says it cares about.
  *
@@ -137,16 +139,13 @@ export type FactRedaction = {
 /**
  * Every section there is to ask for, which is what `openstrap facts collect` means.
  *
- * Written out here, in the file that declares what a caller may ask for, because that is the one
- * place where a new section is added — and a section added to the type and not to this would be a
- * section the command that collects everything quietly stops collecting. A test holds the two
- * together.
+ * Read from the one list of sections rather than typed out again. It used to be written out here,
+ * and a section added to the model and not to this line was a section that `facts collect` quietly
+ * stopped collecting.
  *
- * `transports` is not here: nothing on a machine can answer it. It is what the caller that opened
+ * `transports` is left out: nothing on a machine can answer it. It is what the caller that opened
  * the channel says, and it comes with the order rather than being asked for in it.
  */
-export const everySection: FactDeclaration = {
-  os: {}, arch: {}, cpu: {}, memory: {}, storage: {}, network: {}, virtualization: {}, privileges: {}, runtimes: {},
-  processes: {}, services: {}, tools: {}, paths: {}, env: {}, commands: {},
-  artifacts: {}, packages: {}, users: {}, groups: {},
-};
+export const everySection: FactDeclaration = Object.fromEntries(
+  orderedFactSections.map((section) => [section, {}]),
+) as FactDeclaration;
