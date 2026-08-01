@@ -1,4 +1,4 @@
-import { factSections, type FactSection } from "#types/Facts.js";
+import { factSections, fieldsOf, type FactFieldKind, type FactSection } from "#types/Facts.js";
 import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
@@ -27,6 +27,53 @@ export class RequirementConfigSchema {
         requireAtLeastOneField: [...factBlockNames],
       },
     ) as ConfigSchemaNode<TargetlessRequirement>;
+  }
+
+  /**
+   * A section written out of what the facts say it holds.
+   *
+   * A requirement is a condition over a fact, so what may be required follows from what is reported —
+   * and where that following is done by hand, it stops being true. `pid` and `pids` are reported by
+   * every service reading and could not be required, because the hand-written copy of this list never
+   * had them and nothing compared the two.
+   *
+   * The kind of each field decides what may be said about it: a string matched or listed among
+   * alternatives, a number compared, a list checked for membership, a status named.
+   */
+  private named(section: FactSection): ConfigSchemaNode<unknown | undefined> {
+    const fields = fieldsOf(section);
+
+    if (!fields) {
+      throw new Error(`The facts model does not say what a "${section}" entry holds`);
+    }
+
+    const conditions = Object.fromEntries(
+      Object.entries(fields).map(([field, kind]) => [field, this.schema.optional(this.condition(kind))]),
+    );
+
+    return this.schema.optional(this.schema.record(
+      nameOnTheMachine(this.schema),
+      this.schema.strictObject(conditions, { requireAtLeastOneField: Object.keys(fields) }),
+    ));
+  }
+
+  private condition(kind: FactFieldKind): ConfigSchemaNode<unknown> {
+    const schema = this.schema;
+
+    switch (kind) {
+      case "status":
+        return observedStatus(schema);
+      case "boolean":
+        return booleanCondition(schema);
+      case "number":
+        return numberCondition(schema);
+      case "numbers":
+        return numberListCondition(schema);
+      case "strings":
+        return stringListCondition(schema);
+      case "string":
+        return stringCondition(schema);
+    }
   }
 
   private factBlocks(): Record<FactSection, ConfigSchemaNode<unknown | undefined>> {
@@ -95,18 +142,7 @@ export class RequirementConfigSchema {
         { requireAtLeastOneField: ["managers", "installed"] },
       )),
       processes: schema.optional(namedObservedMap(schema)),
-      services: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          manager: schema.optional(stringCondition(schema)),
-          name: schema.optional(stringCondition(schema)),
-          enabled: schema.optional(booleanCondition(schema)),
-          running: schema.optional(booleanCondition(schema)),
-          state: schema.optional(stringCondition(schema)),
-          version: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "manager", "name", "enabled", "running", "state", "version"] },
-      ))),
+      services: this.named("services"),
       transports: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
         {
           status: schema.optional(observedStatus(schema)),
@@ -244,6 +280,20 @@ function observedRequirement(schema: ConfigSchema): ConfigSchemaNode<unknown> {
  * accepts nothing besides a key — the point is what is absent from the list,
  * which no per-item check can express.
  */
+/** A list of numbers: matched whole, or checked for one being in it. */
+function numberListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
+  return schema.union<unknown>([
+    schema.array(schema.number()),
+    schema.strictObject(
+      {
+        const: schema.optional(schema.array(schema.number())),
+        contains: schema.optional(schema.number()),
+      },
+      { requireAtLeastOneField: ["const", "contains"] },
+    ),
+  ]);
+}
+
 function stringListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
   return schema.union<unknown>([
     schema.array(schema.string()),

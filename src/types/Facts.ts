@@ -136,7 +136,27 @@ export const factSections = {
   users: { entries: "named", ordered: true },
   groups: { entries: "named", ordered: true },
   processes: { entries: "named", ordered: true },
-  services: { entries: "named", ordered: true },
+  services: {
+    entries: "named",
+    ordered: true,
+    // What a service answers with. Written here rather than a second time in the requirement schema:
+    // a requirement is a condition over a fact, so what may be required follows from what is
+    // reported. `pid` and `pids` are the two this list gained the moment it was written down — the
+    // hand-written copy never had them, and nobody noticed because nothing compared the two.
+    fields: {
+      status: "status",
+      reason: "string",
+      message: "string",
+      manager: "string",
+      name: "string",
+      state: "string",
+      version: "string",
+      enabled: "boolean",
+      running: "boolean",
+      pid: "number",
+      pids: "numbers",
+    },
+  },
   transports: { entries: "named", ordered: false },
   runtimes: { entries: "named", ordered: true },
   paths: { entries: "named", ordered: true },
@@ -144,7 +164,25 @@ export const factSections = {
   env: { entries: "named", ordered: true },
   commands: { entries: "named", ordered: true },
   artifacts: { entries: "named", ordered: true },
-} as const satisfies Record<keyof FactSections, { entries: "single" | "named"; ordered: boolean }>;
+} as const satisfies Record<keyof FactSections, {
+  entries: "single" | "named";
+  ordered: boolean;
+  fields?: Readonly<Record<string, FactFieldKind>>;
+}>;
+
+/**
+ * What kind of thing a fact field holds, and therefore what may be asked of it.
+ *
+ * The vocabulary a requirement is written in falls out of this: a string can be matched or listed
+ * among alternatives, a number compared, a list checked for membership, a status named. Nothing here
+ * is about how a fact is collected — only about what shape the answer has.
+ */
+export type FactFieldKind = "status" | "string" | "number" | "boolean" | "strings" | "numbers";
+
+/** The fields of a section, when the section has said what they are. */
+export function fieldsOf(section: FactSection): Readonly<Record<string, FactFieldKind>> | undefined {
+  return (factSections[section] as { fields?: Readonly<Record<string, FactFieldKind>> }).fields;
+}
 
 export type FactSection = keyof typeof factSections;
 
