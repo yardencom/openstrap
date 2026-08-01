@@ -161,7 +161,7 @@ describe("openstrap facts collect", () => {
       command: "facts.collect",
       target: "host",
       json: true,
-      order: undefined,
+      full: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
@@ -175,26 +175,12 @@ describe("openstrap facts collect", () => {
     expect(parse("facts", "collect", "ubuntu-vm")).toMatchObject({ command: "facts.collect", target: "ubuntu-vm" });
   });
 
-  it("takes the order openstrap hands it when openstrap is the caller", () => {
-    const order = {
-      target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
-      declare: { os: {} },
-      channel: { type: "ssh", authMethods: ["publickey"] },
-    };
-    const encoded = Buffer.from(JSON.stringify(order)).toString("base64");
-
-    expect(parse("facts", "collect", "host", "--order", encoded)).toMatchObject({
+  it("takes --full, for reading a machine entire where a blueprint would have narrowed it", () => {
+    expect(parse("facts", "collect", "ubuntu-vm", "--full")).toMatchObject({
       command: "facts.collect",
-      order: { ...order, now: undefined },
+      target: "ubuntu-vm",
+      full: true,
     });
-  });
-
-  it("refuses an order it cannot read, rather than reading the wrong machine", () => {
-    expect(() => parse("facts", "collect", "host", "--order", "not base64 json")).toThrow("--order must");
-    expect(() => parse("facts", "collect", "host", "--order", Buffer.from("[]").toString("base64")))
-      .toThrow("--order must decode to an order");
-    expect(() => parse("facts", "collect", "host", "--order", Buffer.from("{}").toString("base64")))
-      .toThrow("--order must name the target it is about");
   });
 
   it("takes no definition file, because a facts file of its own does not exist", () => {

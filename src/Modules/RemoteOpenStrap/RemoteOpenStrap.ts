@@ -1,9 +1,19 @@
 import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";
 import type { Transport } from "@openstrap/plugin-contract";
-import { Facts, type FactOrder, type FactSnapshot } from "../Facts/Facts.js";
+import { Facts, type FactSnapshot } from "../Facts/Facts.js";
+import type { Target } from "#types/Target.js";
 import { OpenStrapBinary } from "./deliver/OpenStrapBinary.js";
 import type { MachinePlatform } from "#types/Machine.js";
 
+
+/** Which machine is being read, and what the reading is about. */
+export type RemoteCollectRequest = {
+  target: Target;
+  /** What has to be true of this machine. Nothing means: read all of it. */
+  requirements?: readonly unknown[];
+  channel?: { type: string; authMethods?: readonly string[] };
+  now?: Date;
+};
 
 /**
  * openstrap on a machine openstrap is not running on.
@@ -29,22 +39,63 @@ export class RemoteOpenStrap {
     private readonly machine: MachinePlatform,
   ) {}
 
-  /** Puts openstrap on the target, has it read the machine, and returns the snapshot it took. */
-  async collect(order: FactOrder): Promise<FactSnapshot> {
+  /**
+   * Puts openstrap on the target, has it read the machine, and returns the snapshot it took.
+   *
+   * What to read is said the way it is said everywhere else: a blueprint in the directory openstrap
+   * is started in. It is written there for the purpose, next to the delivered binary, and openstrap
+   * over there does what openstrap here does with a blueprint under its feet — reads exactly what the
+   * requirements are about. Given none, it reads the machine entire.
+   *
+   * This used to travel as a base64 argument, which meant two ways of saying the same thing and one
+   * of them known only to this class. There is one way now, and the openstrap on the other side is
+   * not a special build being driven by a private flag: it is openstrap, run in a directory.
+   */
+  async collect(request: RemoteCollectRequest): Promise<FactSnapshot> {
     const openstrap = await new OpenStrapBinary(this.machine).deliverTo(this.transport.fileSystem);
+
+    await this.declare(request);
+
     const result = await this.transport.processes.capture({
       command: openstrap,
-      args: ["facts", "collect", "host", "--json", "--order", encodeOrder(order)],
-      // Nowhere in particular: openstrap is being asked to read this machine, not to work in a
-      // directory, and a directory it has no business writing to is one more way to fail.
-      cwd: "/",
+      args: ["facts", "collect", "host", "--json"],
+      // Where the blueprint was left. openstrap finds what to read the same way a person would.
+      cwd: OpenStrapBinary.directory,
     });
 
     if (result.exitCode !== 0) {
       throw new RemoteOpenStrapError(result.stderr.trim() || `exit ${result.exitCode}`);
     }
 
-    return this.snapshotIn(result.stdout);
+    return this.snapshotIn(result.stdout, request);
+  }
+
+  /**
+   * The blueprint the delivered openstrap will find under its feet.
+   *
+   * One target, named `host`, carrying the requirements this reading is about — the same words a
+   * person writes in their own blueprint, so the machine is read by the same rule wherever the
+   * reading was asked for.
+   *
+   * Written as JSON into a `.yaml` file, which is not a trick: YAML is a superset of JSON, and this
+   * file is generated rather than read by anyone, so the honest thing is the serialiser that cannot
+   * get quoting wrong.
+   *
+   * Nothing is written when there are no requirements. Then there is no blueprint on the other side,
+   * and openstrap there does what it does without one: reads the machine entire.
+   */
+  private async declare(request: RemoteCollectRequest): Promise<void> {
+    const blueprint = this.transport.fileSystem.joinPath(OpenStrapBinary.directory, "openstrap.yaml");
+
+    if (!request.requirements || request.requirements.length === 0) {
+      await this.transport.fileSystem.removePath(blueprint, { force: true });
+
+      return;
+    }
+
+    await this.transport.fileSystem.writeTextFile(blueprint, JSON.stringify({
+      targets: { host: { transport: "local", requirements: request.requirements } },
+    }, null, 2));
   }
 
   /**
@@ -55,7 +106,7 @@ export class RemoteOpenStrap {
    * unparseable is a failure rather than an empty reading — a machine that answered with noise has
    * not been read, and reporting no facts would make that look like a machine with nothing on it.
    */
-  private snapshotIn(output: string): FactSnapshot {
+  private snapshotIn(output: string, request: RemoteCollectRequest): FactSnapshot {
     let parsed: unknown;
 
     try {
@@ -65,19 +116,49 @@ export class RemoteOpenStrap {
     }
 
     try {
-      return Facts.snapshotFrom(parsed);
+      return Facts.snapshotFrom(this.named(parsed, request));
     } catch (error) {
       throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
     }
   }
-}
 
-/**
- * The order as one argument openstrap can be started with.
- *
- * Base64 rather than the JSON itself: it travels through whatever shell the transport uses to start a
- * process, and an encoding with no quotes, spaces or newlines in it cannot be reinterpreted on the way.
- */
-export function encodeOrder(order: FactOrder): string {
-  return Buffer.from(JSON.stringify(order), "utf8").toString("base64");
+  /**
+   * The reading, named by whoever asked for it and stamped with the channel they opened.
+   *
+   * openstrap over there read `host`, because from where it stood that is what the machine is. It
+   * cannot know that anyone calls it `ubuntu-vm`, and it cannot know it was reached over ssh with a
+   * key — the machine has no view of the connection into it. Both of those are known here, by the
+   * side that did the calling, so both are written here.
+   *
+   * They used to travel the other way, in the order: openstrap told openstrap what to call the
+   * machine and which channel to record. That made the far side responsible for repeating something
+   * it had been handed, which is a fact about nothing.
+   */
+  private named(printed: unknown, request: RemoteCollectRequest): unknown {
+    // Anything that is not an object is not a reading, and dressing it in a name would turn a
+    // machine that answered with noise into a snapshot with nothing in it. Handed on untouched, it
+    // is refused by the one place that refuses such things.
+    if (!printed || typeof printed !== "object" || Array.isArray(printed)) {
+      return printed;
+    }
+
+    const snapshot = printed as { scope?: unknown; target?: unknown; facts?: Record<string, unknown> };
+
+    return {
+      ...snapshot,
+      scope: request.target.scope,
+      target: { type: request.target.type, id: request.target.name, displayName: request.target.displayName },
+      facts: {
+        ...snapshot.facts,
+        transports: request.channel
+          ? { [request.channel.type]: {
+            status: "present",
+            type: request.channel.type,
+            ready: true,
+            ...(request.channel.authMethods ? { authMethods: request.channel.authMethods } : {}),
+          } }
+          : snapshot.facts?.transports ?? {},
+      },
+    };
+  }
 }

@@ -1,17 +1,17 @@
-import type { FactOrder } from "../../../Modules/Facts/Facts.js";
 import type { FactsCollectArgs, SubcommandArgsParser } from "../types.js";
 import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
 
 /**
- * `openstrap facts collect <host|target>`.
+ * `openstrap facts collect <host|target> [--full]`.
  *
  * The machine has to be named, because there is more than one it could be: `host` is the machine
  * openstrap is running on, and any other name is a target it created, which it reaches by delivering
  * itself there. A command that guessed would read the wrong machine and say nothing about it.
  *
- * `--order` is how openstrap asks openstrap. Having delivered itself to a machine it cannot read from
- * here, it starts this same command over there, and has to say the three things that machine cannot
- * know: what the caller calls it, which sections were declared, and which channel reached it.
+ * What to read is not an argument. A blueprint in the directory the command was run in decides it,
+ * and `--full` overrides that with "all of it". There used to be an `--order` carrying a whole
+ * declaration as base64, which existed so openstrap could drive openstrap over a channel; that is a
+ * blueprint on the other machine now, so the flag is gone and there is one way to say this.
  */
 export class FactsCollectArgsParser implements SubcommandArgsParser {
   readonly subcommand = "collect";
@@ -19,8 +19,7 @@ export class FactsCollectArgsParser implements SubcommandArgsParser {
   parse(args: readonly string[]): FactsCollectArgs {
     const read = new CommandArguments(args, {
       ...runtimeOptions,
-      flags: ["json"],
-      values: [...(runtimeOptions.values ?? []), "order"],
+      flags: ["json", "full"],
     });
     const named = read.positionals[0];
 
@@ -35,46 +34,9 @@ export class FactsCollectArgsParser implements SubcommandArgsParser {
     return {
       command: "facts.collect",
       target: named,
+      full: read.flag("full"),
       json: read.flag("json"),
-      order: orderIn(read.value("order")),
       ...runtimeArgsIn(read),
     };
   }
-}
-
-/**
- * The order openstrap was started with, as base64 JSON.
- *
- * Encoded because it travels as one argument through whatever shell the transport uses to start a
- * process, and an encoding with no quotes, spaces or newlines cannot be reinterpreted on the way.
- *
- * The target is checked, because a snapshot named after nothing is a snapshot nobody can look up. The
- * rest is not: it was written by openstrap, and re-deciding it here would be a second implementation
- * of the same decisions.
- */
-function orderIn(encoded: string | undefined): FactOrder | undefined {
-  if (encoded === undefined) {
-    return undefined;
-  }
-
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
-  } catch {
-    throw new Error("--order must be base64-encoded JSON");
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("--order must decode to an order");
-  }
-
-  const order = parsed as FactOrder & { now?: string | Date };
-
-  if (typeof order.target?.name !== "string" || order.target.name === "") {
-    throw new Error("--order must name the target it is about");
-  }
-
-  // JSON carries no moment, only the text of one.
-  return { ...order, now: order.now === undefined ? undefined : new Date(order.now) };
 }

@@ -69,7 +69,7 @@ export class VerifyMachine {
           type: request.target.type,
           displayName: request.target.displayName,
         },
-        declare: new RequiredFacts({ requirements: request.target.requirements }).declaration,
+        requirements: request.target.requirements,
         channel: {
           type: request.target.transport,
           // What the connection reports it authenticated with, not what the blueprint called the

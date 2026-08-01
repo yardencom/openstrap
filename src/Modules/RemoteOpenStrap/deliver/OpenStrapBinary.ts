@@ -62,6 +62,9 @@ function builtBinariesDirectory(): string {
  * was already on the target.
  */
 export class OpenStrapBinary {
+  /** Where a delivered openstrap lives, and therefore where it is started from. */
+  static readonly directory = targetDirectory;
+
   private readonly path: string;
   private readonly digest: string;
 

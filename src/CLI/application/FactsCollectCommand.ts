@@ -1,10 +1,13 @@
+import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Connect } from "#features/Connect/Connect.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
-import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
+import { RequiredFacts } from "../../Modules/Requirements/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
-import type { FactsCollectArgs } from "../arguments/types.js";
+import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
+import type { BlueprintTarget } from "#types/Blueprint.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
+import type { FactsCollectArgs } from "../arguments/types.js";
 
 /**
  * What the command answers with: the snapshot, and nothing wrapped around it.
@@ -16,33 +19,36 @@ import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js
 export type FactsCollectResult = FactSnapshot;
 
 /**
- * `openstrap facts collect` — read this machine and say what is on it.
+ * `openstrap facts collect` — read a machine and say what is on it.
  *
- * Asking openstrap for the facts is asking for the facts, so the order names every section there is.
- * Nothing is measured against anything: requirements and everything else a blueprint intends are
- * deliberately absent — `openstrap run` is the command that compares, and this one only looks. The
- * sections that hold named things come back empty, because nothing on a machine can list every
- * service or every program on it and openstrap does not invent names to fill them with.
+ * What gets read is decided by where the command was run. A blueprint in that directory naming this
+ * machine says which facts matter — its requirements name them — and reading anything beyond them is
+ * work nobody asked for. No blueprint, or one that says nothing about this machine, and the answer is
+ * the machine entire. `--full` says "entire" out loud, for the times a blueprint is present and the
+ * question is about the machine rather than about the blueprint.
  *
- * Which machine is the argument: `host` is the one openstrap is running on, and any other name is a
- * target it created, which it reads by delivering itself there and asking. Both answer with the same
- * snapshot of the same shape, because both were collected by the same code — that is the whole point
- * of openstrap going to a machine rather than asking about it from outside.
+ * One rule, and it holds on the other side of a channel too: reading a machine openstrap is not on
+ * means delivering openstrap there and starting it in a directory that has a blueprint in it. The
+ * same sentence describes both cases, which is why there is no second mechanism — an encoded order on
+ * the command line was one, and it was known only to the class that sent it.
  *
- * Nothing is written anywhere: the answer is the answer. Keeping snapshots is what a run does, and
- * this is the command openstrap runs on a machine it was asked only to read.
+ * The sections that hold named things come back empty when nothing named them: no machine can list
+ * every service or every program on it, and openstrap does not invent names to fill them with.
+ *
+ * Nothing is measured against anything — `openstrap run` is the command that compares — and nothing
+ * is written anywhere: the answer is the answer.
  */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
-  constructor(private readonly stateHome = new StateHome()) {}
+  constructor(
+    private readonly stateHome = new StateHome(),
+    private readonly blueprints = new Blueprints(),
+  ) {}
 
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
+    const declared = args.full ? undefined : this.declaredFor(args.target, context);
     const snapshot = args.target === "host"
-      ? await Facts.collect(args.order ?? {
-        target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
-        declare: everySection,
-        now: context.now,
-      })
-      : await this.read(args.target, context);
+      ? await this.here(declared, context)
+      : await this.there(args.target, declared, context);
 
     return {
       result: snapshot,
@@ -52,18 +58,37 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     };
   }
 
+  /** This machine, read in process. */
+  private here(declared: BlueprintTarget | undefined, context: CommandContext): Promise<FactSnapshot> {
+    return Facts.collect({
+      target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
+      declare: declared
+        ? new RequiredFacts({
+          requirements: declared.requirements,
+          workspaceRoot: context.workspaceRoot,
+        }).declaration
+        : everySection,
+      now: context.now,
+    });
+  }
+
   /**
    * A machine openstrap created, read by openstrap on it.
    *
    * Everything here is about getting there and back: finding the machine, opening the channel,
-   * closing it, and putting away the store it was found in. What is collected once openstrap is
-   * there is the same as anywhere else.
+   * closing it, and putting away the store it was found in. What is collected once openstrap is there
+   * is decided the same way as here — the requirements travel, and the openstrap on that machine
+   * turns them into a reading exactly as this one would.
    *
    * The channel goes in as the connection reports it — which transport it was, and what it
    * authenticated with. A machine cannot say how anyone reached it, so the only thing that knows is
    * whatever opened the channel, and it is asked rather than guessed at from the blueprint.
    */
-  private async read(target: string, context: CommandContext): Promise<FactSnapshot> {
+  private async there(
+    target: string,
+    declared: BlueprintTarget | undefined,
+    context: CommandContext,
+  ): Promise<FactSnapshot> {
     const runtime = await context.runtime();
     const store = new SqliteStateStore(this.stateHome.database());
 
@@ -79,11 +104,8 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
 
       try {
         return await new RemoteOpenStrap(connection.transport, machine).collect({
-          // A machine openstrap had to travel to is a guest, which is what it is recorded as. The
-          // fallback used to say `machine`, a word no scope has ever been, and it reached the
-          // snapshot unnoticed because the field was a string.
           target: { name: target, scope: recorded?.scope ?? "guest", type: recorded?.type ?? "vm" },
-          declare: everySection,
+          requirements: declared?.requirements,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
           now: context.now,
         });
@@ -92,6 +114,20 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
       }
     } finally {
       store.close();
+    }
+  }
+
+  /**
+   * What the blueprint under this directory says about this machine, if it says anything.
+   *
+   * Optional on purpose: this command reads machines no blueprint mentions, and a directory with no
+   * blueprint in it is the ordinary case rather than a mistake.
+   */
+  private declaredFor(target: string, context: CommandContext): BlueprintTarget | undefined {
+    try {
+      return this.blueprints.load({ workspaceRoot: context.workspaceRoot }).targets[target];
+    } catch {
+      return undefined;
     }
   }
 }

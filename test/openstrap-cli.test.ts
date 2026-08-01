@@ -103,23 +103,34 @@ targets:
     }
   });
 
-  it("reads what it is told to read, when openstrap is the one asking", async () => {
-    const order = Buffer.from(JSON.stringify({
-      target: { name: "ubuntu-vm", scope: "machine", type: "vm" },
-      declare: { os: {}, arch: {} },
-      channel: { type: "ssh", authMethods: ["publickey"] },
-    })).toString("base64");
+  it("reads what the blueprint under it is about, and all of the machine without one", async () => {
+    const workspace = mkdtempSync(join(tmpdir(), "openstrap-blueprint-"));
 
-    const output = await captureCli(["facts", "collect", "host", "--json", "--order", order]);
-    const snapshot = JSON.parse(output.stdout);
+    writeFileSync(join(workspace, "openstrap.yaml"), [
+      "targets:",
+      "  host:",
+      "    transport: local",
+      "    requirements:",
+      "      - id: node-present",
+      "        runtimes:",
+      "          node:",
+      "            status: present",
+    ].join("\n"));
 
-    expect(output.exitCode).toBe(0);
-    // Named as the caller names it: the machine cannot know what anyone calls it from outside.
-    expect(snapshot.target).toEqual({ id: "ubuntu-vm", type: "vm", displayName: undefined });
-    expect(snapshot.id).toMatch(/^snap_ubuntu-vm_/);
-    // The channel is recorded because the caller opened it, and nothing else is invented.
-    expect(snapshot.facts.transports).toEqual({ ssh: { status: "present", type: "ssh", ready: true, authMethods: ["publickey"] } });
-    expect(snapshot.facts.processes).toEqual({});
+    const byBlueprint = JSON.parse((await captureCli(["facts", "collect", "host", "--json"], workspace)).stdout);
+    const entire = JSON.parse((await captureCli(["facts", "collect", "host", "--json", "--full"], workspace)).stdout);
+
+    rmSync(workspace, { recursive: true, force: true });
+
+    // The blueprint asks about one runtime, so one runtime is read and the rest of the machine is
+    // not: no processes, no packages, no users.
+    expect(Object.keys(byBlueprint.facts.runtimes)).toEqual(["node"]);
+    expect(byBlueprint.facts.processes).toEqual({});
+    expect(byBlueprint.facts.os).toBeUndefined();
+
+    // `--full` in the same directory ignores it and reads the machine entire.
+    expect(entire.facts.os.name).not.toBe("");
+    expect(Object.keys(entire.facts.processes).length).toBeGreaterThan(0);
   });
 
   it("prints what it read", async () => {
