@@ -6,10 +6,19 @@ import type { RunResult } from "../../application/RunCommand.js";
 import type { CommandText } from "../types.js";
 
 /**
- * What a run found, and only what went wrong.
+ * What a run found, and what it looked at to find it.
  *
- * A passing check needs no line: the run's own status already says everything passed, and
- * a hundred lines saying so would bury the one that did not.
+ * Passing checks used to be left out entirely, on the argument that a hundred lines saying "fine"
+ * would bury the one line that is not. The cost was worse than the noise: reading
+ * `machine-fits-a-cluster: failed / memory…` there was no way to tell whether the processor had been
+ * looked at, and for a tool whose whole claim is facts as proof, silence about what was proven is
+ * the wrong economy. `passed` and `skipped` were also indistinguishable — both were nothing — though
+ * one means "checked, it holds" and the other "there was nothing to check".
+ *
+ * So every requirement says how it went and how many of its checks did, and the checks themselves are
+ * listed when any of them did not pass. A requirement that passed entirely is one line; a requirement
+ * that failed shows all of its checks, passing ones included, because what else was looked at is
+ * exactly what a reader wants next.
  */
 export class RunText implements CommandText<RunResult> {
   print(result: RunResult): string {
@@ -29,13 +38,19 @@ export class RunText implements CommandText<RunResult> {
     lines.push("Requirements:");
 
     for (const requirement of result.requirementRun.results) {
-      lines.push(`  - ${requirement.requirementId} [${requirement.target}]: ${requirement.status}`);
+      const checks = this.leaves(requirement.checks);
+      const passed = checks.filter((leaf) => leaf.check.status === "passed").length;
 
-      for (const leaf of this.leaves(requirement.checks)) {
-        if (leaf.check.status === "passed") {
-          continue;
-        }
+      lines.push(
+        `  - ${requirement.requirementId} [${requirement.target}]: ${requirement.status}` +
+        ` (${passed}/${checks.length} checks passed)`,
+      );
 
+      if (passed === checks.length) {
+        continue;
+      }
+
+      for (const leaf of checks) {
         lines.push(
           `      ${leaf.path}: ${leaf.check.status}; expected=${JSON.stringify(leaf.check.expected?.value ?? null)} ` +
           `actual=${JSON.stringify(leaf.check.actual)}${leaf.check.details?.message ? `; ${leaf.check.details.message}` : ""}`,

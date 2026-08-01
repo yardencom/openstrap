@@ -1,18 +1,26 @@
-import { factSections, fieldsOf, type FactFieldKind, type FactSection } from "#types/Facts.js";
+import { factSections, shapeOf, type FactFieldKind, type FactSection, type FactShape } from "#types/Facts.js";
 import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
-/**
- * Which keys a requirement may be written about: the sections a machine is read into, and no
- * others.
- *
- * This was a list of its own, and it had drifted both ways. `commands` and `artifacts` are facts
- * openstrap collects, and a blueprint asking about them was rejected as an unknown key. `providers`
- * and `caches` were accepted here and are not facts at all, so a requirement about them passed
- * validation and then failed for want of something to compare against.
- */
 const factBlockNames = Object.keys(factSections) as readonly FactSection[];
 
+/**
+ * What a blueprint may require, built out of what a machine reports.
+ *
+ * A requirement is a condition over a fact, so this file has nothing of its own to say about which
+ * fields exist: it walks the shape of each section and gives every field the conditions its kind
+ * allows. Add a field to the facts model and it becomes requirable; take one away and requiring it
+ * stops validating. Neither can be done alone any more.
+ *
+ * It was four hundred lines listing every field of every section a second time, and that copy had
+ * drifted in both directions: `pid`, `pids`, and every field of `network.ports` were reported by every
+ * reading and no blueprint could ask about them, while other keys were accepted here on the strength
+ * of somebody having remembered to add them. Nothing compared the two lists, because there was
+ * nothing to compare them against.
+ *
+ * What remains here is the grammar of a condition — what may be said about a string, a number, a
+ * list, a status. That is this module's own, because it is about comparing rather than about machines.
+ */
 export class RequirementConfigSchema {
   constructor(private readonly schema: ConfigSchema) {}
 
@@ -29,34 +37,44 @@ export class RequirementConfigSchema {
     ) as ConfigSchemaNode<TargetlessRequirement>;
   }
 
-  /**
-   * A section written out of what the facts say it holds.
-   *
-   * A requirement is a condition over a fact, so what may be required follows from what is reported —
-   * and where that following is done by hand, it stops being true. `pid` and `pids` are reported by
-   * every service reading and could not be required, because the hand-written copy of this list never
-   * had them and nothing compared the two.
-   *
-   * The kind of each field decides what may be said about it: a string matched or listed among
-   * alternatives, a number compared, a list checked for membership, a status named.
-   */
-  private named(section: FactSection): ConfigSchemaNode<unknown | undefined> {
-    const fields = fieldsOf(section);
-
-    if (!fields) {
-      throw new Error(`The facts model does not say what a "${section}" entry holds`);
-    }
-
-    const conditions = Object.fromEntries(
-      Object.entries(fields).map(([field, kind]) => [field, this.schema.optional(this.condition(kind))]),
-    );
-
-    return this.schema.optional(this.schema.record(
-      nameOnTheMachine(this.schema),
-      this.schema.strictObject(conditions, { requireAtLeastOneField: Object.keys(fields) }),
-    ));
+  private factBlocks(): Record<FactSection, ConfigSchemaNode<unknown | undefined>> {
+    return Object.fromEntries(
+      factBlockNames.map((section) => [section, this.schema.optional(this.of(shapeOf(section)))]),
+    ) as Record<FactSection, ConfigSchemaNode<unknown | undefined>>;
   }
 
+  /**
+   * A shape as the conditions that may be written about it.
+   *
+   * Three cases, because a shape has three: a leaf is a condition, a map is a condition per name, an
+   * object is a condition per field. Nesting falls out of the recursion — `network.ports.tcp/6443` is
+   * a map inside an object, and nobody had to say so twice.
+   */
+  private of(shape: FactShape): ConfigSchemaNode<unknown> {
+    if (typeof shape === "string") {
+      return this.condition(shape);
+    }
+
+    if ("named" in shape) {
+      return this.schema.record(nameOnTheMachine(this.schema), this.of(shape.named));
+    }
+
+    // What an open shape holds differs by machine — a display line, a firewall's own vocabulary — so
+    // any name is allowed through and the comparison answers it: the fact either has that key or does
+    // not, which is the truth either way.
+    if (shape.open) {
+      return this.schema.record(nameOnTheMachine(this.schema), stringCondition(this.schema));
+    }
+
+    return this.schema.strictObject(
+      Object.fromEntries(
+        Object.entries(shape.fields).map(([field, kind]) => [field, this.schema.optional(this.of(kind))]),
+      ),
+      { requireAtLeastOneField: Object.keys(shape.fields) },
+    );
+  }
+
+  /** What may be said about a value of this kind. */
   private condition(kind: FactFieldKind): ConfigSchemaNode<unknown> {
     const schema = this.schema;
 
@@ -75,211 +93,8 @@ export class RequirementConfigSchema {
         return stringCondition(schema);
     }
   }
-
-  private factBlocks(): Record<FactSection, ConfigSchemaNode<unknown | undefined>> {
-    const schema = this.schema;
-
-    return {
-      os: schema.optional(schema.strictObject(
-        {
-          family: schema.optional(stringCondition(schema)),
-          name: schema.optional(stringCondition(schema)),
-          version: schema.optional(stringCondition(schema)),
-          codename: schema.optional(stringCondition(schema)),
-          kernel: schema.optional(stringCondition(schema)),
-          edition: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["family", "name", "version", "codename", "kernel", "edition"] },
-      )),
-      arch: schema.optional(stringCondition(schema)),
-      cpu: schema.optional(schema.strictObject(
-        {
-          cores: schema.optional(numberCondition(schema)),
-          threads: schema.optional(numberCondition(schema)),
-          model: schema.optional(stringCondition(schema)),
-          vendor: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["cores", "threads", "model", "vendor"] },
-      )),
-      memory: schema.optional(schema.strictObject(
-        {
-          totalBytes: schema.optional(numberCondition(schema)),
-          availableBytes: schema.optional(numberCondition(schema)),
-          swapTotalBytes: schema.optional(numberCondition(schema)),
-          swapUsedBytes: schema.optional(numberCondition(schema)),
-          pressure: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["totalBytes", "availableBytes", "swapTotalBytes", "swapUsedBytes", "pressure"] },
-      )),
-      storage: schema.optional(schema.strictObject(
-        {
-          totalBytes: schema.optional(numberCondition(schema)),
-          availableBytes: schema.optional(numberCondition(schema)),
-        },
-        { requireAtLeastOneField: ["totalBytes", "availableBytes"] },
-      )),
-      virtualization: schema.optional(schema.strictObject(
-        {
-          supported: schema.optional(booleanCondition(schema)),
-          enabled: schema.optional(booleanCondition(schema)),
-          type: schema.optional(stringCondition(schema)),
-          nested: schema.optional(booleanCondition(schema)),
-          reason: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["supported", "enabled", "type", "nested", "reason"] },
-      )),
-      network: schema.optional(schema.strictObject(
-        {
-          firewall: schema.optional(observedRequirement(schema)),
-        },
-        { requireAtLeastOneField: ["firewall"] },
-      )),
-      packages: schema.optional(schema.strictObject(
-        {
-          managers: schema.optional(namedObservedMap(schema)),
-          installed: schema.optional(namedObservedMap(schema)),
-        },
-        { requireAtLeastOneField: ["managers", "installed"] },
-      )),
-      processes: schema.optional(namedObservedMap(schema)),
-      services: this.named("services"),
-      transports: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          type: schema.optional(stringCondition(schema)),
-          endpoint: schema.optional(stringCondition(schema)),
-          ready: schema.optional(booleanCondition(schema)),
-          version: schema.optional(stringCondition(schema)),
-          authMethods: schema.optional(stringListCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "type", "endpoint", "ready", "version", "authMethods"] },
-      ))),
-      privileges: schema.optional(schema.strictObject(
-        {
-          mode: schema.optional(stringCondition(schema)),
-          sudo: schema.optional(observedRequirement(schema)),
-          become: schema.optional(observedRequirement(schema)),
-          admin: schema.optional(observedRequirement(schema)),
-        },
-        { requireAtLeastOneField: ["mode", "sudo", "become", "admin"] },
-      )),
-      runtimes: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          type: schema.optional(stringCondition(schema)),
-          version: schema.optional(stringCondition(schema)),
-          ready: schema.optional(booleanCondition(schema)),
-          endpoint: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "type", "version", "ready", "endpoint"] },
-      ))),
-      paths: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          path: schema.optional(stringCondition(schema)),
-          type: schema.optional(schema.union<unknown>([
-            schema.enum(["file", "directory", "other"] as const),
-            stringAssertion(schema),
-          ])),
-          exists: schema.optional(booleanCondition(schema)),
-          readable: schema.optional(booleanCondition(schema)),
-          writable: schema.optional(booleanCondition(schema)),
-          executable: schema.optional(booleanCondition(schema)),
-          sizeBytes: schema.optional(numberCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "path", "type", "exists", "readable", "writable", "executable", "sizeBytes"] },
-      ))),
-      users: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          name: schema.optional(stringCondition(schema)),
-          uid: schema.optional(numberCondition(schema)),
-          gid: schema.optional(numberCondition(schema)),
-          home: schema.optional(stringCondition(schema)),
-          shell: schema.optional(stringCondition(schema)),
-          groups: schema.optional(stringListCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "name", "uid", "gid", "home", "shell", "groups"] },
-      ))),
-      groups: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          name: schema.optional(stringCondition(schema)),
-          gid: schema.optional(numberCondition(schema)),
-          members: schema.optional(stringListCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "name", "gid", "members"] },
-      ))),
-      tools: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          name: schema.optional(stringCondition(schema)),
-          path: schema.optional(stringCondition(schema)),
-          version: schema.optional(stringCondition(schema)),
-          executable: schema.optional(booleanCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "name", "path", "version", "executable"] },
-      ))),
-      env: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          name: schema.optional(stringCondition(schema)),
-          value: schema.optional(stringCondition(schema)),
-          redacted: schema.optional(booleanCondition(schema)),
-          sensitive: schema.optional(booleanCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "name", "value", "redacted", "sensitive"] },
-      ))),
-      commands: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          name: schema.optional(stringCondition(schema)),
-          args: schema.optional(stringListCondition(schema)),
-          stdout: schema.optional(stringCondition(schema)),
-          stderr: schema.optional(stringCondition(schema)),
-          exitCode: schema.optional(numberCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "name", "args", "stdout", "stderr", "exitCode"] },
-      ))),
-      artifacts: schema.optional(schema.record(nameOnTheMachine(schema), schema.strictObject(
-        {
-          status: schema.optional(observedStatus(schema)),
-          path: schema.optional(stringCondition(schema)),
-          kind: schema.optional(stringCondition(schema)),
-          type: schema.optional(stringCondition(schema)),
-          sizeBytes: schema.optional(numberCondition(schema)),
-          sha256: schema.optional(stringCondition(schema)),
-          content: schema.optional(stringCondition(schema)),
-        },
-        { requireAtLeastOneField: ["status", "path", "kind", "type", "sizeBytes", "sha256", "content"] },
-      ))),
-    };
-  }
 }
 
-function namedObservedMap(schema: ConfigSchema): ConfigSchemaNode<Record<string, unknown>> {
-  return schema.record(nameOnTheMachine(schema), observedRequirement(schema));
-}
-
-function observedRequirement(schema: ConfigSchema): ConfigSchemaNode<unknown> {
-  return schema.strictObject(
-    {
-      status: schema.optional(observedStatus(schema)),
-      reason: schema.optional(stringCondition(schema)),
-      message: schema.optional(stringCondition(schema)),
-      passwordless: schema.optional(booleanCondition(schema)),
-    },
-    { requireAtLeastOneField: ["status", "reason", "message", "passwordless"] },
-  );
-}
-
-/**
- * A list of strings, checked as a whole.
- *
- * `authMethods: { const: ["publickey"] }` is the way to say that a target
- * accepts nothing besides a key — the point is what is absent from the list,
- * which no per-item check can express.
- */
 /** A list of numbers: matched whole, or checked for one being in it. */
 function numberListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
   return schema.union<unknown>([
@@ -294,6 +109,12 @@ function numberListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
   ]);
 }
 
+/**
+ * A list of strings: matched whole, or checked for one being in it.
+ *
+ * `authMethods: { const: ["publickey"] }` is how to say that a machine accepts nothing besides a key
+ * — the point is what is absent from the list, which no per-item check can express.
+ */
 function stringListCondition(schema: ConfigSchema): ConfigSchemaNode<unknown> {
   return schema.union<unknown>([
     schema.array(schema.string()),

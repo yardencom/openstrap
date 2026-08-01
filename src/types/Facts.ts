@@ -123,77 +123,241 @@ export type FactSections = {
  * answer which channel someone reached it through, so it is reported by whoever opened the channel
  * and no reading can be told to go and find it. A requirement may still be written about it.
  */
-export const factSections = {
-  os: { entries: "single", ordered: true },
-  arch: { entries: "single", ordered: true },
-  cpu: { entries: "single", ordered: true },
-  memory: { entries: "single", ordered: true },
-  storage: { entries: "single", ordered: true },
-  network: { entries: "single", ordered: true },
-  virtualization: { entries: "single", ordered: true },
-  privileges: { entries: "single", ordered: true },
-  packages: { entries: "named", ordered: true },
-  users: { entries: "named", ordered: true },
-  groups: { entries: "named", ordered: true },
-  processes: { entries: "named", ordered: true },
-  services: {
-    entries: "named",
-    ordered: true,
-    // What a service answers with. Written here rather than a second time in the requirement schema:
-    // a requirement is a condition over a fact, so what may be required follows from what is
-    // reported. `pid` and `pids` are the two this list gained the moment it was written down — the
-    // hand-written copy never had them, and nobody noticed because nothing compared the two.
-    fields: {
-      status: "status",
-      reason: "string",
-      message: "string",
-      manager: "string",
-      name: "string",
-      state: "string",
-      version: "string",
-      enabled: "boolean",
-      running: "boolean",
-      pid: "number",
-      pids: "numbers",
-    },
-  },
-  transports: { entries: "named", ordered: false },
-  runtimes: { entries: "named", ordered: true },
-  paths: { entries: "named", ordered: true },
-  tools: { entries: "named", ordered: true },
-  env: { entries: "named", ordered: true },
-  commands: { entries: "named", ordered: true },
-  artifacts: { entries: "named", ordered: true },
-} as const satisfies Record<keyof FactSections, {
-  entries: "single" | "named";
-  ordered: boolean;
-  fields?: Readonly<Record<string, FactFieldKind>>;
-}>;
-
 /**
- * What kind of thing a fact field holds, and therefore what may be asked of it.
+ * What kind of thing a fact holds, and therefore what may be asked of it.
  *
- * The vocabulary a requirement is written in falls out of this: a string can be matched or listed
- * among alternatives, a number compared, a list checked for membership, a status named. Nothing here
- * is about how a fact is collected — only about what shape the answer has.
+ * A shape is a leaf, an object of shapes, or a map of them keyed by name. That is the whole grammar,
+ * and it is enough to describe every section a machine is read into — which is the point: the schema a
+ * blueprint is checked against is built from this, so what may be required is what is reported, and
+ * neither can be edited without the other following.
  */
 export type FactFieldKind = "status" | "string" | "number" | "boolean" | "strings" | "numbers";
 
-/** The fields of a section, when the section has said what they are. */
-export function fieldsOf(section: FactSection): Readonly<Record<string, FactFieldKind>> | undefined {
-  return (factSections[section] as { fields?: Readonly<Record<string, FactFieldKind>> }).fields;
+export type FactShape =
+  | FactFieldKind
+  | { readonly fields: Readonly<Record<string, FactShape>>; readonly open?: boolean }
+  | { readonly named: FactShape };
+
+/** Everything a reading reports about a thing it found, plus whatever else that thing has. */
+function observed(fields: Readonly<Record<string, FactShape>> = {}): FactShape {
+  return { fields: { status: "status", reason: "string", message: "string", ...fields } };
 }
 
+/** A map keyed by the name of the thing: a service, a path, a port. */
+function named(shape: FactShape): FactShape {
+  return { named: shape };
+}
+
+/** How much of a machine a person is shown of it: `{ pretty: "Ubuntu 24.04.4 LTS" }`. */
+const display: FactShape = { fields: {}, open: true };
+
+/**
+ * Every section a machine is read into: what it holds, and whether it can be asked for.
+ *
+ * The one description. It was three lists of section names kept in step by whoever remembered, and
+ * then — after those were joined — one list of names here and the fields of every section written out
+ * a second time by hand in the requirement schema. That second copy is what drifted: `pid` and `pids`
+ * are on every service reading and no blueprint could require them.
+ *
+ * `ordered` says whether a reading can be told to go and find it. `transports` cannot: nothing on a
+ * machine can answer which channel someone reached it through, so it is reported by whoever opened
+ * the channel. A requirement may still be written about it.
+ *
+ * Whether a section takes names is not written down here either — a shape that is a map takes them,
+ * and one that is not does not.
+ */
+export const factSections = {
+  os: {
+    ordered: true,
+    shape: {
+      fields: {
+        family: "string", name: "string", version: "string",
+        codename: "string", kernel: "string", edition: "string", display,
+      },
+    },
+  },
+  // A section that is one value rather than an object: `arch: arm64`.
+  arch: { ordered: true, shape: "string" },
+  cpu: {
+    ordered: true,
+    shape: {
+      fields: {
+        cores: "number", threads: "number", model: "string", vendor: "string",
+        features: "strings", load: "numbers", display,
+      },
+    },
+  },
+  memory: {
+    ordered: true,
+    shape: {
+      fields: {
+        totalBytes: "number", availableBytes: "number",
+        swapTotalBytes: "number", swapUsedBytes: "number",
+        pressure: "string", display,
+      },
+    },
+  },
+  storage: {
+    ordered: true,
+    shape: {
+      fields: {
+        totalBytes: "number", availableBytes: "number", display,
+        disks: named(observed()),
+        filesystems: named(observed({
+          mount: "string", device: "string", type: "string",
+          totalBytes: "number", availableBytes: "number", usedBytes: "number",
+          readOnly: "boolean",
+        })),
+        mounts: named(observed({
+          path: "string", totalBytes: "number", availableBytes: "number",
+        })),
+      },
+    },
+  },
+  network: {
+    ordered: true,
+    shape: {
+      fields: {
+        interfaces: named(observed({
+          name: "string", type: "string", mac: "string", state: "string", mtu: "number",
+        })),
+        dns: { fields: { resolvers: "strings", search: "strings", domain: "string" } },
+        // Reported in full by every reading, and until this description existed there was no way to
+        // require one: the hand-written schema knew `network.firewall` and nothing else.
+        ports: named(observed({
+          protocol: "string", port: "number", state: "string",
+          bind: "string", process: "string", service: "string",
+        })),
+        firewall: observed(),
+        reachability: named(observed()),
+      },
+    },
+  },
+  virtualization: {
+    ordered: true,
+    shape: {
+      fields: {
+        supported: "boolean", enabled: "boolean", type: "string",
+        nested: "boolean", reason: "string",
+      },
+    },
+  },
+  privileges: {
+    ordered: true,
+    shape: {
+      fields: {
+        mode: "string",
+        sudo: observed({ passwordless: "boolean" }),
+        become: observed({ passwordless: "boolean" }),
+        admin: observed({ passwordless: "boolean" }),
+      },
+    },
+  },
+  packages: {
+    ordered: true,
+    shape: {
+      fields: {
+        managers: named(observed()),
+        installed: named(observed({ name: "string", manager: "string", version: "string" })),
+      },
+    },
+  },
+  users: {
+    ordered: true,
+    shape: named(observed({
+      name: "string", uid: "number", gid: "number", home: "string",
+      shell: "string", groups: "strings", gecos: "string",
+    })),
+  },
+  groups: {
+    ordered: true,
+    shape: named(observed({ name: "string", gid: "number", members: "strings" })),
+  },
+  processes: {
+    ordered: true,
+    shape: named(observed({
+      pid: "number", pids: "numbers", ppid: "number", name: "string", user: "string",
+      command: "string", args: "string", state: "string",
+      startedAt: "string", uptimeSeconds: "number",
+    })),
+  },
+  services: {
+    ordered: true,
+    shape: named(observed({
+      manager: "string", name: "string", state: "string", version: "string",
+      enabled: "boolean", running: "boolean", pid: "number", pids: "numbers",
+    })),
+  },
+  transports: {
+    ordered: false,
+    shape: named(observed({
+      type: "string", endpoint: "string", authMethods: "strings",
+      ready: "boolean", version: "string",
+    })),
+  },
+  runtimes: {
+    ordered: true,
+    shape: named(observed({
+      type: "string", version: "string", ready: "boolean",
+      endpoint: "string", capabilities: "strings",
+    })),
+  },
+  paths: {
+    ordered: true,
+    shape: named(observed({
+      path: "string", type: "string", exists: "boolean", owner: "string", group: "string",
+      mode: "string", readable: "boolean", writable: "boolean", executable: "boolean",
+      sizeBytes: "number",
+    })),
+  },
+  tools: {
+    ordered: true,
+    shape: named(observed({
+      name: "string", path: "string", version: "string",
+      executable: "boolean", capabilities: "strings",
+    })),
+  },
+  env: {
+    ordered: true,
+    shape: named(observed({
+      name: "string", value: "string", redacted: "boolean", sensitive: "boolean",
+    })),
+  },
+  commands: {
+    ordered: true,
+    shape: named(observed({
+      name: "string", args: "strings", stdout: "string", stderr: "string", exitCode: "number",
+    })),
+  },
+  artifacts: {
+    ordered: true,
+    shape: named(observed({
+      path: "string", kind: "string", type: "string",
+      sizeBytes: "number", sha256: "string", content: "string",
+    })),
+  },
+} satisfies Record<keyof FactSections, { ordered: boolean; shape: FactShape }>;
+
 export type FactSection = keyof typeof factSections;
+
+/** What a section holds, for anything that needs to know what may be said about it. */
+export function shapeOf(section: FactSection): FactShape {
+  return factSections[section].shape;
+}
 
 /** Sections a reading can be told to go and find. */
 export const orderedFactSections: readonly FactSection[] = Object.entries(factSections)
   .filter(([, section]) => section.ordered)
   .map(([name]) => name as FactSection);
 
-/** Sections whose entries a caller has to name for a reading to find them. */
+/**
+ * Sections whose entries a caller has to name for a reading to find them.
+ *
+ * Read off the shape rather than declared beside it: a section that is a map of named things needs
+ * names, and one that is not does not. Two ways of saying it would be two things to keep in step.
+ */
 export const namedFactSections: readonly FactSection[] = Object.entries(factSections)
-  .filter(([, section]) => section.entries === "named")
+  .filter(([, section]) => typeof section.shape === "object" && "named" in section.shape)
   .map(([name]) => name as FactSection);
 
 /**

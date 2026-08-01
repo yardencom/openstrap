@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { Blueprints } from "../../Blueprint/index.js";
-import { fieldsOf } from "#types/Facts.js";
+import { shapeOf } from "#types/Facts.js";
 
 /**
  * A requirement is a condition over a fact, so what may be required follows from what is reported.
@@ -20,7 +20,7 @@ import { fieldsOf } from "#types/Facts.js";
  */
 describe("what may be required of a service", () => {
   it("is every field the facts model says a service has", () => {
-    for (const field of Object.keys(fieldsOf("services") ?? {})) {
+    for (const field of Object.keys(fieldsOfServices())) {
       expect(accepts(`${field}: ${exampleFor(field)}`), field).toBe(true);
     }
   });
@@ -48,7 +48,7 @@ describe("what may be required of a service", () => {
 
 /** An example value of the right shape, so the field itself is what is under test. */
 function exampleFor(field: string): string {
-  const kind = fieldsOf("services")?.[field];
+  const kind = fieldsOfServices()[field];
 
   switch (kind) {
     case "status":
@@ -90,4 +90,14 @@ function accepts(condition: string): boolean {
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+/** The fields of one named service entry, as the facts model describes them. */
+function fieldsOfServices(): Readonly<Record<string, string>> {
+  const shape = shapeOf("services");
+  const entry = typeof shape === "object" && "named" in shape ? shape.named : shape;
+
+  return typeof entry === "object" && "fields" in entry
+    ? (entry.fields as Readonly<Record<string, string>>)
+    : {};
 }
