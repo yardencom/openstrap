@@ -56,6 +56,25 @@ describe("RequiredFacts", () => {
     expect(declared.paths).toEqual({ workspace: { path: "/workspace/app" } });
   });
 
+  it("takes the place a requirement names as the place to look", () => {
+    // The only way to ask about a directory whose location is not its name — and the only way such a
+    // requirement means anything on a machine other than this one.
+    const declared = new RequiredFacts({
+      requirements: [{ id: "workspace", paths: { workspace: { path: "/home/openstrap", exists: true } } }],
+    }).declaration;
+
+    expect(declared.paths).toEqual({ workspace: { path: "/home/openstrap" } });
+  });
+
+  it("refuses to send one name to two places", () => {
+    expect(() => new RequiredFacts({
+      requirements: [
+        { id: "here", paths: { workspace: { path: "/home/openstrap" } } },
+        { id: "there", paths: { workspace: { path: "/srv/app" } } },
+      ],
+    }).declaration).toThrow(/different places/);
+  });
+
   it("says nothing about where a path is, because the machine knows", () => {
     const declared = new RequiredFacts({
       requirements: [
