@@ -5,12 +5,15 @@ import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../
 import { Requirements, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
+import type { Target } from "#types/Target.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import { KeychainSecretStore } from "../../../Secrets/index.js";
 import type { SqliteStateStore } from "../../../StateStore/index.js";
 
 export type VerifyRequest = {
   target: BlueprintTarget;
+  /** Which machine this is, as its provider says. */
+  machine: Target;
   access: MachineAccess;
   identity?: SecretReference;
   runtime: OpenStrapRuntime;
@@ -62,15 +65,12 @@ export class VerifyMachine {
         connection,
         machine,
       ).collect({
-        target: {
-          name: request.target.name,
-          scope: request.target.scope,
-          type: request.target.type,
-          displayName: request.target.displayName,
-        },
+        target: request.machine,
         requirements: request.target.requirements,
         channel: {
-          type: request.target.transport,
+          // The channel this reading came back over, as whoever opened it reports — not what the
+          // blueprint called it, and not a word put in by a loader that had never reached anything.
+          type: request.access.transport,
           // What the connection reports it authenticated with, not what the blueprint called the
           // channel: a security requirement checked against openstrap's own configuration checks
           // nothing.
@@ -91,7 +91,7 @@ export class VerifyMachine {
       return {
         snapshot,
         requirementRun: new Requirements(request.target.requirements).checkedAgainst({
-          target: request.target,
+          target: request.machine,
           snapshots: [snapshot],
           trigger: "create",
           profile: "local-vm",

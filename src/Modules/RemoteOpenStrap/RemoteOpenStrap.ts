@@ -93,8 +93,10 @@ export class RemoteOpenStrap {
       return;
     }
 
+    // No provider and no transport: openstrap over there is on the machine it is about, and nothing
+    // reached it to get there.
     await this.transport.fileSystem.writeTextFile(blueprint, JSON.stringify({
-      targets: { host: { transport: "local", requirements: request.requirements } },
+      targets: { host: { requirements: request.requirements } },
     }, null, 2));
   }
 

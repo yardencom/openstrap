@@ -22,10 +22,7 @@ describe("Blueprint", () => {
 
     expect(blueprint.targets.local).toMatchObject({
       name: "local",
-      scope: "host",
-      type: "host",
       displayName: "Local machine",
-      transport: "local",
     });
     expect(blueprint.targets.local!.requirements.map((requirement) => requirement.id)).toContain("node-runtime");
   });
@@ -144,7 +141,11 @@ targets:
     expect(blueprint.targets.app!.requirements).toEqual([]);
   });
 
-  it("derives scope, type and transport instead of asking for them", () => {
+  it("carries what was written and nothing it would have had to invent", () => {
+    // What kind of machine a target is and how it is reached were filled in here — `guest`, `vm`,
+    // `ssh` — on the strength of a provider having been named at all. The provider declares what it
+    // makes and hands back the channel to what it made, so both are asked of it when there is a
+    // machine to ask about, and a blueprint says neither.
     const blueprint = loadBlueprint(`
 targets:
   ubuntu-vm:
@@ -158,14 +159,24 @@ targets:
             ready: true
 `);
 
-    expect(blueprint.targets["ubuntu-vm"]).toMatchObject({
-      scope: "guest",
-      type: "vm",
-      transport: "ssh",
+    expect(blueprint.targets["ubuntu-vm"]).toEqual({
+      name: "ubuntu-vm",
       provider: "utm",
       image: "ubuntu:24.04",
       size: "medium",
+      requirements: [{ id: "ssh-ready", transports: { ssh: { ready: true } } }],
     });
+  });
+
+  it("keeps a transport the blueprint named", () => {
+    const blueprint = loadBlueprint(`
+targets:
+  ubuntu-vm:
+    provider: utm
+    transport: ssh
+`);
+
+    expect(blueprint.targets["ubuntu-vm"]!.transport).toBe("ssh");
   });
 
   it("rejects scope and type written by hand", () => {

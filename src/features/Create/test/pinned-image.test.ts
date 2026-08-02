@@ -161,14 +161,12 @@ function create(
   return new CreateMachine(fakeSecrets(), fakeKeys()).execute({
     target: {
       name: "ubuntu-vm",
-      scope: "guest",
-      type: "vm",
       provider: "utm",
-      transport: "ssh",
       image: "ubuntu:24.04",
       requirements: [],
       ...target,
     } as BlueprintTarget,
+    machine: { name: "ubuntu-vm", scope: "guest", type: "vm" },
     provider,
     store,
     hostPort: 2222,

@@ -1,5 +1,5 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
-import { Connect } from "#features/Connect/Connect.js";
+import { Connect, UnknownMachineError } from "#features/Connect/Connect.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import { Requirements } from "../../Modules/Requirements/index.js";
@@ -97,11 +97,18 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
         throw new UnknownMachinePlatformError(target);
       }
 
+      // What kind of machine this is was written down when it was made, by the provider that makes
+      // it. A machine openstrap has no row for is one it never made — `connect` says so, and this
+      // used to call it a guest vm and read it anyway.
+      if (recorded === null) {
+        throw new UnknownMachineError(target);
+      }
+
       const connection = await new Connect().execute({ target, runtime, store });
 
       try {
         return await new RemoteOpenStrap(connection.transport, machine).collect({
-          target: { name: target, scope: recorded?.scope ?? "guest", type: recorded?.type ?? "vm" },
+          target: { name: target, scope: recorded.scope, type: recorded.type },
           requirements: declared?.requirements,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
           now: context.now,

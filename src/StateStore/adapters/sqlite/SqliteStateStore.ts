@@ -35,7 +35,12 @@ export class SqliteStateStore {
     this.database.close();
   }
 
-  /** Recording a target twice updates it rather than creating a second one. */
+  /**
+   * Recording a target twice updates it rather than creating a second one.
+   *
+   * The transport column is older than the knowledge that a machine has no channel until something
+   * has reached it, and it does not take a null. Nothing is what it holds until then.
+   */
   saveTarget(target: TargetRecord, now: string): void {
     this.database.prepare(`
       INSERT INTO target (name, scope, type, provider, transport, created_at, updated_at)
@@ -46,7 +51,7 @@ export class SqliteStateStore {
         provider = excluded.provider,
         transport = excluded.transport,
         updated_at = excluded.updated_at
-    `).run(target.name, target.scope, target.type, target.provider ?? null, target.transport, now, now);
+    `).run(target.name, target.scope, target.type, target.provider ?? null, target.transport ?? "", now, now);
   }
 
   readTarget(name: string): TargetRecord | null {
@@ -65,7 +70,7 @@ export class SqliteStateStore {
       scope: String(row.scope) as TargetRecord["scope"],
       type: String(row.type) as TargetRecord["type"],
       provider: row.provider ?? undefined,
-      transport: String(row.transport),
+      transport: row.transport ? String(row.transport) : undefined,
     };
   }
 

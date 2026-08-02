@@ -5,8 +5,10 @@ import {
   mergeRequirementRuns,
   Requirements,
   type RequirementRun,
+  type TargetlessRequirement,
 } from "../../Modules/Requirements/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
+import type { Target } from "#types/Target.js";
 import { Create } from "../Create/Create.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
 
@@ -86,7 +88,7 @@ export class Run {
     // machine is up, which is the whole of what was asked. Reading the host instead and calling it
     // this machine is the mistake this feature exists to end.
     return created.requirementRun === undefined
-      ? { requirementRun: this.judge(target, [], request) }
+      ? { requirementRun: this.judge(created.machine, target.requirements, [], request) }
       : { snapshot: created.snapshot, requirementRun: created.requirementRun };
   }
 
@@ -101,15 +103,18 @@ export class Run {
     target: BlueprintTarget,
     request: RunRequest,
   ): Promise<{ snapshot: FactSnapshot; requirementRun: RequirementRun }> {
-    const snapshot = await this.read(target, request);
+    // A target with no provider is this machine, and that is the whole of what `host` means: nobody
+    // made it and nothing was reached to get to it. There is no provider here to say otherwise.
+    const machine: Target = {
+      name: target.name,
+      scope: "host",
+      type: "host",
+      displayName: target.displayName,
+    };
+    const snapshot = await this.read(machine, target.requirements, request);
     const at = String(snapshot.reading.takenAt);
 
-    request.store.saveTarget({
-      name: target.name,
-      scope: target.scope,
-      type: target.type,
-      transport: target.transport,
-    }, at);
+    request.store.saveTarget({ ...machine, transport: target.transport }, at);
     request.store.saveDesiredState(target.name, target, at);
     request.store.saveFactSnapshot({
       id: String(snapshot.id),
@@ -119,24 +124,29 @@ export class Run {
       data: { ...snapshot.facts },
     });
 
-    return { snapshot, requirementRun: this.judge(target, [snapshot], request) };
+    return { snapshot, requirementRun: this.judge(machine, target.requirements, [snapshot], request) };
   }
 
-  private read(target: BlueprintTarget, request: RunRequest): Promise<FactSnapshot> {
+  private read(
+    machine: Target,
+    requirements: readonly TargetlessRequirement[],
+    request: RunRequest,
+  ): Promise<FactSnapshot> {
     return Facts.collect({
-      target: { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
-      declare: new Requirements(target.requirements).order(),
+      target: machine,
+      declare: new Requirements(requirements).order(),
       now: request.now,
     });
   }
 
   private judge(
-    target: BlueprintTarget,
+    machine: Target,
+    requirements: readonly TargetlessRequirement[],
     snapshots: readonly FactSnapshot[],
     request: RunRequest,
   ): RequirementRun {
-    return new Requirements(target.requirements).checkedAgainst({
-      target,
+    return new Requirements(requirements).checkedAgainst({
+      target: machine,
       snapshots,
       now: request.now,
       trigger: "manual",

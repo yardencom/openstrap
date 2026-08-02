@@ -5,7 +5,13 @@ export type TargetRecord = {
   scope: TargetScope;
   type: TargetType;
   provider?: string;
-  transport: string;
+  /**
+   * What reached this machine, once something has.
+   *
+   * Absent until then: a machine being made has not been reached yet, and the blueprint that
+   * declared it need not have said how it would be. Whoever opens the channel writes it down.
+   */
+  transport?: string;
 };
 
 export type RunStatus = "running" | "succeeded" | "failed";

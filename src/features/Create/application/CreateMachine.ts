@@ -1,12 +1,15 @@
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
 import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
+import type { MachineAccess, MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
 import { KeychainSecretStore, SSHKeyPair } from "../../../Secrets/index.js";
-import type { MachineImageRecord, SqliteStateStore } from "../../../StateStore/index.js";
+import type { MachineImageRecord, SqliteStateStore, TargetRecord } from "../../../StateStore/index.js";
+import type { Target } from "#types/Target.js";
 
 export type CreateMachineRequest = {
   target: BlueprintTarget;
+  /** Which machine this is, as its provider says. */
+  machine: Target;
   provider: Provider;
   store: SqliteStateStore;
   /**
@@ -38,7 +41,8 @@ export type CreateStep = {
 export type CreateMachineResult = {
   runId: string;
   handle: MachineHandle;
-  endpoint: { host: string; port: number; user: string };
+  /** Where the machine listens and what reaches it, as the provider reports. */
+  access: MachineAccess;
   image: { reference: string; url: string; sha256: string; format: string; boot: string };
   steps: CreateStep[];
   created: boolean;
@@ -81,13 +85,17 @@ export class CreateMachine {
 
     done({ name: "detect provider", status: "succeeded", detail: availability.version });
 
-    request.store.saveTarget({
-      name: target.name,
-      scope: target.scope,
-      type: target.type,
+    // Written before anything else is: a port reservation, a key and a run all belong to a target,
+    // and the row they point at has to be there first. How the machine is reached is not part of it
+    // yet — nothing has reached it — and is written below, once the provider has said.
+    const record = {
+      name: request.machine.name,
+      scope: request.machine.scope,
+      type: request.machine.type,
       provider: target.provider,
-      transport: target.transport,
-    }, timestamp);
+    };
+
+    request.store.saveTarget({ ...record, transport: target.transport }, timestamp);
     request.store.saveDesiredState(target.name, target, timestamp);
 
     const runId = `run_${target.name}_${timestamp.replace(/[-:.]/g, "")}`;
@@ -111,11 +119,11 @@ export class CreateMachine {
         done({ name: "create machine", status: "skipped", detail: "a machine with this name already exists" });
         done(await this.ensureRunning(request.provider, existing));
 
-        const access = await request.provider.access(existing);
+        const access = await this.reached(request, record, existing, timestamp);
         this.recordSteps(request.store, runId, steps, timestamp);
         request.store.finishRun(runId, "succeeded", new Date().toISOString());
 
-        return { runId, handle: existing, endpoint: access.endpoint, image, steps, created: false };
+        return { runId, handle: existing, access, image, steps, created: false };
       }
 
       const pair = this.keys.generate(`${user}@${target.name}`);
@@ -156,11 +164,11 @@ export class CreateMachine {
       await request.provider.start(handle);
       done({ name: "start machine", status: "succeeded" });
 
-      const access = await request.provider.access(handle);
+      const access = await this.reached(request, record, handle, timestamp);
       this.recordSteps(request.store, runId, steps, timestamp);
       request.store.finishRun(runId, "succeeded", new Date().toISOString());
 
-      return { runId, handle, endpoint: access.endpoint, image, steps, created: true };
+      return { runId, handle, access, image, steps, created: true };
     } catch (error) {
       this.recordSteps(request.store, runId, steps, timestamp);
       request.store.recordStep({
@@ -176,6 +184,29 @@ export class CreateMachine {
 
       throw error;
     }
+  }
+
+  /**
+   * How the machine is reached, asked of the provider that made it and written down.
+   *
+   * The blueprint wins when it named a transport, because a person naming one is choosing. When it
+   * did not, the provider's answer is the answer — `ssh` used to be written here on the way in, and
+   * a provider handing back anything else would have been connected to over a channel nobody opened.
+   */
+  private async reached(
+    request: CreateMachineRequest,
+    record: Omit<TargetRecord, "transport">,
+    machine: MachineHandle,
+    timestamp: string,
+  ): Promise<MachineAccess> {
+    const access = await request.provider.access(machine);
+
+    request.store.saveTarget({
+      ...record,
+      transport: request.target.transport ?? access.transport,
+    }, timestamp);
+
+    return access;
   }
 
   /**

@@ -38,7 +38,11 @@ export class CreateText implements CommandText<CreatedTarget> {
     }
 
     lines.push("");
-    lines.push(`Access:  ssh ${result.endpoint.user}@${result.endpoint.host} -p ${result.endpoint.port}`);
+    // Named by whoever opened it. It was `ssh` in a literal here, which was right for as long as
+    // there was one transport for it to be wrong about.
+    const endpoint = result.access.endpoint;
+
+    lines.push(`Access:  ${result.access.transport} ${endpoint.user}@${endpoint.host} -p ${endpoint.port}`);
     lines.push(`         openstrap connect ${result.target}`);
     lines.push("");
 

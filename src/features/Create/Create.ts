@@ -1,9 +1,11 @@
+import { AmbiguousMachineKindError } from "./errors/AmbiguousMachineKindError.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { OpenStrapRuntime, Provider } from "../../Plugin/index.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { RequirementRun } from "../../Modules/Requirements/index.js";
 import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { StateHome, type SqliteStateStore } from "../../StateStore/index.js";
+import type { Target } from "#types/Target.js";
 import { CreateMachine, type CreateMachineResult } from "./application/CreateMachine.js";
 import { MissingProviderError } from "./errors/MissingProviderError.js";
 import { VerifyMachine } from "./application/VerifyMachine.js";
@@ -23,6 +25,8 @@ export type CreateRequest = {
 
 /** A machine brought into being, and what it turned out to be. */
 export type CreateResult = CreateMachineResult & {
+  /** Which machine this is, in the words its provider uses. */
+  machine: Target;
   requirementRun?: RequirementRun;
   /** What the machine was read to be, when anything was required of it. */
   snapshot?: FactSnapshot;
@@ -73,8 +77,14 @@ export class Create {
     provider: Provider,
     request: CreateRequest,
   ): Promise<CreateResult> {
+    const machine: Target = {
+      name: target.name,
+      ...machineKind(provider),
+      displayName: target.displayName,
+    };
     const created = await this.machines.execute({
       target,
+      machine,
       provider,
       store: request.store,
       repin: request.repin,
@@ -85,19 +95,44 @@ export class Create {
     // Nothing was required of it, so there is nothing to verify and nothing to report: the machine is
     // up, which is all that was asked.
     if (target.requirements.length === 0) {
-      return created;
+      return { ...created, machine };
     }
 
     const identity = request.store.readSecretReference(target.name, "ssh-identity");
     const verified = await this.verification.execute({
       target,
-      access: { transport: target.transport, endpoint: created.endpoint },
+      machine,
+      // As the provider handed it back, unless the blueprint named a channel of its own. What was
+      // used here before was the blueprint's `transport` — and when a blueprint said nothing, the
+      // word `ssh`, put there by the loader because a provider had been named at all.
+      access: created.access,
       identity: identity ? { store: identity.store, name: identity.name } : undefined,
       runtime: request.runtime,
       store: request.store,
       runId: created.runId,
     });
 
-    return { ...created, requirementRun: verified.requirementRun, snapshot: verified.snapshot };
+    return { ...created, machine, requirementRun: verified.requirementRun, snapshot: verified.snapshot };
   }
+}
+
+/**
+ * What kind of machine a provider makes.
+ *
+ * Asked of the provider, which declares it: `utm` says it makes a guest and that a guest is a vm.
+ * That a blueprint named a provider says only that openstrap is not talking about the machine it
+ * runs on — which of the other kinds it is is the provider's to say, and was `guest`/`vm` written
+ * out here for as long as there was one provider to be wrong about.
+ *
+ * A provider that declares several can make several, and nothing so far says which one this is:
+ * refused rather than answered with the first of a list.
+ */
+function machineKind(provider: Provider): { scope: Target["scope"]; type: Target["type"] } {
+  const { scopes, types } = provider.capabilities;
+
+  if (scopes.length !== 1 || types.length !== 1) {
+    throw new AmbiguousMachineKindError(provider.id, scopes, types);
+  }
+
+  return { scope: scopes[0]!, type: types[0]! };
 }

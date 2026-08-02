@@ -6,6 +6,8 @@ import type { SqliteStateStore } from "../../StateStore/index.js";
 
 
 
+export { UnknownMachineError } from "./errors/UnknownMachineError.js";
+
 export type ConnectRequest = {
   target: string;
   runtime: OpenStrapRuntime;

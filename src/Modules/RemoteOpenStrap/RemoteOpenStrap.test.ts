@@ -78,7 +78,7 @@ describe("openstrap on the target", () => {
     expect(command!.args).toEqual(["facts", "collect", "host", "--json"]);
     expect(command!.cwd).toBe("/tmp/openstrap");
     expect(JSON.parse(target.written.get("/tmp/openstrap/openstrap.yaml")!)).toEqual({
-      targets: { host: { transport: "local", requirements: request.requirements } },
+      targets: { host: { requirements: request.requirements } },
     });
     // Nothing on the command line a shell could reinterpret on the way: the declaration is a file
     // now, and files do not go through argument parsing.

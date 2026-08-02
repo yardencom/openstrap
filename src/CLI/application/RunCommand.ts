@@ -5,13 +5,18 @@ import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-/** What a run found: which machines it was about, what they are, and how they measured up. */
+/**
+ * What a run found: which machines it was about, and how they measured up.
+ *
+ * The targets are reported as the blueprint declared them. What each machine turned out to be is on
+ * the snapshot it produced, which is the only place it is known: a blueprint names a provider, and
+ * the provider is what says whether that makes a vm or a container.
+ */
 export type RunResult = RunOutcome & {
   targets: Array<{
     name: string;
-    scope: string;
-    type: string;
-    transport: string;
+    provider?: string;
+    transport?: string;
   }>;
 };
 
@@ -52,8 +57,7 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
           ...run,
           targets: Object.values(blueprint.targets).map((target) => ({
             name: target.name,
-            scope: target.scope,
-            type: target.type,
+            provider: target.provider,
             transport: target.transport,
           })),
         },
