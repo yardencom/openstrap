@@ -72,7 +72,7 @@ export class RequiredFacts {
         }
 
         for (const [name, asked] of Object.entries(about)) {
-          names[name] = this.place(section, name, asked, names[name]);
+          names[name] = this.address(section, name, asked, names[name]);
         }
       }
     }
@@ -81,10 +81,11 @@ export class RequiredFacts {
   }
 
   /**
-   * Where to look for one name.
+   * The address to put in the order for one name, when the order needs one.
    *
-   * Nowhere, usually — the name is the whole of it. A requirement that states a `path` is saying
-   * where, not what must be found:
+   * Usually it does not: `runtimes.docker` is a runtime called docker, and the collector needs no
+   * more than that. A path is the exception, because a name like `config` is not a place, and a
+   * requirement that states a `path` is saying where to go rather than what must be found there:
    *
    *     paths:
    *       workspace:
@@ -97,7 +98,7 @@ export class RequiredFacts {
    * Two requirements sending one name to two places is refused rather than settled by whichever ran
    * last, because then some other requirement is judging a thing it was not written about.
    */
-  private place(
+  private address(
     section: string,
     name: string,
     asked: unknown,
