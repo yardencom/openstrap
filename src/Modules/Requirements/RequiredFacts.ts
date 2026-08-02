@@ -31,117 +31,90 @@ export type RequiredFactsRequest = {
 /**
  * What has to be read from a machine before its requirements can be checked.
  *
- * A requirement already says what it is about: its top-level fields are fact
- * sections and, in the sections that hold named things, its keys are the names.
- * Deriving the reading from the requirements rather than reading everything means
- * a run pays only for the facts it is going to compare — and, more importantly,
- * that a requirement can never be checked against a section nobody collected.
+ * A requirement already says what it is about: its top-level fields are the sections, and in the
+ * sections that hold named things, its keys are the names. So the order is the requirements read
+ * once:
  *
- * This lives with requirements rather than with facts because it is requirements
- * that know their own shape. The facts module has never heard of a blueprint.
+ *     - id: docker-runtime            →  { runtimes: { docker: {} },
+ *       runtimes: { docker: … }          →    cpu: {} }
+ *       cpu: { cores: … }
+ *
+ * Deriving it rather than reading everything means a run pays only for the facts it is going to
+ * compare — and, more importantly, that a requirement can never be checked against a section nobody
+ * collected.
+ *
+ * The value is empty because a name is all a collector needs: how to find a runtime called `docker`
+ * is the business of whoever collects runtimes. The exception is a requirement that says where the
+ * thing is, which is the only way to ask about a directory whose location is not its name.
  */
 export class RequiredFacts {
   constructor(private readonly request: RequiredFactsRequest) {}
 
-  /**
-   * The order: one entry per section the requirements are about, holding the names they name.
-   *
-   * A section that no requirement mentions is not in it, and so is not collected. A section that
-   * holds no names — how much memory there is, which architecture this is — is here with nothing in
-   * it, because asking for it is all there is to say about it.
-   */
   get declaration(): Record<string, Record<string, unknown>> {
-    return Object.fromEntries(
-      [...this.askedSections()].map(([section, names]) => [section, this.namedIn(section, names)]),
-    );
+    /** Section, then name, then what the reading has to be told about that name. */
+    const order: Record<string, Record<string, Record<string, unknown>>> = {};
+
+    for (const requirement of this.request.requirements) {
+      for (const [section, about] of Object.entries(requirement)) {
+        if (metaFields.has(section) || !orderableSections.has(section)) {
+          continue;
+        }
+
+        // A section that holds no names is asked for and nothing more: asking is all there is to say
+        // about how much memory a machine has. One that holds names collects them from every
+        // requirement — reading a section twice could answer two requirements differently about the
+        // same machine.
+        const names = order[section] ?? {};
+        order[section] = names;
+
+        if (!namedSections.has(section) || about === null || typeof about !== "object") {
+          continue;
+        }
+
+        for (const [name, asked] of Object.entries(about)) {
+          names[name] = this.place(section, name, asked, names[name]);
+        }
+      }
+    }
+
+    return order;
   }
 
   /**
-   * What the reading has to be told about one name.
+   * Where to look for one name.
    *
-   * Usually nothing: a requirement names a thing, and how to find a thing by its name is the
-   * business of whoever collects that section — `runtimes.docker` is a runtime called docker,
-   * `paths./etc/ssh/sshd_config` is that path.
-   *
-   * The exception is a requirement that says where the thing is. `path` written as a plain string is
-   * not a condition on what was found, it is where to look:
+   * Nowhere, usually — the name is the whole of it. A requirement that states a `path` is saying
+   * where, not what must be found:
    *
    *     paths:
    *       workspace:
    *         path: /home/openstrap/app
    *         exists: true
    *
-   * That is the only way to ask about a directory whose location is not its name, and it is what
-   * makes such a requirement mean anything on a machine other than this one. Without it, `workspace`
-   * falls back to the directory the run was started in — true here, and meaningless on a guest,
-   * which has never heard of it.
-   */
-  private namedIn(section: string, names: ReadonlyMap<string, string | undefined>): Record<string, unknown> {
-    return Object.fromEntries([...names].map(([name, where]) => [name, this.declared(section, name, where)]));
-  }
-
-  private declared(section: string, name: string, where: string | undefined): Record<string, unknown> {
-    if (where !== undefined) {
-      return { path: where };
-    }
-
-    return section === "paths" && name === "workspace"
-      ? { path: this.request.workspaceRoot ?? "." }
-      : {};
-  }
-
-  /**
-   * Every section the requirements mention, the names asked about in it, and where a requirement
-   * said to look for a name.
+   * Without that, `workspace` means the directory the run was started in: true here, and on a guest
+   * only the directory openstrap happened to be run in over there.
    *
-   * Several requirements may ask about the same section, so the names are collected across all of
-   * them: reading a section twice for two requirements could answer them differently about the same
-   * machine. For the same reason two requirements cannot send one name to two places — that would be
-   * one name meaning two things, and whichever won would make the other requirement judge a thing it
-   * was not written about.
+   * Two requirements sending one name to two places is refused rather than settled by whichever ran
+   * last, because then some other requirement is judging a thing it was not written about.
    */
-  private askedSections(): Map<string, Map<string, string | undefined>> {
-    const sections = new Map<string, Map<string, string | undefined>>();
-
-    for (const requirement of this.request.requirements) {
-      for (const [section, value] of Object.entries(requirement)) {
-        if (metaFields.has(section) || !orderableSections.has(section)) {
-          continue;
-        }
-
-        const names = sections.get(section) ?? new Map<string, string | undefined>();
-
-        if (namedSections.has(section) && value !== null && typeof value === "object") {
-          for (const [name, asked] of Object.entries(value as Record<string, unknown>)) {
-            names.set(name, this.whereToLook(section, name, asked, names));
-          }
-        }
-
-        sections.set(section, names);
-      }
-    }
-
-    return sections;
-  }
-
-  /** Where a requirement said the thing is, when it said so, and the same place every time. */
-  private whereToLook(
+  private place(
     section: string,
     name: string,
     asked: unknown,
-    named: ReadonlyMap<string, string | undefined>,
-  ): string | undefined {
+    already: Record<string, unknown> | undefined,
+  ): Record<string, unknown> {
     const stated = asked !== null && typeof asked === "object" && typeof (asked as { path?: unknown }).path === "string"
       ? (asked as { path: string }).path
       : undefined;
-    const already = named.get(name);
+    const before = already?.path as string | undefined;
 
-    if (stated !== undefined && already !== undefined && already !== stated) {
-      throw new Error(
-        `Two requirements put "${name}" in ${section} in different places: "${already}" and "${stated}"`,
-      );
+    if (stated !== undefined && before !== undefined && before !== stated) {
+      throw new Error(`Two requirements put "${name}" in ${section} in different places: "${before}" and "${stated}"`);
     }
 
-    return stated ?? already;
+    const where = stated ?? before
+      ?? (section === "paths" && name === "workspace" ? this.request.workspaceRoot ?? "." : undefined);
+
+    return where === undefined ? {} : { path: where };
   }
 }
