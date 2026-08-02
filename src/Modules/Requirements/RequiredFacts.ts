@@ -24,8 +24,6 @@ const orderableSections = new Set<string>(orderedFactSections);
 
 export type RequiredFactsRequest = {
   requirements: readonly TargetlessRequirement[];
-  /** Where the run is happening, for a requirement written about the workspace. */
-  workspaceRoot?: string;
 };
 
 /**
@@ -92,8 +90,11 @@ export class RequiredFacts {
    *         path: /home/openstrap/app
    *         exists: true
    *
-   * Without that, `workspace` means the directory the run was started in: true here, and on a guest
-   * only the directory openstrap happened to be run in over there.
+   * There are no names openstrap knows the meaning of. `workspace` used to be one: written without a
+   * path it became the directory the run was started in, which is true on the machine that started
+   * it and, on a guest, whatever directory openstrap was run in over there. A blueprint that means
+   * the directory it is run from says so — `path: .` — and then the same words mean the same thing
+   * wherever they are read.
    *
    * Two requirements sending one name to two places is refused rather than settled by whichever ran
    * last, because then some other requirement is judging a thing it was not written about.
@@ -113,8 +114,7 @@ export class RequiredFacts {
       throw new Error(`Two requirements put "${name}" in ${section} in different places: "${before}" and "${stated}"`);
     }
 
-    const where = stated ?? before
-      ?? (section === "paths" && name === "workspace" ? this.request.workspaceRoot ?? "." : undefined);
+    const where = stated ?? before;
 
     return where === undefined ? {} : { path: where };
   }

@@ -19,13 +19,9 @@ export type { EvaluationRequest } from "./check/RequirementEvaluator.js";
 export class Requirements {
   constructor(private readonly requirements: readonly TargetlessRequirement[]) {}
 
-  /**
-   * What has to be read from the machine before any of this can be checked.
-   *
-   * @param workspaceRoot Where the run is happening, for a requirement written about `workspace`.
-   */
-  order(workspaceRoot?: string): FactDeclaration {
-    return new RequiredFacts({ requirements: this.requirements, workspaceRoot }).declaration as FactDeclaration;
+  /** What has to be read from the machine before any of this can be checked. */
+  order(): FactDeclaration {
+    return new RequiredFacts({ requirements: this.requirements }).declaration as FactDeclaration;
   }
 
   /** How the machine measured up, once it has been read. */

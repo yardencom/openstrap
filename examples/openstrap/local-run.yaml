@@ -24,6 +24,9 @@ targets:
       - id: workspace-ready
         paths:
           workspace:
+            # The directory openstrap was run in. Said out loud rather than left to a name openstrap
+            # knows the meaning of, so the same words mean the same thing on any machine.
+            path: "."
             status: present
             exists: true
             type: directory

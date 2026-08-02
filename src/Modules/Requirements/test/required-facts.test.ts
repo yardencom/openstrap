@@ -47,13 +47,15 @@ describe("RequiredFacts", () => {
     expect(Object.keys(declared)).toEqual(["services"]);
   });
 
-  it("knows where the workspace is, because only the run does", () => {
+  it("knows no names of its own, not even workspace", () => {
+    // `workspace` written without a path used to become the directory the run was started in. It was
+    // the one word openstrap silently rewrote, and it meant something different on every machine it
+    // was read on. A blueprint that means the directory it is run from writes `path: .`.
     const declared = new RequiredFacts({
       requirements: [{ id: "workspace-ready", paths: { workspace: { exists: true } } }],
-      workspaceRoot: "/workspace/app",
     }).declaration;
 
-    expect(declared.paths).toEqual({ workspace: { path: "/workspace/app" } });
+    expect(declared.paths).toEqual({ workspace: {} });
   });
 
   it("takes the place a requirement names as the place to look", () => {

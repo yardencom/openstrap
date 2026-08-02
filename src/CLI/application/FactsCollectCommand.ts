@@ -63,7 +63,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     return Facts.collect({
       target: { name: "host", scope: "host", type: "host", displayName: "Local host" },
       declare: declared
-        ? new Requirements(declared.requirements).order(context.workspaceRoot)
+        ? new Requirements(declared.requirements).order()
         : everySection,
       now: context.now,
     });

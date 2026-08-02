@@ -125,7 +125,7 @@ export class Run {
   private read(target: BlueprintTarget, request: RunRequest): Promise<FactSnapshot> {
     return Facts.collect({
       target: { name: target.name, scope: target.scope, type: target.type, displayName: target.displayName },
-      declare: new Requirements(target.requirements).order(request.workspaceRoot),
+      declare: new Requirements(target.requirements).order(),
       now: request.now,
     });
   }
