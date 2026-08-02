@@ -118,6 +118,68 @@ targets:
     expect(blueprint.targets.local!.requirements).toHaveLength(2);
   });
 
+  it("lets two requirements be about two ports, which are two things", () => {
+    // The keys one level into a section were read as names, and in `network` that level is fields:
+    // three requirements about three ports were three claims on `network.ports`. It refused the
+    // blueprint openstrap-server carries for its own environment — a cluster, a database and a
+    // server, each declared by the port it answers on.
+    const blueprint = loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: kubernetes
+        network:
+          ports:
+            tcp/6443:
+              state: listening
+      - id: database
+        network:
+          ports:
+            tcp/5432:
+              state: listening
+`);
+
+    expect(blueprint.targets.local!.requirements).toHaveLength(2);
+  });
+
+  it("refuses one port described by two requirements", () => {
+    expect(() => loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: listening
+        network:
+          ports:
+            tcp/6443:
+              state: listening
+      - id: bound-locally
+        network:
+          ports:
+            tcp/6443:
+              bind: 127.0.0.1
+`)).toThrow(/requirements\.1\.network\.ports\.tcp\/6443: described by "listening" and by "bound-locally"/);
+  });
+
+  it("lets two requirements ask two things about one field", () => {
+    // A field is not a thing. Nothing is merged for `cpu.cores` and nothing about it is said twice
+    // about one entry, so a floor and a ceiling written apart cost nobody anything.
+    const blueprint = loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: enough-cores
+        cpu:
+          cores:
+            minimum: 2
+      - id: not-a-server
+        cpu:
+          cores:
+            maximum: 16
+`);
+
+    expect(blueprint.targets.local!.requirements).toHaveLength(2);
+  });
+
   it("refuses a name that could not be one", () => {
     // A name with a space at the end matches nothing on the machine and would be reported as an
     // absence, which reads as "the variable is missing" rather than "the blueprint has a typo".

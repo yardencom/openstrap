@@ -152,20 +152,20 @@ function describedOnce(requirements: readonly TargetlessRequirement[]): ConfigIs
 
   requirements.forEach((requirement, index) => {
     for (const [section, about] of Object.entries(requirement)) {
-      if (about === null || typeof about !== "object") {
+      if (!Object.hasOwn(factSections, section)) {
         continue;
       }
 
-      for (const name of Object.keys(about)) {
-        const first = written.get(`${section}.${name}`);
+      for (const thing of thingsIn(shapeOf(section as FactSection), about, [section])) {
+        const first = written.get(thing.join("."));
 
         if (first === undefined) {
-          written.set(`${section}.${name}`, requirement.id);
+          written.set(thing.join("."), requirement.id);
           continue;
         }
 
         issues.push({
-          path: [String(index), section, name],
+          path: [String(index), ...thing],
           message: `described by "${first}" and by "${requirement.id}"; one thing is described by one requirement`,
         });
       }
@@ -173,6 +173,39 @@ function describedOnce(requirements: readonly TargetlessRequirement[]): ConfigIs
   });
 
   return issues;
+}
+
+/**
+ * The things a requirement describes, each as the path to it.
+ *
+ * A thing is something the machine has one of and that has a name: a file, a service, a port. The
+ * shape of the section is what says where those are — `paths` is a map of them, `network.ports` is a
+ * field holding a map of them — so the answer is found by walking the two together rather than by
+ * taking the first key and hoping.
+ *
+ * That hope is what this cost: keys one level in were read as names, so three requirements about
+ * `tcp/6443`, `tcp/5432` and `tcp/8080` were three claims on `network.ports` and a blueprint that
+ * describes a cluster, a database and a server was refused.
+ *
+ * A field on its own is not a thing. Two requirements may both be about `cpu.cores` — one asking for
+ * a minimum and another for a maximum — and neither the reading nor the verdict has anything to
+ * reconcile: nothing is merged and nothing is said twice about one entry.
+ */
+function thingsIn(shape: FactShape, written: unknown, path: string[]): string[][] {
+  if (written === null || typeof written !== "object" || typeof shape === "string" || "told" in shape) {
+    return [];
+  }
+
+  // A name, and everything under it belongs to that one thing.
+  if ("named" in shape || shape.open) {
+    return Object.keys(written).map((name) => [...path, name]);
+  }
+
+  return Object.entries(written).flatMap(([field, value]) => {
+    const fieldShape = shape.fields[field];
+
+    return fieldShape === undefined ? [] : thingsIn(fieldShape, value, [...path, field]);
+  });
 }
 
 /** A list of numbers: matched whole, or checked for one being in it. */
