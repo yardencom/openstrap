@@ -80,7 +80,7 @@ export class RequirementCheck {
 
     const observed = asObserved(at.actual) ?? at.observed;
     const entries = namedEntriesOf(at.shape);
-    const checks: Record<string, RequirementCheckNode> = {};
+    const checks: Record<string, RequirementCheckNode> = this.presence(at, observed);
 
     for (const [key, expected] of Object.entries(at.expected)) {
       const actual = isRecord(at.actual) ? at.actual[key] : undefined;
@@ -101,6 +101,42 @@ export class RequirementCheck {
     }
 
     return checks;
+  }
+
+  /**
+   * A thing a requirement named has to be there.
+   *
+   * Naming something is requiring it: a blueprint that says `paths.config` is saying the machine has
+   * that path, and everything written beside it is what else must be true of it. So a reading that
+   * came back `absent` fails, whether or not anything was asked about the fields.
+   *
+   * Without this, a requirement could pass against a machine that has nothing of what it named. It
+   * did: `paths: { config: { path: /etc/ssh/no-such-file } }` reported one check passed, because the
+   * only thing written was where to look, and openstrap had indeed looked there.
+   *
+   * A requirement that says what it expects the status to be is left alone — `exists: false` and
+   * `status: absent` are how a blueprint requires something to be gone, and they are answered by the
+   * comparison like anything else.
+   */
+  private presence(
+    at: { expected: unknown; actual: unknown; path: readonly string[]; shape: FactShape | undefined },
+    observed: Observed | undefined,
+  ): Record<string, RequirementCheckNode> {
+    const named = at.path.length === 2 && namedEntriesOf(at.shape) === undefined;
+    const asked = isRecord(at.expected) && ("status" in at.expected || "exists" in at.expected);
+
+    if (!named || asked || observed === undefined || observed.status === "present") {
+      return {};
+    }
+
+    return {
+      status: checked(
+        observed.status === "absent" ? "failed" : "error",
+        "present",
+        observed.status,
+        `${at.path.join(".")} was required and is ${observed.status}`,
+      ),
+    };
   }
 
   private leaf(at: {

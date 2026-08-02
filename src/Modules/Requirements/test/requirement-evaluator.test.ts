@@ -127,6 +127,25 @@ describe("RequirementEvaluator", () => {
     expect(leaf(run.results[0]!.checks, ["runtimes", "badVersion", "version"]).status).toBe("error");
     expect(run.status).toBe("error");
   });
+  it("fails a thing that was named and is not there, whatever was asked about it", () => {
+    // Naming something is requiring it. Without this a requirement could pass against a machine that
+    // has nothing of what it named: `paths: { config: { path: /etc/nothing } }` reported one check
+    // passed, because the only thing written was where to look and openstrap had looked there.
+    const run = evaluate([{ id: "no-such-service", services: { nginx: { running: true } } }]);
+
+    expect(run.results[0]!.status).toBe("failed");
+    expect(leaf(run.results[0]!.checks, ["services", "nginx", "status"]).details?.message)
+      .toContain("was required and is absent");
+  });
+
+  it("leaves a requirement that asks for absence to answer for itself", () => {
+    // `status: absent` is how a blueprint requires something to be gone. Adding a presence check
+    // beside it would make that impossible to write.
+    const run = evaluate([{ id: "no-nginx", services: { nginx: { status: "absent" } } }]);
+
+    expect(run.results[0]!.status).toBe("passed");
+  });
+
   it("checks a list for membership rather than for equality", () => {
     const passing = evaluate([{ id: "in-sudo", users: { openstrap: { groups: { contains: "sudo" } } } }]);
     const failing = evaluate([{ id: "in-docker", users: { openstrap: { groups: { contains: "docker" } } } }]);
