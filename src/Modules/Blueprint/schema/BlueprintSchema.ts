@@ -62,9 +62,7 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       provider: this.schema.optional(this.identifier),
       image: this.schema.optional(this.name),
       size: this.schema.optional(this.name),
-      requirements: this.schema.optional(this.schema.array(this.requirements.withoutTarget(), {
-        uniqueBy: ["id"],
-      })),
+      requirements: this.schema.optional(this.requirements.ofOneTarget()),
     });
   }
 

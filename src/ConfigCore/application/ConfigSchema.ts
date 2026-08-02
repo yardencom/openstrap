@@ -1,6 +1,6 @@
 import { ConfigDefinition } from "../ConfigDefinition.js";
 import type { ConfigSchemaNode } from "../ConfigSchemaNode.js";
-import type { ConfigArrayOptions, ConfigSchemaBuilderBackend } from "../ports/ConfigSchemaBuilderBackend.js";
+import type { ConfigArrayOptions, ConfigRule, ConfigSchemaBuilderBackend } from "../ports/ConfigSchemaBuilderBackend.js";
 
 export class ConfigSchema {
   private readonly backend: ConfigSchemaBuilderBackend;
@@ -79,5 +79,17 @@ export class ConfigSchema {
 
   defaulted<TValue>(node: ConfigSchemaNode<TValue>, defaultValue: Exclude<TValue, undefined>): ConfigSchemaNode<TValue> {
     return this.backend.defaulted(node, defaultValue);
+  }
+
+  /**
+   * A node with a rule of its own, for what shape alone cannot say.
+   *
+   * Whether a field is a string is a question about that field; whether two entries of a list
+   * describe the same thing is a question about the list. The second kind has to be written as code,
+   * and this is where it is attached, so that it is answered where every other question about the
+   * file is answered — with the rest of the issues, in one refusal, before anything is run.
+   */
+  checked<TValue>(node: ConfigSchemaNode<TValue>, rule: ConfigRule<TValue>): ConfigSchemaNode<TValue> {
+    return this.backend.checked(node, rule);
   }
 }

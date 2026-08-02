@@ -4,6 +4,7 @@ import { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 import type {
   ConfigArrayOptions,
   ConfigEnumValues,
+  ConfigRule,
   ConfigSchemaBuilderBackend,
 } from "../../ports/ConfigSchemaBuilderBackend.js";
 import { applyArrayUniquenessPolicy } from "./ZodArrayUniquenessPolicy.js";
@@ -202,6 +203,33 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
     this.copyMetadata(node, defaultedNode);
 
     return defaultedNode;
+  }
+
+  checked<TValue>(node: ConfigSchemaNode<TValue>, rule: ConfigRule<TValue>): ConfigSchemaNode<TValue> {
+    const schema = this.unwrap(node);
+    let checked = schema.superRefine((value, context) => {
+      for (const issue of rule(value)) {
+        context.addIssue({
+          code: "custom",
+          path: [...issue.path],
+          message: issue.message,
+        });
+      }
+    }) as z.ZodType<TValue>;
+
+    // A check makes a new schema, and what the emitted JSON Schema says about this node was written
+    // on the old one. Carried over, or a rule would quietly cost the editor everything the node had
+    // told it.
+    const emitted = z.globalRegistry.get(schema);
+
+    if (emitted) {
+      checked = checked.meta({ ...emitted });
+    }
+
+    const checkedNode = this.wrap(checked);
+    this.copyMetadata(node, checkedNode);
+
+    return checkedNode;
   }
 
   private wrap<TValue>(

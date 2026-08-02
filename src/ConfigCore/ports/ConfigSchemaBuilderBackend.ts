@@ -1,3 +1,4 @@
+import type { ConfigIssue } from "../types/ConfigIssue.js";
 import type { ConfigSchemaNode } from "../ConfigSchemaNode.js";
 
 export type ConfigEnumValues<TValue extends string> = readonly TValue[] | Record<string, TValue>;
@@ -6,6 +7,14 @@ export type ConfigArrayOptions = {
   nonempty?: boolean;
   uniqueBy?: readonly string[];
 };
+
+/**
+ * A rule about a value this file format cannot state: what it refuses, and where.
+ *
+ * Every issue it returns is reported like any other, with a path relative to the value it was given,
+ * so a rule about a list says which entry and a rule about an object says which field.
+ */
+export type ConfigRule<TValue> = (value: TValue) => readonly ConfigIssue[];
 
 export interface ConfigSchemaBuilderBackend {
   string(params?: { minLength?: number; pattern?: string; patternMessage?: string }): ConfigSchemaNode<string>;
@@ -27,4 +36,5 @@ export interface ConfigSchemaBuilderBackend {
   ): ConfigSchemaNode<TValue>;
   optional<TValue>(node: ConfigSchemaNode<TValue>): ConfigSchemaNode<TValue | undefined>;
   defaulted<TValue>(node: ConfigSchemaNode<TValue>, defaultValue: Exclude<TValue, undefined>): ConfigSchemaNode<TValue>;
+  checked<TValue>(node: ConfigSchemaNode<TValue>, rule: ConfigRule<TValue>): ConfigSchemaNode<TValue>;
 }

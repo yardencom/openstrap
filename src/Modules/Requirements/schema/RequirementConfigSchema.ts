@@ -1,5 +1,5 @@
 import { factSections, shapeOf, type FactFieldKind, type FactSection, type FactShape } from "#types/Facts.js";
-import type { ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
+import type { ConfigIssue, ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
 const factBlockNames = Object.keys(factSections) as readonly FactSection[];
@@ -24,7 +24,20 @@ const factBlockNames = Object.keys(factSections) as readonly FactSection[];
 export class RequirementConfigSchema {
   constructor(private readonly schema: ConfigSchema) {}
 
-  withoutTarget(): ConfigSchemaNode<TargetlessRequirement> {
+  /**
+   * Everything required of one machine.
+   *
+   * A list, and two things that are true of it rather than of any entry in it: a requirement is
+   * known by its id, and a thing on the machine is described once.
+   */
+  ofOneTarget(): ConfigSchemaNode<TargetlessRequirement[]> {
+    return this.schema.checked(
+      this.schema.array(this.requirement(), { uniqueBy: ["id"] }),
+      describedOnce,
+    );
+  }
+
+  private requirement(): ConfigSchemaNode<TargetlessRequirement> {
     return this.schema.strictObject(
       {
         id: identifier(this.schema),
@@ -120,6 +133,46 @@ export class RequirementConfigSchema {
         return stringCondition(schema);
     }
   }
+}
+
+/**
+ * One thing described by more than one requirement of the same target.
+ *
+ * A machine is read once, so `paths.config` written in two requirements is one entry in the order
+ * and two claims on it — and a verdict in which the same file passes on one line and fails on
+ * another. Everything wanted of a thing is written where the thing is written.
+ *
+ * Not a question about a requirement but about the list, which is why it is code and not shape: no
+ * requirement is wrong on its own, and neither one is the wrong one. Every repetition is reported,
+ * because a person fixing a blueprint would rather see all of them than run again for each.
+ */
+function describedOnce(requirements: readonly TargetlessRequirement[]): ConfigIssue[] {
+  const written = new Map<string, string>();
+  const issues: ConfigIssue[] = [];
+
+  requirements.forEach((requirement, index) => {
+    for (const [section, about] of Object.entries(requirement)) {
+      if (about === null || typeof about !== "object") {
+        continue;
+      }
+
+      for (const name of Object.keys(about)) {
+        const first = written.get(`${section}.${name}`);
+
+        if (first === undefined) {
+          written.set(`${section}.${name}`, requirement.id);
+          continue;
+        }
+
+        issues.push({
+          path: [String(index), section, name],
+          message: `described by "${first}" and by "${requirement.id}"; one thing is described by one requirement`,
+        });
+      }
+    }
+  });
+
+  return issues;
 }
 
 /** A list of numbers: matched whole, or checked for one being in it. */

@@ -84,6 +84,43 @@ targets:
     expect(Object.keys(requirement.artifacts!)).toEqual(["package.json"]);
   });
 
+  it("refuses one thing described by two requirements", () => {
+    // A machine is read once, so a name written twice is one entry in the order and two claims on
+    // it — and a verdict where the same file passes on one line and fails on another. Caught reading
+    // the blueprint, because nothing about any machine makes it better or worse.
+    expect(() => loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: where
+        paths:
+          config:
+            path: /etc/ssh/sshd_config
+      - id: readable
+        paths:
+          config:
+            readable: true
+`)).toThrow(/described by "where" and by "readable"/);
+  });
+
+  it("lets two requirements be about different things in one section", () => {
+    const blueprint = loadBlueprint(`
+targets:
+  local:
+    requirements:
+      - id: ssh
+        services:
+          ssh:
+            running: true
+      - id: cron
+        services:
+          cron:
+            running: true
+`);
+
+    expect(blueprint.targets.local!.requirements).toHaveLength(2);
+  });
+
   it("refuses a name that could not be one", () => {
     // A name with a space at the end matches nothing on the machine and would be reported as an
     // absence, which reads as "the variable is missing" rather than "the blueprint has a typo".
