@@ -33,17 +33,19 @@ export type RequiredFactsRequest = {
  * sections that hold named things, its keys are the names. So the order is the requirements read
  * once:
  *
- *     - id: docker-runtime            →  { runtimes: { docker: {} },
- *       runtimes: { docker: … }          →    cpu: {} }
- *       cpu: { cores: … }
+ *     - id: docker-runtime          →  { runtimes: { docker: { ready: true } },
+ *       runtimes:                        cpu: {} }
+ *         docker: { ready: true }
+ *       cpu: { cores: { minimum: 2 } }
  *
  * Deriving it rather than reading everything means a run pays only for the facts it is going to
  * compare — and, more importantly, that a requirement can never be checked against a section nobody
  * collected.
  *
- * The value is empty because a name is all a collector needs: how to find a runtime called `docker`
- * is the business of whoever collects runtimes. The exception is a requirement that says where the
- * thing is, which is the only way to ask about a directory whose location is not its name.
+ * What each name carries is what the requirements wrote about it, unedited. A collector reads the
+ * few fields it is told — a path to look at, a service to look for — and ignores the rest: `ready:
+ * true` means nothing to whoever asks about a runtime, and it does not have to be taken out for that
+ * to be true.
  */
 export class RequiredFacts {
   constructor(private readonly request: RequiredFactsRequest) {}
