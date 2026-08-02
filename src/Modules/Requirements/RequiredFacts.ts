@@ -71,53 +71,15 @@ export class RequiredFacts {
           continue;
         }
 
+        // Written as it was written. A name belongs to one requirement — a blueprint that spreads
+        // one thing over two is refused when it is read — so there is nothing here to reconcile.
+        // A copy, so that the order and the blueprint are not one object: the order travels.
         for (const [name, asked] of Object.entries(about)) {
-          names[name] = merged(section, name, names[name], asked);
+          names[name] = { ...asked };
         }
       }
     }
 
     return order;
   }
-}
-
-/**
- * One name, as every requirement that mentions it wrote it.
- *
- * The order is the requirements themselves rather than a stripped copy of them. It used to be
- * stripped — names only — and then the one thing a collector actually reads from a requirement, the
- * path, had to be put back by a method that knew which sections have addresses. What a collector
- * does not read it ignores: `exists: true` means nothing to whoever opens a file, and it does not
- * have to be taken out for that to be true.
- *
- * Two requirements that write the same field differently are refused rather than settled by
- * whichever ran last: one name looked for in two places would leave one of them judging a thing it
- * was not written about.
- */
-function merged(
-  section: string,
-  name: string,
-  already: Record<string, unknown> | undefined,
-  asked: unknown,
-): Record<string, unknown> {
-  if (asked === null || typeof asked !== "object") {
-    return already ?? {};
-  }
-
-  const written = { ...already };
-
-  for (const [field, value] of Object.entries(asked)) {
-    const before = written[field];
-
-    if (before !== undefined && JSON.stringify(before) !== JSON.stringify(value)) {
-      throw new Error(
-        `Two requirements write ${section}.${name}.${field} differently: ` +
-        `${JSON.stringify(before)} and ${JSON.stringify(value)}`,
-      );
-    }
-
-    written[field] = value;
-  }
-
-  return written;
 }

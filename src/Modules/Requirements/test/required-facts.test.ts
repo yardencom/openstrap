@@ -67,26 +67,6 @@ describe("RequiredFacts", () => {
     expect(declared.paths).toEqual({ workspace: { path: "/home/openstrap", exists: true } });
   });
 
-  it("refuses two requirements that write one field two ways", () => {
-    expect(() => new RequiredFacts({
-      requirements: [
-        { id: "here", paths: { workspace: { path: "/home/openstrap" } } },
-        { id: "there", paths: { workspace: { path: "/srv/app" } } },
-      ],
-    }).declaration).toThrow(/differently/);
-  });
-
-  it("puts what several requirements say about one name together", () => {
-    const declared = new RequiredFacts({
-      requirements: [
-        { id: "there", paths: { config: { path: "/etc/ssh/sshd_config" } } },
-        { id: "readable", paths: { config: { readable: true } } },
-      ],
-    }).declaration;
-
-    expect(declared.paths).toEqual({ config: { path: "/etc/ssh/sshd_config", readable: true } });
-  });
-
   it("names a section that holds no named things without naming anything in it", () => {
     const declared = new RequiredFacts({
       requirements: [{ id: "on-arm", arch: { const: "arm64" } }],
