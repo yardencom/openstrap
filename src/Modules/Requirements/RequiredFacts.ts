@@ -49,7 +49,7 @@ export class RequiredFacts {
   constructor(private readonly request: RequiredFactsRequest) {}
 
   get declaration(): Record<string, Record<string, unknown>> {
-    /** Section, then name, then what the reading has to be told about that name. */
+    /** Section, then name, then what that name was written with. */
     const order: Record<string, Record<string, Record<string, unknown>>> = {};
 
     for (const requirement of this.request.requirements) {
@@ -70,52 +70,52 @@ export class RequiredFacts {
         }
 
         for (const [name, asked] of Object.entries(about)) {
-          names[name] = this.address(section, name, asked, names[name]);
+          names[name] = merged(section, name, names[name], asked);
         }
       }
     }
 
     return order;
   }
+}
 
-  /**
-   * The address to put in the order for one name, when the order needs one.
-   *
-   * Usually it does not: `runtimes.docker` is a runtime called docker, and the collector needs no
-   * more than that. A path is the exception, because a name like `config` is not a place, and a
-   * requirement that states a `path` is saying where to go rather than what must be found there:
-   *
-   *     paths:
-   *       workspace:
-   *         path: /home/openstrap/app
-   *         exists: true
-   *
-   * There are no names openstrap knows the meaning of. `workspace` used to be one: written without a
-   * path it became the directory the run was started in, which is true on the machine that started
-   * it and, on a guest, whatever directory openstrap was run in over there. A blueprint that means
-   * the directory it is run from says so — `path: .` — and then the same words mean the same thing
-   * wherever they are read.
-   *
-   * Two requirements sending one name to two places is refused rather than settled by whichever ran
-   * last, because then some other requirement is judging a thing it was not written about.
-   */
-  private address(
-    section: string,
-    name: string,
-    asked: unknown,
-    already: Record<string, unknown> | undefined,
-  ): Record<string, unknown> {
-    const stated = asked !== null && typeof asked === "object" && typeof (asked as { path?: unknown }).path === "string"
-      ? (asked as { path: string }).path
-      : undefined;
-    const before = already?.path as string | undefined;
+/**
+ * One name, as every requirement that mentions it wrote it.
+ *
+ * The order is the requirements themselves rather than a stripped copy of them. It used to be
+ * stripped — names only — and then the one thing a collector actually reads from a requirement, the
+ * path, had to be put back by a method that knew which sections have addresses. What a collector
+ * does not read it ignores: `exists: true` means nothing to whoever opens a file, and it does not
+ * have to be taken out for that to be true.
+ *
+ * Two requirements that write the same field differently are refused rather than settled by
+ * whichever ran last: one name looked for in two places would leave one of them judging a thing it
+ * was not written about.
+ */
+function merged(
+  section: string,
+  name: string,
+  already: Record<string, unknown> | undefined,
+  asked: unknown,
+): Record<string, unknown> {
+  if (asked === null || typeof asked !== "object") {
+    return already ?? {};
+  }
 
-    if (stated !== undefined && before !== undefined && before !== stated) {
-      throw new Error(`Two requirements put "${name}" in ${section} in different places: "${before}" and "${stated}"`);
+  const written = { ...already };
+
+  for (const [field, value] of Object.entries(asked)) {
+    const before = written[field];
+
+    if (before !== undefined && JSON.stringify(before) !== JSON.stringify(value)) {
+      throw new Error(
+        `Two requirements write ${section}.${name}.${field} differently: ` +
+        `${JSON.stringify(before)} and ${JSON.stringify(value)}`,
+      );
     }
 
-    const where = stated ?? before;
-
-    return where === undefined ? {} : { path: where };
+    written[field] = value;
   }
+
+  return written;
 }

@@ -135,12 +135,29 @@ export type FactFieldKind = "status" | "string" | "number" | "boolean" | "string
 
 export type FactShape =
   | FactFieldKind
+  | { readonly told: FactFieldKind }
   | { readonly fields: Readonly<Record<string, FactShape>>; readonly open?: boolean }
   | { readonly named: FactShape };
 
 /** Everything a reading reports about a thing it found, plus whatever else that thing has. */
 function observed(fields: Readonly<Record<string, FactShape>> = {}): FactShape {
   return { fields: { status: "status", reason: "string", message: "string", ...fields } };
+}
+
+/**
+ * A field the reading is told rather than asked.
+ *
+ * Some of what a reading reports it was given: which path to look at, which service to look for,
+ * which user id to expect. Those come back in the facts, so they can be written in a requirement —
+ * but only as the value, never as a condition, because a condition about them compares the answer
+ * with the question. `path: { const: /etc/ssh/sshd_config }` asks openstrap whether it looked where
+ * it was sent, which it always did; written as `path: /etc/ssh/sshd_config` it is the sending.
+ *
+ * It also keeps a condition out of a place a collector reads a value from: an object where a path
+ * was expected is not a stricter question, it is a broken one.
+ */
+function told(kind: FactFieldKind): FactShape {
+  return { told: kind };
 }
 
 /** A map keyed by the name of the thing: a service, a path, a port. */
@@ -258,33 +275,33 @@ export const factSections = {
     shape: {
       fields: {
         managers: named(observed()),
-        installed: named(observed({ name: "string", manager: "string", version: "string" })),
+        installed: named(observed({ name: told("string"), manager: told("string"), version: "string" })),
       },
     },
   },
   users: {
     ordered: true,
     shape: named(observed({
-      name: "string", uid: "number", gid: "number", home: "string",
+      name: told("string"), uid: told("number"), gid: "number", home: "string",
       shell: "string", groups: "strings", gecos: "string",
     })),
   },
   groups: {
     ordered: true,
-    shape: named(observed({ name: "string", gid: "number", members: "strings" })),
+    shape: named(observed({ name: told("string"), gid: told("number"), members: "strings" })),
   },
   processes: {
     ordered: true,
     shape: named(observed({
-      pid: "number", pids: "numbers", ppid: "number", name: "string", user: "string",
-      command: "string", args: "string", state: "string",
+      pid: "number", pids: "numbers", ppid: "number", name: told("string"), user: "string",
+      command: told("string"), args: "string", state: "string",
       startedAt: "string", uptimeSeconds: "number",
     })),
   },
   services: {
     ordered: true,
     shape: named(observed({
-      manager: "string", name: "string", state: "string", version: "string",
+      manager: told("string"), name: told("string"), state: "string", version: "string",
       enabled: "boolean", running: "boolean", pid: "number", pids: "numbers",
     })),
   },
@@ -305,7 +322,7 @@ export const factSections = {
   paths: {
     ordered: true,
     shape: named(observed({
-      path: "string", type: "string", exists: "boolean", owner: "string", group: "string",
+      path: told("string"), type: "string", exists: "boolean", owner: "string", group: "string",
       mode: "string", readable: "boolean", writable: "boolean", executable: "boolean",
       sizeBytes: "number",
     })),
@@ -313,26 +330,27 @@ export const factSections = {
   tools: {
     ordered: true,
     shape: named(observed({
-      name: "string", path: "string", version: "string",
+      name: told("string"), path: "string", version: "string",
       executable: "boolean", capabilities: "strings",
     })),
   },
   env: {
     ordered: true,
     shape: named(observed({
-      name: "string", value: "string", redacted: "boolean", sensitive: "boolean",
+      name: told("string"), value: "string", redacted: "boolean", sensitive: "boolean",
     })),
   },
   commands: {
     ordered: true,
     shape: named(observed({
-      name: "string", args: "strings", stdout: "string", stderr: "string", exitCode: "number",
+      name: told("string"), args: told("strings"), stdout: "string", stderr: "string",
+      exitCode: "number",
     })),
   },
   artifacts: {
     ordered: true,
     shape: named(observed({
-      path: "string", kind: "string", type: "string",
+      path: told("string"), kind: told("string"), type: "string",
       sizeBytes: "number", sha256: "string", content: "string",
     })),
   },

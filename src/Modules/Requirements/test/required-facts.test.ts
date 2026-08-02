@@ -29,10 +29,11 @@ describe("RequiredFacts", () => {
       ],
     }).declaration;
 
-    // The name and nothing else. How to find a service called `sshd` is the service collector's
-    // business, and it already has the name.
-    expect(declared.services).toEqual({ sshd: {} });
-    expect(declared.processes).toEqual({ sshd: {} });
+    // The requirement as it was written. What a collector does not read it ignores: `running: true`
+    // means nothing to whoever asks systemd about a service, and it does not have to be taken out
+    // for that to be true.
+    expect(declared.services).toEqual({ sshd: { running: true } });
+    expect(declared.processes).toEqual({ sshd: { status: "present" } });
   });
 
   it("collects the names across every requirement that asks about a section", () => {
@@ -55,37 +56,35 @@ describe("RequiredFacts", () => {
       requirements: [{ id: "workspace-ready", paths: { workspace: { exists: true } } }],
     }).declaration;
 
-    expect(declared.paths).toEqual({ workspace: {} });
+    expect(declared.paths).toEqual({ workspace: { exists: true } });
   });
 
-  it("takes the place a requirement names as the place to look", () => {
-    // The only way to ask about a directory whose location is not its name — and the only way such a
-    // requirement means anything on a machine other than this one.
+  it("carries the address a requirement wrote, which is the only way to look anywhere else", () => {
     const declared = new RequiredFacts({
       requirements: [{ id: "workspace", paths: { workspace: { path: "/home/openstrap", exists: true } } }],
     }).declaration;
 
-    expect(declared.paths).toEqual({ workspace: { path: "/home/openstrap" } });
+    expect(declared.paths).toEqual({ workspace: { path: "/home/openstrap", exists: true } });
   });
 
-  it("refuses to send one name to two places", () => {
+  it("refuses two requirements that write one field two ways", () => {
     expect(() => new RequiredFacts({
       requirements: [
         { id: "here", paths: { workspace: { path: "/home/openstrap" } } },
         { id: "there", paths: { workspace: { path: "/srv/app" } } },
       ],
-    }).declaration).toThrow(/different places/);
+    }).declaration).toThrow(/differently/);
   });
 
-  it("says nothing about where a path is, because the machine knows", () => {
+  it("puts what several requirements say about one name together", () => {
     const declared = new RequiredFacts({
       requirements: [
-        { id: "home-ready", paths: { home: { writable: true } } },
-        { id: "ssh-config", paths: { "/etc/ssh/sshd_config": { exists: true } } },
+        { id: "there", paths: { config: { path: "/etc/ssh/sshd_config" } } },
+        { id: "readable", paths: { config: { readable: true } } },
       ],
     }).declaration;
 
-    expect(declared.paths).toEqual({ home: {}, "/etc/ssh/sshd_config": {} });
+    expect(declared.paths).toEqual({ config: { path: "/etc/ssh/sshd_config", readable: true } });
   });
 
   it("names a section that holds no named things without naming anything in it", () => {

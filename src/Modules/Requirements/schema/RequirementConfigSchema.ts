@@ -55,6 +55,13 @@ export class RequirementConfigSchema {
       return this.condition(shape);
     }
 
+    // A field the reading is told takes the value and no condition: written as one, it would be
+    // asking openstrap whether it looked where it was sent, and it would reach the collector as an
+    // object where a path or a name was expected.
+    if ("told" in shape) {
+      return this.value(shape.told);
+    }
+
     if ("named" in shape) {
       return this.schema.record(nameOnTheMachine(this.schema), this.of(shape.named));
     }
@@ -72,6 +79,26 @@ export class RequirementConfigSchema {
       ),
       { requireAtLeastOneField: Object.keys(shape.fields) },
     );
+  }
+
+  /** The value itself, for a field that is told rather than asked. */
+  private value(kind: FactFieldKind): ConfigSchemaNode<unknown> {
+    const schema = this.schema;
+
+    switch (kind) {
+      case "status":
+        return observedStatus(schema);
+      case "boolean":
+        return schema.boolean();
+      case "number":
+        return schema.number();
+      case "numbers":
+        return schema.array(schema.number());
+      case "strings":
+        return schema.array(schema.string());
+      case "string":
+        return schema.string();
+    }
   }
 
   /** What may be said about a value of this kind. */
