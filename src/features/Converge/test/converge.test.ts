@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { Converge } from "../Converge.js";
+import { Converging } from "../application/Converging.js";
 import type { Step } from "#types/Step.js";
 import type { TargetlessRequirement } from "#types/Requirements.js";
 
@@ -30,7 +30,7 @@ afterEach(async () => {
 describe("bringing a machine to what was declared", () => {
   it("does the thing, reads the machine again, and answers with the reading", async () => {
     const file = join(directory, "wanted.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", file)],
       steps: [writes("write-the-file", file, ["the-file"])],
@@ -51,7 +51,7 @@ describe("bringing a machine to what was declared", () => {
     // changed and the copy succeeds.
     const source = join(directory, "source.txt");
     const copy = join(directory, "copy.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-copy", copy), fileExists("the-source", source)],
       steps: [
@@ -75,7 +75,7 @@ describe("bringing a machine to what was declared", () => {
   it("plans no step twice, because a step is chosen by facts that are no longer false", async () => {
     const first = join(directory, "first.txt");
     const second = join(directory, "second.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-first", first), fileExists("the-second", second)],
       steps: [
@@ -93,7 +93,7 @@ describe("bringing a machine to what was declared", () => {
 
   it("works out the plan and changes nothing when only asked what it would do", async () => {
     const file = join(directory, "untouched.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", file)],
       steps: [writes("write-the-file", file, ["the-file"])],
@@ -107,7 +107,7 @@ describe("bringing a machine to what was declared", () => {
   });
 
   it("says so when nothing knows what to do, rather than reporting a run with no steps", async () => {
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", join(directory, "nobody-knows.txt"))],
     });
@@ -119,7 +119,7 @@ describe("bringing a machine to what was declared", () => {
 
   it("stops when a pass moves nothing, instead of running the same steps to the bound", async () => {
     const file = join(directory, "never.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", file)],
       steps: [{ ...writes("cannot", file, ["the-file"]), action: failing() }],
@@ -134,7 +134,7 @@ describe("bringing a machine to what was declared", () => {
     // Each pass does something — the file is written, and something else removes it — so nothing
     // stalls and nothing converges. This is the case the bound exists for.
     const file = join(directory, "tug-of-war.txt");
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", file)],
       steps: [
@@ -157,13 +157,13 @@ describe("bringing a machine to what was declared", () => {
     const wanted = join(directory, "wanted.txt");
     const guarded = join(directory, "guarded.txt");
 
-    await new Converge().execute({
+    await new Converging().execute({
       target: host,
       requirements: [fileExists("the-guard", guarded)],
       steps: [writes("write-the-guard", guarded, ["the-guard"])],
     });
 
-    const result = await new Converge().execute({
+    const result = await new Converging().execute({
       target: host,
       requirements: [fileExists("the-file", wanted)],
       steps: [{
