@@ -1,3 +1,4 @@
+import { isLeafCheck } from "#types/Requirements.js";
 import type { CheckStatus, RequirementCheckNode, RequirementLeafCheck } from "#types/Requirements.js";
 
 /**
@@ -28,12 +29,8 @@ export class CheckOutcome {
     return statuses.includes("failed") ? "failed" : "passed";
   }
 
-  /** A node that holds a comparison rather than more nodes. */
+  /** A node that holds a comparison rather than more nodes. Said once, in the vocabulary. */
   static isLeaf(node: RequirementCheckNode): node is RequirementLeafCheck {
-    return Boolean(node)
-      && typeof node === "object"
-      && typeof (node as RequirementLeafCheck).status === "string"
-      && "expected" in node
-      && "actual" in node;
+    return isLeafCheck(node);
   }
 }

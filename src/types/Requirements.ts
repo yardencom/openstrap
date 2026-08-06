@@ -47,6 +47,21 @@ export type RequirementCheckNode = RequirementLeafCheck | {
   [key: string]: RequirementCheckNode;
 };
 
+/**
+ * A node that holds a comparison rather than more nodes.
+ *
+ * Here rather than beside whoever walks the tree, because more than one thing walks it: judging
+ * rolls the leaves up into a status, and converging takes the failed ones apart again. Two answers
+ * to "is this a leaf" would be two shapes of the same tree.
+ */
+export function isLeafCheck(node: RequirementCheckNode): node is RequirementLeafCheck {
+  return Boolean(node)
+    && typeof node === "object"
+    && typeof (node as RequirementLeafCheck).status === "string"
+    && "expected" in node
+    && "actual" in node;
+}
+
 export type RequirementResult = {
   requirementId: string;
   target: string;
