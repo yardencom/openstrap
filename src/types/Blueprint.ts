@@ -1,3 +1,4 @@
+import type { Step } from "./Step.js";
 import type { TargetlessRequirement } from "./Requirements.js";
 
 /**
@@ -19,6 +20,15 @@ export type BlueprintTarget = {
   image?: string;
   size?: string;
   requirements: TargetlessRequirement[];
+  /**
+   * How this machine is brought to what the requirements declare, where a person says so.
+   *
+   * Optional in a way requirements are not: a blueprint that declares what a machine must be is
+   * complete on its own, and openstrap will check it and report. Steps are the other half — what to
+   * do when it falls short — and nothing has to write them, because a resolver from a plugin may
+   * know instead, and because checking without converging is a use of its own.
+   */
+  steps?: readonly Step[];
 };
 
 export type Blueprint = {

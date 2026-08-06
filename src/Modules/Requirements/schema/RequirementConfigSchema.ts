@@ -22,6 +22,8 @@ const factBlockNames = Object.keys(factSections) as readonly FactSection[];
  * list, a status. That is this module's own, because it is about comparing rather than about machines.
  */
 export class RequirementConfigSchema {
+  private blocks?: Record<FactSection, ConfigSchemaNode<unknown | undefined>>;
+
   constructor(private readonly schema: ConfigSchema) {}
 
   /**
@@ -30,18 +32,38 @@ export class RequirementConfigSchema {
    * A list, and two things that are true of it rather than of any entry in it: a requirement is
    * known by its id, and a thing on the machine is described once.
    */
-  ofOneTarget(): ConfigSchemaNode<TargetlessRequirement[]> {
+  ofOneTarget(steps?: ConfigSchemaNode<unknown>): ConfigSchemaNode<TargetlessRequirement[]> {
     return this.schema.checked(
-      this.schema.array(this.requirement(), { uniqueBy: ["id"] }),
+      this.schema.array(this.requirement(steps), { uniqueBy: ["id"] }),
       describedOnce,
     );
   }
 
-  private requirement(): ConfigSchemaNode<TargetlessRequirement> {
+  /**
+   * A condition over the facts, with no requirement wrapped around it.
+   *
+   * The same words a requirement is written in, minus the name it is filed under. Anything that
+   * needs to ask "is this already true of the machine" asks it in this language — a step's guard is
+   * the one that does — and asks it of the same checker, so `network.ports.tcp/6443` is spelled one
+   * way in the whole product.
+   */
+  factConditions(): ConfigSchemaNode<Record<string, unknown>> {
+    return this.schema.strictObject(this.factBlocks(), {
+      requireAtLeastOneField: [...factBlockNames],
+    }) as ConfigSchemaNode<Record<string, unknown>>;
+  }
+
+  /**
+   * @param steps What may be written inside a requirement to answer it, when anything may. Handed
+   * in rather than described here: a step is not a statement about a machine, and a module about
+   * comparing readings with declarations has no business knowing what one looks like.
+   */
+  private requirement(steps?: ConfigSchemaNode<unknown>): ConfigSchemaNode<TargetlessRequirement> {
     return this.schema.strictObject(
       {
         id: identifier(this.schema),
         optional: this.schema.optional(this.schema.boolean()),
+        ...(steps === undefined ? {} : { steps: this.schema.optional(steps) }),
         ...this.factBlocks(),
       },
       {
@@ -50,10 +72,21 @@ export class RequirementConfigSchema {
     ) as ConfigSchemaNode<TargetlessRequirement>;
   }
 
+  /**
+   * Every section, as what may be written about it.
+   *
+   * Built once and handed out by reference. Two callers want it — a requirement is these blocks
+   * with a name attached, a step's guard is these blocks and nothing else — and building it twice
+   * would produce two schemas that are the same schema, which nothing downstream can tell. It
+   * mattered where it always does: the emitted JSON Schema is the whole model of a machine, and it
+   * was in the file twice.
+   */
   private factBlocks(): Record<FactSection, ConfigSchemaNode<unknown | undefined>> {
-    return Object.fromEntries(
+    this.blocks ??= Object.fromEntries(
       factBlockNames.map((section) => [section, this.schema.optional(this.of(shapeOf(section)))]),
     ) as Record<FactSection, ConfigSchemaNode<unknown | undefined>>;
+
+    return this.blocks;
   }
 
   /**

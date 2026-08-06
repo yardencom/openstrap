@@ -5,8 +5,14 @@ import type { Observed, ObservedStatus } from "#types/Facts.js";
 import type { CheckStatus, RequirementCheckNode, RequirementLeafCheck, RequirementResult, TargetlessRequirement } from "#types/Requirements.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 
-/** Fields that name the requirement rather than a section of facts. */
-const meta = new Set(["id", "optional"]);
+/**
+ * Fields that name the requirement rather than a section of facts.
+ *
+ * `steps` is in the list and never reaches here: the loader takes the steps out of a requirement on
+ * the way in, because a step is not a statement about a machine. It is named anyway, so that one
+ * arriving by some other road is skipped rather than reported as a section nobody collected.
+ */
+const meta = new Set(["id", "optional", "steps"]);
 
 /** Statuses that mean the machine was not read, so nothing under them can be compared. */
 const unreadable = new Set<ObservedStatus>(["unknown", "unsupported", "error"]);
