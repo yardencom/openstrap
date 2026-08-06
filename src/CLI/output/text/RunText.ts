@@ -35,9 +35,23 @@ export class RunText implements CommandText<RunResult> {
     }
 
     lines.push("");
-    lines.push("Requirements:");
+    lines.push(...this.requirements(result.requirementRun));
+    lines.push("");
 
-    for (const requirement of result.requirementRun.results) {
+    return `${lines.join("\n")}\n`;
+  }
+
+  /**
+   * How a machine measured up, in the words openstrap says it in everywhere.
+   *
+   * Public because a run is not the only thing that produces one of these: converging ends with a
+   * requirement run too, and it is the same document. A second way of printing it would drift from
+   * this one, and a reader would have to learn both.
+   */
+  requirements(run: RunResult["requirementRun"]): string[] {
+    const lines = ["Requirements:"];
+
+    for (const requirement of run.results) {
       const checks = this.leaves(requirement.checks);
       const passed = checks.filter((leaf) => leaf.check.status === "passed").length;
 
@@ -58,9 +72,7 @@ export class RunText implements CommandText<RunResult> {
       }
     }
 
-    lines.push("");
-
-    return `${lines.join("\n")}\n`;
+    return lines;
   }
 
   /**

@@ -202,7 +202,7 @@ targets:
 
     expect(output.exitCode).toBe(2);
     expect(output.stderr).toContain('Unknown command "workloads"');
-    expect(output.stderr).toContain("Known commands: run, create, connect, facts");
+    expect(output.stderr).toContain("Known commands: run, create, converge, connect, facts");
   });
 
 });

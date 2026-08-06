@@ -38,13 +38,24 @@ export type CreateArgs = {
   json: boolean;
 } & RuntimeArgs;
 
+export type ConvergeArgs = {
+  command: "converge";
+  /** `host` is the machine openstrap is running on; anything else is a target it created. */
+  target: string;
+  /** Work out what would be done, print it, and change nothing. */
+  check: boolean;
+  /** How many times to act before giving up. The feature's own bound unless this says otherwise. */
+  maxPasses?: number;
+  json: boolean;
+} & RuntimeArgs;
+
 export type ConnectArgs = {
   command: "connect";
   target: string;
   run?: string;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs;
+export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

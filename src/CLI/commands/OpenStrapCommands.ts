@@ -2,6 +2,9 @@ import type { OpenStrapCommand, OpenStrapPlugin } from "../../Plugin/index.js";
 import { ConnectArgsParser } from "../arguments/parsers/ConnectArgs.js";
 import { ConnectCommand } from "../application/ConnectCommand.js";
 import { ConnectText } from "../output/text/ConnectText.js";
+import { ConvergeArgsParser } from "../arguments/parsers/ConvergeArgs.js";
+import { ConvergeCommand } from "../application/ConvergeCommand.js";
+import { ConvergeText } from "../output/text/ConvergeText.js";
 import { CreateArgsParser } from "../arguments/parsers/CreateArgs.js";
 import { CreateCommand } from "../application/CreateCommand.js";
 import { CreateText } from "../output/text/CreateText.js";
@@ -46,6 +49,11 @@ function commands(): readonly OpenStrapCommand[] {
       "create",
       "openstrap create vm <target> [--config path] [--host-port n] [--repin] [--json] [--plugin specifier]",
       new CreateArgsParser(), new CreateCommand(), new CreateText(),
+    ),
+    command(
+      "converge",
+      "openstrap converge <host|target> [--check] [--max-passes n] [--json] [--plugin specifier]",
+      new ConvergeArgsParser(), new ConvergeCommand(), new ConvergeText(),
     ),
     command(
       "connect",

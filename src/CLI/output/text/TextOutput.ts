@@ -1,6 +1,7 @@
 import type { ParsedArgs } from "../../arguments/index.js";
 import type { CommandText, Output } from "../types.js";
 import { ConnectText } from "./ConnectText.js";
+import { ConvergeText } from "./ConvergeText.js";
 import { CreateText } from "./CreateText.js";
 import { FactsText } from "./FactsText.js";
 import { RunText } from "./RunText.js";
@@ -17,6 +18,7 @@ export class TextOutput implements Output {
     "run": new RunText(),
     "create": new CreateText(),
     "connect": new ConnectText(),
+    "converge": new ConvergeText(),
     "facts.collect": new FactsText(),
   };
 

@@ -1,6 +1,7 @@
 import { RemoteOpenStrapError } from "./errors/RemoteOpenStrapError.js";
 import type { Transport } from "@openstrap/plugin-contract";
 import { Facts, type FactSnapshot } from "../Facts/Facts.js";
+import type { Convergence } from "#types/Convergence.js";
 import type { Target } from "#types/Target.js";
 import { OpenStrapBinary } from "./deliver/OpenStrapBinary.js";
 import type { MachinePlatform } from "#types/Machine.js";
@@ -14,6 +15,24 @@ export type RemoteCollectRequest = {
   channel?: { type: string; authMethods?: readonly string[] };
   now?: Date;
 };
+
+/** The same machine, and what it should be brought to rather than only read. */
+export type RemoteConvergeRequest = RemoteCollectRequest & {
+  /** How this machine is made right, as its blueprint says. Travels with the blueprint. */
+  steps?: readonly unknown[];
+  /** Work out the plan over there and change nothing. */
+  check?: boolean;
+  maxPasses?: number;
+};
+
+/**
+ * What openstrap over there did, and the machine as it left it.
+ *
+ * No requirement run. openstrap over there produced one, and it is about a machine it calls `host`,
+ * because that is what the machine is from where it stands. The proof belongs to the side that knows
+ * the machine's name, and that side has the reading — so it judges it itself, with the same code.
+ */
+export type RemoteConvergence = Omit<Convergence, "requirementRun"> & { snapshot: FactSnapshot };
 
 /**
  * openstrap on a machine openstrap is not running on.
@@ -71,6 +90,39 @@ export class RemoteOpenStrap {
   }
 
   /**
+   * Puts openstrap on the target and has it bring the machine to what the blueprint declares.
+   *
+   * The same road as reading, and deliberately the same: openstrap is delivered, a blueprint is left
+   * under its feet, and openstrap over there is run in that directory. The difference is one word of
+   * the command line and the steps in the blueprint.
+   *
+   * Acting happens on the machine and not from here, for the reason reading does: a machine acted on
+   * over a channel and a machine acted on from inside would be two implementations, and the loop —
+   * act, read again, act again — would pay a round trip for every step of it. What crosses the
+   * channel is a document going out and a document coming back.
+   */
+  async converge(request: RemoteConvergeRequest): Promise<RemoteConvergence> {
+    const openstrap = await new OpenStrapBinary(this.machine).deliverTo(this.transport.fileSystem);
+
+    await this.declare(request);
+
+    const result = await this.transport.processes.capture({
+      command: openstrap,
+      args: [
+        "converge", "host", "--json",
+        ...(request.check ? ["--check"] : []),
+        ...(request.maxPasses === undefined ? [] : ["--max-passes", String(request.maxPasses)]),
+      ],
+      cwd: OpenStrapBinary.directory,
+    });
+
+    // Unlike a reading, a non-zero exit is an ordinary answer here: a machine that could not be
+    // brought all the way is still a machine openstrap has something to say about, and the plan and
+    // the passes are that something. Only silence is a failure.
+    return this.convergenceIn(result.stdout, result.stderr, request);
+  }
+
+  /**
    * The blueprint the delivered openstrap will find under its feet.
    *
    * One target, named `host`, carrying the requirements this reading is about — the same words a
@@ -84,19 +136,28 @@ export class RemoteOpenStrap {
    * Nothing is written when there are no requirements. Then there is no blueprint on the other side,
    * and openstrap there does what it does without one: reads the machine entire.
    */
-  private async declare(request: RemoteCollectRequest): Promise<void> {
+  private async declare(request: RemoteConvergeRequest): Promise<void> {
     const blueprint = this.transport.fileSystem.joinPath(OpenStrapBinary.directory, "openstrap.yaml");
+    const requirements = request.requirements ?? [];
+    const steps = request.steps ?? [];
 
-    if (!request.requirements || request.requirements.length === 0) {
+    if (requirements.length === 0 && steps.length === 0) {
       await this.transport.fileSystem.removePath(blueprint, { force: true });
 
       return;
     }
 
     // No provider and no transport: openstrap over there is on the machine it is about, and nothing
-    // reached it to get there.
+    // reached it to get there. Steps travel in the blueprint because that is where a person wrote
+    // them, and because a plugin that knows how to make something true is installed here rather than
+    // there — the blueprint is the one thing that reaches the machine.
     await this.transport.fileSystem.writeTextFile(blueprint, JSON.stringify({
-      targets: { host: { requirements: request.requirements } },
+      targets: {
+        host: {
+          requirements,
+          ...(steps.length === 0 ? {} : { steps }),
+        },
+      },
     }, null, 2));
   }
 
@@ -119,6 +180,42 @@ export class RemoteOpenStrap {
 
     try {
       return Facts.snapshotFrom(this.named(parsed, request));
+    } catch (error) {
+      throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * What openstrap printed over there, which is one convergence.
+   *
+   * The snapshot inside it is put back together the same way a reading is, and named the same way:
+   * it is the same document, printed by the same code, and it arrived by the same road.
+   */
+  private convergenceIn(output: string, said: string, request: RemoteConvergeRequest): RemoteConvergence {
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(output);
+    } catch {
+      throw new RemoteOpenStrapError(`its answer was not JSON: ${(output || said).slice(0, 200)}`);
+    }
+
+    if (!parsed || typeof parsed !== "object" || !("snapshot" in parsed)) {
+      throw new RemoteOpenStrapError(`its answer was not a convergence: ${output.slice(0, 200)}`);
+    }
+
+    // Taken off rather than left to the type to hide: openstrap over there judged a machine it calls
+    // `host`, and a caller reaching for that verdict would get one about a name nobody here uses.
+    // The reading is what travels; the judging happens where the machine has its name.
+    const { requirementRun, ...printed } = parsed as RemoteConvergence & {
+      snapshot: unknown;
+      requirementRun?: unknown;
+    };
+
+    void requirementRun;
+
+    try {
+      return { ...printed, snapshot: Facts.snapshotFrom(this.named(printed.snapshot, request)) };
     } catch (error) {
       throw new RemoteOpenStrapError(error instanceof Error ? error.message : String(error));
     }
