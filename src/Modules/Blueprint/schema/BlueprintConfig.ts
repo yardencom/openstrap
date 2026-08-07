@@ -1,4 +1,4 @@
-import type { FileAccess } from "#types/Action.js";
+import type { FileAccess, StepValue } from "#types/Action.js";
 import type { Guard } from "#types/Step.js";
 import type { TargetlessRequirement } from "../../Requirements/index.js";
 
@@ -31,7 +31,7 @@ export type WrittenStep = {
   download?: { url: string; path: string; access?: FileAccess };
 
   cwd?: string;
-  environment?: Record<string, string>;
+  environment?: Record<string, StepValue>;
   timeoutMs?: number;
 };
 

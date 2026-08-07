@@ -16463,7 +16463,24 @@
         "minLength": 1
       },
       "additionalProperties": {
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "secret"
+            ],
+            "additionalProperties": false
+          }
+        ]
       }
     },
     "__schema1236": {
@@ -16647,7 +16664,24 @@
         "minLength": 1
       },
       "additionalProperties": {
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "secret"
+            ],
+            "additionalProperties": false
+          }
+        ]
       }
     },
     "__schema1251": {

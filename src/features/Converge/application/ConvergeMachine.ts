@@ -1,5 +1,6 @@
 import { Connect, UnknownMachineError } from "#features/Connect/Connect.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
+import { StepSecrets } from "./StepSecrets.js";
 import { Requirements } from "../../../Modules/Requirements/index.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import { WrittenSteps, type BlueprintTarget } from "../../../Modules/Blueprint/index.js";
@@ -34,6 +35,8 @@ export type ConvergeMachineRequest = {
  * judging — the same requirements against the reading that came back.
  */
 export class ConvergeMachine {
+  constructor(private readonly secrets = new StepSecrets()) {}
+
   async execute(request: ConvergeMachineRequest): Promise<ConvergingResult> {
     const declared = request.target;
     const recorded = request.store.readTarget(declared.name);
@@ -64,6 +67,8 @@ export class ConvergeMachine {
         target: machine,
         requirements: declared.requirements,
         steps: declared.steps && WrittenSteps.asWritten(declared.steps),
+        // Fetched here, because the store is here: a delivered openstrap has no keychain to ask.
+        secrets: await this.secrets.forDelivery(declared.steps ?? []),
         check: request.check,
         maxPasses: request.maxPasses,
         channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },

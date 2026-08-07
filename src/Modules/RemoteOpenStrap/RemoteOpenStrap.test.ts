@@ -188,6 +188,33 @@ describe("openstrap bringing the target to what was declared", () => {
       .rejects.toThrow(/no such command/);
   });
 
+  it("hands secrets to that openstrap in its environment, and writes them nowhere", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    await new RemoteOpenStrap(target.api, linuxArm64).converge({
+      ...convergeRequest,
+      steps: [{
+        id: "put-the-key-in-the-cluster",
+        for: ["home-exists"],
+        run: "kubectl create secret generic openstrap --from-literal=KEY=$KEY",
+        environment: { KEY: { secret: "openstrap-server.master-key" } },
+      }],
+      secrets: { OPENSTRAP_SECRET_OPENSTRAP_SERVER_MASTER_KEY: "s3cr3t" },
+    });
+
+    const [command] = target.captured;
+
+    expect(command!.environment).toEqual({ OPENSTRAP_SECRET_OPENSTRAP_SERVER_MASTER_KEY: "s3cr3t" });
+    // Not on the command line, where the machine's process list would show it.
+    expect(command!.args.join(" ")).not.toContain("s3cr3t");
+    // And not on its disk. The blueprint that travels carries the name and nothing else, which is
+    // the whole point of naming a secret instead of writing it.
+    const written = target.written.get("/tmp/openstrap/openstrap.yaml")!;
+
+    expect(written).toContain("openstrap-server.master-key");
+    expect(written).not.toContain("s3cr3t");
+  });
+
   it("refuses an answer that is not a convergence", async () => {
     const target = fakeTarget({ answer: answering(snapshot) });
 

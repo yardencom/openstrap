@@ -1,4 +1,4 @@
-import { Applying } from "./apply/Applying.js";
+import { Applying, type Reveal } from "./apply/Applying.js";
 import { DeclaredSteps } from "./plan/DeclaredSteps.js";
 import { Planning } from "./plan/Planning.js";
 import { Unmet } from "./plan/Unmet.js";
@@ -10,7 +10,8 @@ import type { Resolver } from "#types/Unsatisfied.js";
 import type { Step, StepOutcome } from "#types/Step.js";
 
 export { DeclaredSteps } from "./plan/DeclaredSteps.js";
-export type { Action, FileAccess } from "#types/Action.js";
+export type { Action, FileAccess, StepValue } from "#types/Action.js";
+export type { Reveal } from "./apply/Applying.js";
 export type { Plan } from "#types/Plan.js";
 export type { Resolver, Unsatisfied } from "#types/Unsatisfied.js";
 export type { Guard, Step, StepOutcome, StepStatus } from "#types/Step.js";
@@ -56,8 +57,17 @@ export class Steps {
     return this.applying.execute(steps);
   }
 
-  /** The same module, told about the steps a blueprint declared. */
-  static declared(steps: readonly Step[], resolvers: readonly Resolver[] = []): Steps {
-    return new Steps(steps.length === 0 ? resolvers : [new DeclaredSteps(steps), ...resolvers]);
+  /**
+   * The same module, told about the steps a blueprint declared and where secrets come from.
+   *
+   * @param reveal What answers a name a step wrote instead of a value. Handed in, because which
+   * store an installation has is not this module's business — a keychain here, something else
+   * elsewhere, and the blueprint says neither.
+   */
+  static declared(steps: readonly Step[], resolvers: readonly Resolver[] = [], reveal?: Reveal): Steps {
+    return new Steps(
+      steps.length === 0 ? resolvers : [new DeclaredSteps(steps), ...resolvers],
+      new Applying(reveal),
+    );
   }
 }

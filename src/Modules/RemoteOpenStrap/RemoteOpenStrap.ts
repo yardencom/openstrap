@@ -23,6 +23,14 @@ export type RemoteConvergeRequest = RemoteCollectRequest & {
   /** Work out the plan over there and change nothing. */
   check?: boolean;
   maxPasses?: number;
+  /**
+   * Secrets the steps named, already fetched, keyed by the variable they arrive in.
+   *
+   * They travel in the environment of the openstrap being started and nowhere else. The blueprint
+   * written beside it carries the names — a value written into that file would be a secret on the
+   * machine's disk, which is exactly what naming it instead of writing it was for.
+   */
+  secrets?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -114,6 +122,9 @@ export class RemoteOpenStrap {
         ...(request.maxPasses === undefined ? [] : ["--max-passes", String(request.maxPasses)]),
       ],
       cwd: OpenStrapBinary.directory,
+      // Not on the command line, where a process list would show them, and not in the blueprint,
+      // where a disk would keep them.
+      environment: request.secrets,
     });
 
     // Unlike a reading, a non-zero exit is an ordinary answer here: a machine that could not be

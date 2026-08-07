@@ -71,6 +71,74 @@ describe("doing what the plan says", () => {
     expect((await stat(join(directory, "still-ran"))).isFile()).toBe(true);
   });
 
+  /**
+   * A password does not go in a blueprint that lives in a repository.
+   *
+   * It does not go in an argument either: arguments are in the plan, in the process list of the
+   * machine, and in the message a failed step prints. A step names the secret; the value is fetched
+   * one moment before the program starts and exists only in what that program is given.
+   */
+  describe("a value a step named instead of writing", () => {
+    it("reaches the program, and only the program", async () => {
+      const applying = new Applying(async (name) => name === "the-key" ? "s3cr3t" : null);
+      const applied = await applying.execute([{
+        id: "check-it",
+        requirements: ["a-requirement"],
+        action: {
+          kind: "run",
+          command: "sh",
+          // Nothing is echoed: the step passes if the program was given the value, and says nothing
+          // about it either way.
+          args: ["-c", 'test "$KEY" = s3cr3t'],
+          environment: { KEY: { secret: "the-key" } },
+        },
+      }]);
+
+      expect(applied).toEqual([{ stepId: "check-it", status: "done" }]);
+    });
+
+    it("still takes a value written out, because most of them are not secret", async () => {
+      const applied = await new Applying().execute([{
+        id: "check-it",
+        requirements: ["a-requirement"],
+        action: { kind: "run", command: "sh", args: ["-c", 'test "$WHERE" = /srv'], environment: { WHERE: "/srv" } },
+      }]);
+
+      expect(applied[0]!.status).toBe("done");
+    });
+
+    it("fails the step when nothing can answer, and names what it asked for", async () => {
+      const applied = await new Applying().execute([{
+        id: "needs-it",
+        requirements: ["a-requirement"],
+        action: { kind: "run", command: "true", args: [], environment: { KEY: { secret: "nowhere" } } },
+      }]);
+
+      // Not run with an empty variable. A program handed an empty password usually fails somewhere
+      // less obvious, and a step that reported `done` would have made it worse.
+      expect(applied[0]!.status).toBe("failed");
+      expect(applied[0]!.message).toContain("nowhere");
+    });
+
+    it("keeps the value out of what it says when the step fails", async () => {
+      const applying = new Applying(async () => "s3cr3t");
+      const applied = await applying.execute([{
+        id: "cannot",
+        requirements: ["a-requirement"],
+        action: {
+          kind: "run",
+          command: "sh",
+          args: ["-c", "echo something went wrong 1>&2; exit 1"],
+          environment: { KEY: { secret: "the-key" } },
+        },
+      }]);
+
+      expect(applied[0]!.status).toBe("failed");
+      expect(applied[0]!.message).toContain("something went wrong");
+      expect(applied[0]!.message).not.toContain("s3cr3t");
+    });
+  });
+
   it("takes a channel of access from nobody, because it runs where the machine is", async () => {
     // Said here as a fact about the API and not only as a grep: there is nowhere to pass a
     // connection, so there cannot be a second way of doing this over one.

@@ -3,10 +3,20 @@ import { dirname } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import type { Action, FileAccess } from "#types/Action.js";
+import type { Action, FileAccess, StepValue } from "#types/Action.js";
 import type { Step, StepOutcome } from "#types/Step.js";
 
 const run = promisify(execFile);
+
+/**
+ * Where a value comes from when a step named one instead of writing it.
+ *
+ * A function and not a store, because this module knows nothing about stores: which one an
+ * installation has is decided outside, and the one that answers here is whichever was handed in.
+ * Nothing means no store — a step that names a secret then fails, rather than running with an empty
+ * password and reporting success.
+ */
+export type Reveal = (name: string) => Promise<string | null>;
 
 /** What each word for access means as a mode, and the whole of what openstrap will set. */
 const modes: Record<FileAccess, number> = {
@@ -32,6 +42,13 @@ const modes: Record<FileAccess, number> = {
  * every word about packages, services and distributions belongs to whoever wrote the step.
  */
 export class Applying {
+  /**
+   * @param reveal What answers when a step names a secret rather than writing a value. A step that
+   * names one where nothing can answer fails: running a program with an empty password and calling
+   * it done is the one outcome worse than a failure.
+   */
+  constructor(private readonly reveal: Reveal = async () => null) {}
+
   async execute(steps: readonly Step[]): Promise<readonly StepOutcome[]> {
     const outcomes: StepOutcome[] = [];
 
@@ -57,7 +74,7 @@ export class Applying {
       case "run":
         await run(action.command, [...action.args], {
           cwd: action.cwd,
-          env: action.environment ? { ...process.env, ...action.environment } : process.env,
+          env: await this.environment(action.environment),
           timeout: action.timeoutMs ?? 600_000,
           maxBuffer: 8 * 1024 * 1024,
         });
@@ -85,6 +102,44 @@ export class Applying {
         // adding it here stops compiling.
         return exhausted(action);
     }
+  }
+
+  /**
+   * What the program is given, with the names a step wrote resolved to values.
+   *
+   * Every secret is fetched here, one step before it is used, and the value exists only as a field of
+   * the object handed to the child process. It is not in the plan, not in the blueprint, not in the
+   * arguments, and not in anything this module prints — the same value in an argument would be in the
+   * process list of the machine and in every error message a failed step produces.
+   *
+   * A name nothing can answer stops the step. `undefined` in an environment is a variable the program
+   * does not get, and a program that reads an empty password usually fails somewhere less obvious.
+   */
+  private async environment(
+    declared: Readonly<Record<string, StepValue>> | undefined,
+  ): Promise<NodeJS.ProcessEnv> {
+    if (declared === undefined) {
+      return process.env;
+    }
+
+    const given: NodeJS.ProcessEnv = { ...process.env };
+
+    for (const [name, value] of Object.entries(declared)) {
+      if (typeof value === "string") {
+        given[name] = value;
+        continue;
+      }
+
+      const revealed = await this.reveal(value.secret);
+
+      if (revealed === null) {
+        throw new Error(`no secret called "${value.secret}" was found for ${name}`);
+      }
+
+      given[name] = revealed;
+    }
+
+    return given;
   }
 
   private async fetched(url: string, path: string, access: FileAccess | undefined): Promise<void> {

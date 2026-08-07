@@ -1,4 +1,5 @@
 import type { ConfigIssue, ConfigSchema, ConfigSchemaNode } from "../../../ConfigCore/index.js";
+import type { StepValue } from "#types/Action.js";
 import type { WrittenStep } from "./BlueprintConfig.js";
 
 /** Exactly one of these says what the step does. It is the word a person writes. */
@@ -67,7 +68,7 @@ export class StepSchema {
         download: this.schema.optional(this.downloaded),
         cwd: this.schema.optional(this.schema.string({ minLength: 1 })),
         environment: this.schema.optional(
-          this.schema.record(this.schema.string({ minLength: 1 }), this.schema.string()),
+          this.schema.record(this.schema.string({ minLength: 1 }), this.value),
         ),
         timeoutMs: this.schema.optional(this.schema.number({ int: true, positive: true })),
       }) as ConfigSchemaNode<WrittenStep>,
@@ -96,6 +97,25 @@ export class StepSchema {
       path: this.path,
       access: this.schema.optional(this.access),
     });
+  }
+
+  /**
+   * A value a step is given: the value, or the name of a secret to fetch it by.
+   *
+   * ```yaml
+   * environment:
+   *   PGPASSWORD: { secret: openstrap-server.database-password }
+   * ```
+   *
+   * The store is not named here. Which one holds it belongs to the installation — a keychain on one
+   * machine, a vault somewhere else — and a blueprint naming one would be a blueprint that works in
+   * one place. This says only that the value is not written down.
+   */
+  private get value(): ConfigSchemaNode<StepValue> {
+    return this.schema.union<StepValue>([
+      this.schema.string(),
+      this.schema.strictObject({ secret: this.schema.string({ minLength: 1 }) }),
+    ]);
   }
 
   private get identifier(): ConfigSchemaNode<string> {

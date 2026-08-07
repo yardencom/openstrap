@@ -1,6 +1,19 @@
 import type { FileAccess } from "@openstrap/plugin-contract";
 
 /**
+ * A value a step is given, which is either the value or where to get it.
+ *
+ * `{ secret: "openstrap-server.master-key" }` is a name in whatever store this installation has —
+ * the macOS keychain here, something else somewhere else. The blueprint holds the name; the value is
+ * fetched when the step runs and is never written down.
+ *
+ * The store is not named. Which one holds the secret is a property of the installation, not of the
+ * thing being declared, and a blueprint that named `keychain` would be a blueprint that only works
+ * on one person's laptop.
+ */
+export type StepValue = string | { readonly secret: string };
+
+/**
  * One thing that can be done to a machine.
  *
  * A closed union, and closed on purpose: this is not a list of conveniences that grows when someone
@@ -31,7 +44,14 @@ export type Action =
       shell?: boolean;
       /** Where to run it. The machine's default working directory when nothing says otherwise. */
       cwd?: string;
-      environment?: Readonly<Record<string, string>>;
+      /**
+       * What the program is given, by name.
+       *
+       * The one place a secret may reach a step. A password is not written into a blueprint that
+       * lives in a repository, and it is not an argument either — arguments are in the plan, in the
+       * process list and in every error message a failed step prints.
+       */
+      environment?: Readonly<Record<string, StepValue>>;
       /** How long to wait before giving up on it. */
       timeoutMs?: number;
     }

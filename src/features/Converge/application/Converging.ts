@@ -1,3 +1,4 @@
+import { StepSecrets } from "./StepSecrets.js";
 import { Steps } from "../../../Modules/Steps/index.js";
 import { Facts, type FactSnapshot } from "../../../Modules/Facts/Facts.js";
 import { Requirements } from "../../../Modules/Requirements/index.js";
@@ -62,10 +63,12 @@ export type ConvergingResult = Convergence & {
  * on its way to failing.
  */
 export class Converging {
+  constructor(private readonly secrets = new StepSecrets()) {}
+
   async execute(request: ConvergingRequest): Promise<ConvergingResult> {
     const steps = request.steps ?? [];
     const requirements = new Requirements(request.requirements);
-    const steps_ = Steps.declared(steps, request.resolvers ?? []);
+    const steps_ = Steps.declared(steps, request.resolvers ?? [], this.secrets.reveal());
     const maxPasses = request.maxPasses ?? 3;
     const passes: ConvergencePass[] = [];
 
