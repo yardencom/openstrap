@@ -8,16 +8,22 @@ import { StateHome, type SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 import { CreateMachine, type CreateMachineResult } from "./application/CreateMachine.js";
 import { MissingProviderError } from "./errors/MissingProviderError.js";
+import type { OpenStrapServer } from "../../Server/index.js";
+import { ReportRun } from "./application/ReportRun.js";
 import { VerifyMachine } from "./application/VerifyMachine.js";
 
-export type { CreateMachineResult, CreateStep } from "./application/CreateMachine.js";
+export type { CreateMachineResult } from "./application/CreateMachine.js";
+export type { CreateStep } from "./application/CreateStep.js";
 export { ProviderUnavailableError } from "./errors/ProviderUnavailableError.js";
 export { MissingProviderError } from "./errors/MissingProviderError.js";
 
 export type CreateRequest = {
   target: BlueprintTarget;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
+  /** This machine's own record, which is where a machine lives when a run has no server. */
+  store?: SqliteStateStore;
+  /** The record a team shares. Where there is one it decides, and the store is not written. */
+  server?: OpenStrapServer;
   hostPort: number;
   repin?: boolean;
   now?: Date;
@@ -67,33 +73,67 @@ export class Create {
       machine,
       provider,
       store: request.store,
-      secrets: request.runtime.secretStores.sole(),
+      server: request.server,
+      // Only where openstrap is the one making the key: a server issues its own and keeps it.
+      ...(request.server ? {} : { secrets: request.runtime.secretStores.sole() }),
       repin: request.repin,
-      hostPort: request.store.hostPortFor(target.name, request.hostPort),
+      // A proposal. A server answers with the port that is actually free on this host, and its
+      // answer wins.
+      hostPort: request.store?.hostPortFor(target.name, request.hostPort) ?? request.hostPort,
       now: request.now,
     });
 
-    // Nothing was required of it, so there is nothing to verify and nothing to report: the machine is
-    // up, which is all that was asked.
+    // Nothing was required of it, so there is nothing to verify: the machine is up, which is all that
+    // was asked. The run is still reported — it happened.
     if (target.requirements.length === 0) {
+      await this.report(request, created, target.name);
+
       return { ...created, machine };
     }
 
-    const identity = request.store.readSecretReference(target.name, "ssh-identity");
-    const verified = await this.verification.execute({
-      target,
-      machine,
-      // As the provider handed it back, unless the blueprint named a channel of its own. What was
-      // used here before was the blueprint's `transport` — and when a blueprint said nothing, the
-      // word `ssh`, put there by the loader because a provider had been named at all.
-      access: created.access,
-      identity: identity ? { store: identity.store, name: identity.name } : undefined,
-      runtime: request.runtime,
-      store: request.store,
-      runId: created.runId,
-    });
+    try {
+      const verified = await this.verification.execute({
+        target,
+        machine,
+        // As the provider handed it back, unless the blueprint named a channel of its own. What was
+        // used here before was the blueprint's `transport` — and when a blueprint said nothing, the
+        // word `ssh`, put there by the loader because a provider had been named at all.
+        access: created.access,
+        identity: created.identity.reference,
+        privateKey: created.identity.privateKey,
+        platform: { platform: created.image.platform, architecture: created.image.architecture },
+        runtime: request.runtime,
+      });
 
-    return { ...created, machine, requirementRun: verified.requirementRun, snapshot: verified.snapshot };
+      await this.report(request, created, target.name, verified);
+
+      return { ...created, machine, requirementRun: verified.requirementRun, snapshot: verified.snapshot };
+    } catch (error) {
+      await this.report(request, created, target.name, undefined, error);
+
+      throw error;
+    }
+  }
+
+  /** The run, told to whoever opened it — after the machine has been read, because that is part of it. */
+  private report(
+    request: CreateRequest,
+    created: CreateMachineResult,
+    target: string,
+    verified?: { snapshot: FactSnapshot; requirementRun: RequirementRun },
+    error?: unknown,
+  ): Promise<void> {
+    return ReportRun.of({
+      target,
+      runId: created.runId,
+      startedAt: created.startedAt,
+      steps: created.steps,
+      status: error === undefined ? "succeeded" : "failed",
+      store: request.store,
+      server: request.server,
+      ...(verified ? { snapshot: verified.snapshot, requirementRun: verified.requirementRun } : {}),
+      ...(error === undefined ? {} : { error }),
+    });
   }
 
   /** What kind of machine a provider makes. */

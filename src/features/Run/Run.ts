@@ -8,6 +8,7 @@ import {
   type RequirementRun,
   type TargetlessRequirement,
 } from "../../Modules/Requirements/index.js";
+import type { OpenStrapServer } from "../../Server/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 import { Converge } from "../Converge/Converge.js";
@@ -17,7 +18,10 @@ import { Facts } from "../../Modules/Facts/Facts.js";
 export type RunRequest = {
   blueprint: Blueprint;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
+  /** This machine's own record, which is where a machine lives when a run has no server. */
+  store?: SqliteStateStore;
+  /** The record a team shares. Where there is one it decides, and the store is not written. */
+  server?: OpenStrapServer;
   workspaceRoot?: string;
   hostPort: number;
   now?: Date;
@@ -69,6 +73,7 @@ export class Run {
       target,
       runtime: request.runtime,
       store: request.store,
+      server: request.server,
       now: request.now,
     });
   }
@@ -82,6 +87,7 @@ export class Run {
       target,
       runtime: request.runtime,
       store: request.store,
+      server: request.server,
       hostPort: request.hostPort,
       now: request.now,
     });
@@ -110,9 +116,11 @@ export class Run {
     const snapshot = await this.read(machine, target.requirements, request);
     const at = String(snapshot.reading.takenAt);
 
-    request.store.saveTarget({ ...machine, transport: target.transport }, at);
-    request.store.saveDesiredState(target.name, target, at);
-    request.store.saveFactSnapshot({
+    // Only where this machine keeps its own record. A run against the host makes nothing and reaches
+    // nothing, so there is no run to open on a server and nothing there to tell about it.
+    request.store?.saveTarget({ ...machine, transport: target.transport }, at);
+    request.store?.saveDesiredState(target.name, target, at);
+    request.store?.saveFactSnapshot({
       id: String(snapshot.id),
       target: target.name,
       schemaVersion: snapshot.schemaVersion,

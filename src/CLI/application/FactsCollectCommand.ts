@@ -1,9 +1,9 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
-import { Connect, UnknownMachineError } from "#features/Connect/Connect.js";
+import { Connect } from "#features/Connect/Connect.js";
 import { Facts, everySection, type FactSnapshot } from "../../Modules/Facts/Facts.js";
 import { RemoteOpenStrap } from "../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import { Requirements } from "../../Modules/Requirements/index.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
 import { UnknownMachinePlatformError } from "../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
 import type { BlueprintTarget } from "#types/Blueprint.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
@@ -17,10 +17,7 @@ export type FactsCollectResult = FactSnapshot;
 
 /** `openstrap facts collect` — read a machine and say what is on it. */
 export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCollectResult> {
-  constructor(
-    private readonly stateHome = new StateHome(),
-    private readonly blueprints = new Blueprints(),
-  ) {}
+  constructor(private readonly blueprints = new Blueprints()) {}
 
   async execute(args: FactsCollectArgs, context: CommandContext): Promise<CommandOutcome<FactsCollectResult>> {
     const declared = args.full ? undefined : this.declaredFor(args.target, context);
@@ -54,28 +51,26 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     context: CommandContext,
   ): Promise<FactSnapshot> {
     const runtime = await context.runtime();
-    const store = new SqliteStateStore(this.stateHome.database());
+    const recorded = new WhereMachinesAreRecorded();
 
     try {
-      const recorded = store.readTarget(target);
-      const machine = store.readMachineImage(target);
-
-      if (machine === null) {
-        throw new UnknownMachinePlatformError(target);
-      }
-
-      // What kind of machine this is was written down when it was made, by the provider that makes
-      // it. A machine openstrap has no row for is one it never made — `connect` says so, and this
-      // used to call it a guest vm and read it anyway.
-      if (recorded === null) {
-        throw new UnknownMachineError(target);
-      }
-
-      const connection = await new Connect().execute({ target, runtime, store });
+      const connection = await new Connect().execute({
+        target,
+        runtime,
+        store: recorded.store,
+        server: recorded.server,
+      });
 
       try {
-        return await new RemoteOpenStrap(connection.transport, machine).collect({
-          target: { name: target, scope: recorded.scope, type: recorded.type },
+        // What kind of machine this is was written down when it was made, by the provider that makes
+        // it. Without it there is no telling which build of openstrap to deliver, and this used to
+        // call the machine a guest vm and read it anyway.
+        if (connection.machine === undefined) {
+          throw new UnknownMachinePlatformError(target);
+        }
+
+        return await new RemoteOpenStrap(connection.transport, connection.machine).collect({
+          target: { name: target, ...connection.kind },
           requirements: declared?.requirements,
           channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },
           now: context.now,
@@ -84,7 +79,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
         await connection.close();
       }
     } finally {
-      store.close();
+      recorded.close();
     }
   }
 

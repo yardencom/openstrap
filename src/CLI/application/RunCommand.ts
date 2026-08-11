@@ -1,7 +1,7 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Checks } from "../../Modules/Requirements/index.js";
 import { Run, type RunResult as RunOutcome } from "#features/Run/Run.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
 import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -19,10 +19,7 @@ export type RunResult = RunOutcome & {
 
 /** `openstrap run` — take a blueprint from what it declares to what is true. */
 export class RunCommand implements CliCommand<RunArgs, RunResult> {
-  constructor(
-    private readonly blueprints = new Blueprints(),
-    private readonly stateHome = new StateHome(),
-  ) {}
+  constructor(private readonly blueprints = new Blueprints()) {}
 
   async execute(args: RunArgs, context: CommandContext): Promise<CommandOutcome<RunResult>> {
     const blueprint = this.blueprints.load({
@@ -30,13 +27,14 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
       workspaceRoot: context.workspaceRoot,
     });
     const runtime = await context.runtime();
-    const store = new SqliteStateStore(this.stateHome.database());
+    const recorded = new WhereMachinesAreRecorded();
 
     try {
       const run = await new Run().execute({
         blueprint,
         runtime,
-        store,
+        store: recorded.store,
+        server: recorded.server,
         workspaceRoot: context.workspaceRoot,
         hostPort: args.hostPort ?? 2222,
         now: context.now,
@@ -54,7 +52,7 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
         exitCode: Checks.succeeded(run.requirementRun.status) ? 0 : 1,
       };
     } finally {
-      store.close();
+      recorded.close();
     }
   }
 }

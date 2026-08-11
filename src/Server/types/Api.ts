@@ -105,5 +105,9 @@ export type TargetAccessResponse = {
   provider: string;
   resourceId: string;
   transport: string;
+  scope: string;
+  type: string;
+  /** What a machine made from the pinned image is; absent where nothing was ever pinned for it. */
+  machine?: { platform: string; architecture: string };
   identity: { privateKey: string };
 };

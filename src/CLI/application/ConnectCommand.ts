@@ -1,5 +1,5 @@
 import { Connect, type Connection } from "#features/Connect/Connect.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
 import type { ConnectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -11,17 +11,16 @@ export type ConnectResult = {
 };
 
 export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
-  constructor(private readonly stateHome = new StateHome()) {}
-
   async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome<ConnectResult>> {
     const runtime = await context.runtime();
-    const store = new SqliteStateStore(this.stateHome.database());
+    const recorded = new WhereMachinesAreRecorded();
 
     try {
       const connection = await new Connect().execute({
         target: args.target,
         runtime,
-        store,
+        store: recorded.store,
+        server: recorded.server,
       });
 
       try {
@@ -32,7 +31,7 @@ export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
         await connection.close();
       }
     } finally {
-      store.close();
+      recorded.close();
     }
   }
 

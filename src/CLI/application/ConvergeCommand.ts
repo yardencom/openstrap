@@ -1,7 +1,7 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Converge, type ConvergeResult } from "#features/Converge/Converge.js";
 import { Checks } from "../../Modules/Requirements/index.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
 import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 import type { ConvergeArgs } from "../arguments/types.js";
@@ -11,7 +11,6 @@ export type { ConvergeResult };
 /** `openstrap converge` — make a machine what its blueprint says it is. */
 export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult> {
   constructor(
-    private readonly stateHome = new StateHome(),
     private readonly blueprints = new Blueprints(),
     private readonly converge = new Converge(),
   ) {}
@@ -24,13 +23,14 @@ export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult>
       throw new UnknownTargetError(args.target, Object.keys(blueprint.targets));
     }
 
-    const store = new SqliteStateStore(this.stateHome.database());
+    const recorded = new WhereMachinesAreRecorded();
 
     try {
       const result = await this.converge.execute({
         target,
         runtime: await context.runtime(),
-        store,
+        store: recorded.store,
+        server: recorded.server,
         check: args.check,
         maxPasses: args.maxPasses,
         now: context.now,
@@ -44,7 +44,7 @@ export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult>
         exitCode: Checks.succeeded(result.requirementRun.status) ? 0 : 1,
       };
     } finally {
-      store.close();
+      recorded.close();
     }
   }
 }

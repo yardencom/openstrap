@@ -2,6 +2,7 @@ import { ConvergeMachine } from "./application/ConvergeMachine.js";
 import { Converging, type ConvergingResult } from "./application/Converging.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
+import type { OpenStrapServer } from "../../Server/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 
@@ -11,7 +12,10 @@ export { Converging } from "./application/Converging.js";
 export type ConvergeRequest = {
   target: BlueprintTarget;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
+  /** This machine's own record, which is where a machine lives when a run has no server. */
+  store?: SqliteStateStore;
+  /** The record a team shares. Where there is one it is the record, and the store is not asked. */
+  server?: OpenStrapServer;
   /** Work out the plan and change nothing. */
   check?: boolean;
   maxPasses?: number;

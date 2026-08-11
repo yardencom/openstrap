@@ -7,16 +7,18 @@ import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStra
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { Target } from "#types/Target.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
-import type { SqliteStateStore } from "../../../StateStore/index.js";
+import type { MachinePlatform } from "#types/Machine.js";
 
 export type VerifyRequest = {
   target: BlueprintTarget;
   machine: Target;
   access: MachineAccess;
   identity?: SecretReference;
+  /** The key itself, where a server issued it and there is nothing to look up. */
+  privateKey?: string;
+  /** What a build of openstrap for this machine has to be built for, as the image it was made from says. */
+  platform?: MachinePlatform;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
-  runId: string;
   timeoutMs?: number;
 };
 
@@ -38,15 +40,16 @@ export class VerifyMachine {
       target: request.target.name,
       endpoint,
       identity: request.identity,
-      reveal: (reference) => request.runtime.secretStores.require(reference.store).read(reference),
+      reveal: async (reference) => request.privateKey
+        ?? await request.runtime.secretStores.require(reference.store).read(reference),
     });
 
     try {
       // Read by openstrap on the machine itself, delivered over this connection. The connection is
       // how it gets there and how it answers; it is not where any fact comes from.
-      const machine = request.store.readMachineImage(request.target.name);
+      const machine = request.platform;
 
-      if (machine === null) {
+      if (machine === undefined) {
         throw new UnknownMachinePlatformError(request.target.name);
       }
 
@@ -67,15 +70,6 @@ export class VerifyMachine {
         },
       });
 
-
-      request.store.saveFactSnapshot({
-        id: String(snapshot.id),
-        target: request.target.name,
-        runId: request.runId,
-        schemaVersion: snapshot.schemaVersion,
-        capturedAt: String(snapshot.reading.takenAt),
-        data: { ...snapshot.facts },
-      });
 
       return {
         snapshot,
