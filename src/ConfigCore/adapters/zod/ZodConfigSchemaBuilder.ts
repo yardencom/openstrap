@@ -7,8 +7,8 @@ import type {
   ConfigRule,
   ConfigSchemaBuilderBackend,
 } from "../../ports/ConfigSchemaBuilderBackend.js";
-import { applyArrayUniquenessPolicy } from "./ZodArrayUniquenessPolicy.js";
-import { createZodDiscriminatedUnion } from "./ZodDiscriminatedUnionPolicy.js";
+import { ZodArrayUniquenessPolicy } from "./ZodArrayUniquenessPolicy.js";
+import { ZodDiscriminatedUnionPolicy } from "./ZodDiscriminatedUnionPolicy.js";
 import type { ZodSchemaLiteralValue, ZodSchemaValueKind } from "./ZodSchemaMetadataRegistry.js";
 import { ZodSchemaMetadataRegistry } from "./ZodSchemaMetadataRegistry.js";
 import { ZodSchemaRegistry } from "./ZodSchemaRegistry.js";
@@ -73,7 +73,7 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
       throw new Error("Config enum must contain at least one value");
     }
 
-    return this.wrap(z.enum(asNonEmptyTuple(enumValues)) as z.ZodType<TValue>, { valueKind: "primitive" });
+    return this.wrap(z.enum(ZodConfigSchemaBuilder.asNonEmptyTuple(enumValues)) as z.ZodType<TValue>, { valueKind: "primitive" });
   }
 
   array<TValue>(
@@ -86,8 +86,8 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
       schema = z.array(this.unwrap(element)).nonempty();
     }
 
-    const uniqueBy = uniqueFieldNames(params.uniqueBy);
-    const uniquenessPolicy = applyArrayUniquenessPolicy({
+    const uniqueBy = ZodConfigSchemaBuilder.uniqueFieldNames(params.uniqueBy);
+    const uniquenessPolicy = ZodArrayUniquenessPolicy.apply({
       schema,
       element,
       metadata: this.metadata,
@@ -123,7 +123,7 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
     if (params.requireAtLeastOneField?.length) {
       const requiredFieldChoices = params.requireAtLeastOneField;
       schema = schema.superRefine((value, context) => {
-        if (!hasAtLeastOneField(value, requiredFieldChoices)) {
+        if (!ZodConfigSchemaBuilder.hasAtLeastOneField(value, requiredFieldChoices)) {
           context.addIssue({
             code: "custom",
             path: [],
@@ -155,10 +155,10 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
 
     const schema = variants.length === 1
       ? this.unwrap(variants[0]!)
-      : z.union(asUnionTuple(variants.map((variant) => this.unwrap(variant))));
+      : z.union(ZodConfigSchemaBuilder.asUnionTuple(variants.map((variant) => this.unwrap(variant))));
 
     const node = this.wrap(schema as z.ZodType<TValue>, {
-      valueKind: mergeVariantValueKinds(variants.map((variant) => this.metadata.getValueKind(variant))),
+      valueKind: ZodConfigSchemaBuilder.mergeVariantValueKinds(variants.map((variant) => this.metadata.getValueKind(variant))),
     });
     this.setMergedFields(node, variants);
 
@@ -179,7 +179,7 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
       throw new Error("Config discriminated union must contain at least two variants");
     }
 
-    const schema = createZodDiscriminatedUnion(
+    const schema = ZodDiscriminatedUnionPolicy.create(
       discriminator,
       variants,
       this.metadata,
@@ -271,82 +271,82 @@ export class ZodConfigSchemaBuilder implements ConfigSchemaBuilderBackend {
   }
 
   private setMergedFields(target: ConfigSchemaNode<unknown>, variants: readonly ConfigSchemaNode<unknown>[]): void {
-    const fields = mergeVariantFields(variants.map((variant) => this.metadata.getFields(variant)));
+    const fields = ZodConfigSchemaBuilder.mergeVariantFields(variants.map((variant) => this.metadata.getFields(variant)));
 
     if (fields) {
       this.metadata.setFields(target, [...fields]);
     }
   }
-}
 
-function mergeVariantFields(fieldSets: Array<ReadonlySet<string> | undefined>): ReadonlySet<string> | undefined {
-  const fields = new Set<string>();
+  private static mergeVariantFields(fieldSets: Array<ReadonlySet<string> | undefined>): ReadonlySet<string> | undefined {
+    const fields = new Set<string>();
 
-  for (const fieldSet of fieldSets) {
-    for (const fieldName of fieldSet ?? []) {
-      fields.add(fieldName);
+    for (const fieldSet of fieldSets) {
+      for (const fieldName of fieldSet ?? []) {
+        fields.add(fieldName);
+      }
     }
+
+    return fields.size > 0 ? fields : undefined;
   }
 
-  return fields.size > 0 ? fields : undefined;
-}
+  private static mergeVariantValueKinds(valueKinds: Array<ZodSchemaValueKind | undefined>): ZodSchemaValueKind {
+    const knownValueKinds = valueKinds.filter((valueKind): valueKind is ZodSchemaValueKind => Boolean(valueKind));
 
-function mergeVariantValueKinds(valueKinds: Array<ZodSchemaValueKind | undefined>): ZodSchemaValueKind {
-  const knownValueKinds = valueKinds.filter((valueKind): valueKind is ZodSchemaValueKind => Boolean(valueKind));
+    if (knownValueKinds.length === 0) {
+      return "unknown";
+    }
 
-  if (knownValueKinds.length === 0) {
-    return "unknown";
+    const [firstValueKind] = knownValueKinds;
+
+    return knownValueKinds.every((valueKind) => valueKind === firstValueKind) ? firstValueKind : "unknown";
   }
 
-  const [firstValueKind] = knownValueKinds;
-
-  return knownValueKinds.every((valueKind) => valueKind === firstValueKind) ? firstValueKind : "unknown";
-}
-
-function uniqueFieldNames(fieldNames: readonly string[] = []): string[] {
-  return [...new Set(fieldNames)];
-}
-
-function asNonEmptyTuple<TValue>(values: readonly TValue[]): [TValue, ...TValue[]] {
-  if (values.length === 0) {
-    throw new Error("Expected at least one value");
+  private static uniqueFieldNames(fieldNames: readonly string[] = []): string[] {
+    return [...new Set(fieldNames)];
   }
 
-  return values as [TValue, ...TValue[]];
-}
+  private static asNonEmptyTuple<TValue>(values: readonly TValue[]): [TValue, ...TValue[]] {
+    if (values.length === 0) {
+      throw new Error("Expected at least one value");
+    }
 
-function asUnionTuple<TValue>(values: readonly TValue[]): [TValue, TValue, ...TValue[]] {
-  if (values.length < 2) {
-    throw new Error("Expected at least two union variants");
+    return values as [TValue, ...TValue[]];
   }
 
-  return values as [TValue, TValue, ...TValue[]];
-}
+  private static asUnionTuple<TValue>(values: readonly TValue[]): [TValue, TValue, ...TValue[]] {
+    if (values.length < 2) {
+      throw new Error("Expected at least two union variants");
+    }
 
-function hasAtLeastOneField(value: Record<string, unknown>, fieldNames: readonly string[]): boolean {
-  return fieldNames.some((fieldName) => hasRequiredFieldValue(value[fieldName]));
-}
-
-function hasRequiredFieldValue(value: unknown): boolean {
-  if (value === undefined || value === null) {
-    return false;
+    return values as [TValue, TValue, ...TValue[]];
   }
 
-  if (Array.isArray(value)) {
-    return value.length > 0;
+  private static hasAtLeastOneField(value: Record<string, unknown>, fieldNames: readonly string[]): boolean {
+    return fieldNames.some((fieldName) => ZodConfigSchemaBuilder.hasRequiredFieldValue(value[fieldName]));
   }
 
-  if (typeof value === "string") {
-    return value.length > 0;
+  private static hasRequiredFieldValue(value: unknown): boolean {
+    if (value === undefined || value === null) {
+      return false;
+    }
+
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+
+    if (typeof value === "string") {
+      return value.length > 0;
+    }
+
+    if (ZodConfigSchemaBuilder.isPlainRecord(value)) {
+      return Object.keys(value).length > 0;
+    }
+
+    return true;
   }
 
-  if (isPlainRecord(value)) {
-    return Object.keys(value).length > 0;
+  private static isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
   }
-
-  return true;
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }

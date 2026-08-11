@@ -7,13 +7,7 @@ const run = promisify(execFile);
 
 export const keychainStoreId = "keychain";
 
-/**
- * Keeps secrets in the macOS login keychain.
- *
- * Values are passed to `security` as arguments of a spawned process rather
- * than through a shell, so nothing is interpolated into a command line that a
- * shell would parse.
- */
+/** Keeps secrets in the macOS login keychain. */
 export class KeychainSecretStore implements SecretStore {
   readonly id = keychainStoreId;
   readonly displayName = "macOS keychain";

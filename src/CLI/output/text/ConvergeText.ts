@@ -1,4 +1,4 @@
-import { actionSaid } from "#types/Step.js";
+import type { Action } from "#types/Action.js";
 import type { CommandText } from "../types.js";
 import type { ConvergeResult } from "../../application/ConvergeCommand.js";
 import type { Plan } from "../../../Modules/Steps/index.js";
@@ -13,15 +13,7 @@ const endings: Record<ConvergeResult["end"], string> = {
   exhausted: "the limit of passes was reached with work still to do",
 };
 
-/**
- * What converging did, and what the machine is now.
- *
- * In that order, and the order is the argument. The passes are what openstrap did — interesting
- * while it is happening and mostly noise afterwards — and the requirement run is the answer to the
- * question that was asked. So the doing is summarised and the verdict is printed in full, by the
- * same words a run is printed in: it is the same document, and a reader who has seen one has seen
- * both.
- */
+/** What converging did, and what the machine is now. */
 export class ConvergeText implements CommandText<ConvergeResult> {
   constructor(private readonly requirements = new RunText()) {}
 
@@ -53,13 +45,7 @@ export class ConvergeText implements CommandText<ConvergeResult> {
     return `${lines.join("\n")}\n`;
   }
 
-  /**
-   * The plan as it stands at the end.
-   *
-   * After a `--check` this is the whole point of the command. After a real convergence it is what is
-   * still not true and what nobody could answer — printed because a machine left short with nothing
-   * said about why is the failure mode this module was written to avoid.
-   */
+  /** The plan as it stands at the end: the whole point after `--check`, what is still not true after a run. */
   private plan(plan: Plan, end: ConvergeResult["end"]): string[] {
     const lines: string[] = [];
 
@@ -67,7 +53,7 @@ export class ConvergeText implements CommandText<ConvergeResult> {
       lines.push("Would run:");
 
       for (const step of plan.steps) {
-        lines.push(`  - ${step.id}: ${actionSaid(step.action)}`);
+        lines.push(`  - ${step.id}: ${ConvergeText.said(step.action)}`);
         lines.push(`      for ${(step.requirements ?? []).join(", ")}`);
       }
 
@@ -86,4 +72,21 @@ export class ConvergeText implements CommandText<ConvergeResult> {
 
     return lines;
   }
+
+  /** One action, in one line, close enough to what it does that a reader can object to it. */
+  private static said(action: Action): string {
+    switch (action.kind) {
+      case "run":
+        return action.shell
+          ? `run ${action.args[1] ?? ""}`
+          : `run ${action.command} ${action.args.join(" ")}`.trimEnd();
+      case "write":
+        return `write ${action.path}`;
+      case "remove":
+        return `remove ${action.path}`;
+      case "download":
+        return `download ${action.url} to ${action.path}`;
+    }
+  }
+
 }

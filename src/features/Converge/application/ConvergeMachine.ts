@@ -18,22 +18,7 @@ export type ConvergeMachineRequest = {
   now?: Date;
 };
 
-/**
- * A machine openstrap created, brought to what the blueprint declares by openstrap on it.
- *
- * Everything here is getting there and back. openstrap is delivered, the requirements and the steps
- * travel with it as a blueprint, the loop turns over there, and one reading comes back. One crossing
- * of the channel and not one per step — a loop driven from outside would pay a round trip for every
- * turn of read-act-read, and would be a second way of acting on a machine besides the one that runs
- * on it.
- *
- * The steps go out in the words they were written in. What arrives is a blueprint, read by the same
- * loader against the same schema, so it has to be a document a person could have written.
- *
- * The verdict is worked out here. openstrap over there judged a machine it calls `host`, because
- * from where it stands that is what the machine is; the name belongs to this side, and so does the
- * judging — the same requirements against the reading that came back.
- */
+/** A machine openstrap created, brought to what the blueprint declares by openstrap on it. */
 export class ConvergeMachine {
   constructor(private readonly secrets = new StepSecrets()) {}
 

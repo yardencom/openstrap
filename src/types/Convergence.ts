@@ -24,14 +24,7 @@ export type ConvergenceEnd =
   /** The bound was reached with work still to do. */
   | "exhausted";
 
-/**
- * What came of bringing a machine to what its blueprint declares.
- *
- * `requirementRun` is the answer to "did it work", and it is a requirement run like any other:
- * openstrap read the machine again and compared it again. Steps exiting zero is not an answer to
- * that question — every convergence tool in existence reports "changed" and stops there, and
- * "changed" is a statement about the tool.
- */
+/** What came of bringing a machine to what its blueprint declares. */
 export type Convergence = {
   passes: readonly ConvergencePass[];
   /** The plan as it stood at the last reading: what is still not true, and what nobody can answer. */

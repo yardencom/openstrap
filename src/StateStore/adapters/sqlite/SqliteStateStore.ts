@@ -35,12 +35,7 @@ export class SqliteStateStore {
     this.database.close();
   }
 
-  /**
-   * Recording a target twice updates it rather than creating a second one.
-   *
-   * The transport column is older than the knowledge that a machine has no channel until something
-   * has reached it, and it does not take a null. Nothing is what it holds until then.
-   */
+  /** Recording a target twice updates it rather than creating a second one. */
   saveTarget(target: TargetRecord, now: string): void {
     this.database.prepare(`
       INSERT INTO target (name, scope, type, provider, transport, created_at, updated_at)
@@ -211,11 +206,7 @@ export class SqliteStateStore {
       : null;
   }
 
-  /**
-   * Reserves a host port, refusing one already held by another target.
-   *
-   * The refusal is the point: two machines must never be handed the same port.
-   */
+  /** Reserves a host port, refusing one already held by another target. */
   allocatePort(port: AllocatedPortRecord, now: string): void {
     const existing = this.database.prepare(
       "SELECT target FROM allocated_port WHERE host_port = ?",
@@ -234,13 +225,7 @@ export class SqliteStateStore {
     `).run(port.hostPort, port.target, port.guestPort, port.protocol, now);
   }
 
-  /**
-   * The port this target already holds, or the first free one at or above `from`.
-   *
-   * Asked for rather than chosen by the caller, because who else is listening is what this table is
-   * for. A run creating every machine a blueprint declares used to hand each of them the same
-   * number, and the second one failed with the first one's reservation.
-   */
+  /** The port this target already holds, or the first free one at or above `from`. */
   hostPortFor(target: string, from: number): number {
     const held = this.database.prepare(
       "SELECT host_port FROM allocated_port WHERE target = ? ORDER BY host_port LIMIT 1",
@@ -287,9 +272,7 @@ export class SqliteStateStore {
     `).run(reference.target, reference.purpose, reference.store, reference.name, now);
   }
 
-  /**
-   * Records the image a target was made from. Replacing it is what `create --repin` asks for.
-   */
+  /** Records the image a target was made from. */
   saveMachineImage(target: string, image: MachineImageRecord, now: string): void {
     this.database.prepare(`
       INSERT INTO machine_image (target, reference, url, sha256, platform, architecture, format, boot, created_at)

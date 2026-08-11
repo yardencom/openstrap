@@ -17,24 +17,12 @@ export type ConnectRequest = {
 export type Connection = {
   /** Where the machine listens and what reached it, as the provider reports. */
   access: MachineAccess;
-  /**
-   * What was opened.
-   *
-   * Handed over rather than hidden behind a method or two of this module's choosing: the callers are
-   * a person running a command on the machine and openstrap delivering itself to it, and no pair of
-   * methods serves both without one of them being wrong.
-   */
+  /** What was opened. */
   transport: TransportConnection;
   close(): Promise<void>;
 };
 
-/**
- * Opens a session to a target, hiding how it is reached.
- *
- * Where the machine listens is asked of the provider rather than remembered:
- * a forwarded port can be reassigned and an address can change, and a stored
- * endpoint would be a second truth that drifts from the first.
- */
+/** Opens a session to a target, hiding how it is reached. */
 export class Connect {
   constructor(private readonly secrets = new KeychainSecretStore()) {}
 

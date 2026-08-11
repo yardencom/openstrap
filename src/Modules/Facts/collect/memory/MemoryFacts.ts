@@ -1,10 +1,11 @@
+import type { Asked } from "#types/FactDeclaration.js";
 import si from "systeminformation";
 
 import type { FactSections } from "#types/Facts.js";
 
 /** How much memory this machine has, and how much of it is free. */
 export class MemoryFacts {
-  async memory(declared: Record<string, never> | undefined): Promise<FactSections["memory"]> {
+  async memory(declared: Asked | undefined): Promise<FactSections["memory"]> {
     if (declared === undefined) {
       return undefined;
     }

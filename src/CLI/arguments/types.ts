@@ -1,10 +1,5 @@
 
-/**
- * The arguments each command takes, once read.
- *
- * `command` discriminates the union, so a caller that switches on it is told by the
- * compiler when a command is added and not handled.
- */
+/** The arguments each command takes, once read. */
 export type RuntimeArgs = {
   runtimeConfigPath?: string;
   pluginSpecifiers: string[];

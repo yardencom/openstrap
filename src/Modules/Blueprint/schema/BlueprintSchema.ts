@@ -61,7 +61,7 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
   }
 
   private get target(): ConfigSchemaNode<BlueprintTargetConfig> {
-    return this.schema.checked(this.written, (target) => [...namedOnce(target), ...forWhatIsDeclared(target)]);
+    return this.schema.checked(this.written, (target) => [...BlueprintSchema.namedOnce(target), ...BlueprintSchema.forWhatIsDeclared(target)]);
   }
 
   private get written(): ConfigSchemaNode<BlueprintTargetConfig> {
@@ -81,13 +81,7 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
     });
   }
 
-  /**
-   * Steps, told whether one written here may name the facts it answers.
-   *
-   * The conditions a guard may hold are built once and handed to both places. They are the whole
-   * vocabulary of the facts and they are enormous; two of them are the same schema written twice,
-   * and a JSON Schema emitter has no way to know that unless it is the same node.
-   */
+  /** Steps, told whether one written here names the requirements it is for. */
   private stepsOf(answers: "named" | "implied"): ConfigSchemaNode<WrittenStep[]> {
     this.conditions ??= this.requirements.factConditions();
 
@@ -101,68 +95,51 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       patternMessage: "must start with a lowercase letter and use lowercase letters, numbers, '.', '_', ':' or '-'",
     });
   }
-}
 
-/**
- * One name, one step, across the whole target.
- *
- * Each list of steps is checked for repeats on its own, and that is not enough: a step under one
- * requirement and a step under another are two lists, and two steps of the same name in them are
- * one step in the plan — steps are gathered by name, so the second would quietly replace the first
- * and one of the two would never run.
- *
- * A rule about the target rather than about any list in it, which is why it is written here and in
- * code: neither of the two is the wrong one, and the shape of a file cannot say this.
- */
-function namedOnce(target: BlueprintTargetConfig): ConfigIssue[] {
-  const written = new Map<string, string>();
-  const issues: ConfigIssue[] = [];
-  const places: Array<{ steps: readonly WrittenStep[]; where: string[]; underneath: string }> = [
-    ...(target.requirements ?? []).map((requirement, index) => ({
-      steps: requirement.steps ?? [],
-      where: ["requirements", String(index), "steps"],
-      underneath: `"${requirement.id}"`,
-    })),
-    { steps: target.steps ?? [], where: ["steps"], underneath: "the target" },
-  ];
+  /** One name, one step, across the whole target. */
+  private static namedOnce(target: BlueprintTargetConfig): ConfigIssue[] {
+    const written = new Map<string, string>();
+    const issues: ConfigIssue[] = [];
+    const places: Array<{ steps: readonly WrittenStep[]; where: string[]; underneath: string }> = [
+      ...(target.requirements ?? []).map((requirement, index) => ({
+        steps: requirement.steps ?? [],
+        where: ["requirements", String(index), "steps"],
+        underneath: `"${requirement.id}"`,
+      })),
+      { steps: target.steps ?? [], where: ["steps"], underneath: "the target" },
+    ];
 
-  for (const place of places) {
-    place.steps.forEach((step, index) => {
-      const first = written.get(step.id);
+    for (const place of places) {
+      place.steps.forEach((step, index) => {
+        const first = written.get(step.id);
 
-      if (first === undefined) {
-        written.set(step.id, place.underneath);
-        return;
-      }
+        if (first === undefined) {
+          written.set(step.id, place.underneath);
+          return;
+        }
 
-      issues.push({
-        path: [...place.where, String(index), "id"],
-        message: `already the name of a step under ${first}; one name is one step`,
+        issues.push({
+          path: [...place.where, String(index), "id"],
+          message: `already the name of a step under ${first}; one name is one step`,
+        });
       });
-    });
+    }
+
+    return issues;
   }
 
-  return issues;
-}
+  /** A step beside the requirements is for requirements that are there. */
+  private static forWhatIsDeclared(target: BlueprintTargetConfig): ConfigIssue[] {
+    const declared = new Set((target.requirements ?? []).map((requirement) => requirement.id));
 
-/**
- * A step beside the requirements is for requirements that are there.
- *
- * The only thing a name can be got wrong in, now that steps name requirements rather than copying
- * fact paths — and unlike a path, a name can be checked against something. A step for a requirement
- * nobody declared would validate, load, and never be planned, which is the failure this whole
- * spelling was chosen to make impossible.
- */
-function forWhatIsDeclared(target: BlueprintTargetConfig): ConfigIssue[] {
-  const declared = new Set((target.requirements ?? []).map((requirement) => requirement.id));
-
-  return (target.steps ?? []).flatMap((step, index) =>
-    (step.for ?? [])
-      .map((name, at) => ({ name, at }))
-      .filter(({ name }) => !declared.has(name))
-      .map(({ name, at }) => ({
-        path: ["steps", String(index), "for", String(at)],
-        message: `no requirement of this target is called "${name}"`,
-      })),
-  );
+    return (target.steps ?? []).flatMap((step, index) =>
+      (step.for ?? [])
+        .map((name, at) => ({ name, at }))
+        .filter(({ name }) => !declared.has(name))
+        .map(({ name, at }) => ({
+          path: ["steps", String(index), "for", String(at)],
+          message: `no requirement of this target is called "${name}"`,
+        })),
+    );
+  }
 }

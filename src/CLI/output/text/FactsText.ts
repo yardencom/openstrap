@@ -8,12 +8,8 @@ const namedSections = [
 ] as const;
 
 /**
- * Only what this reads out, and every part of it optional.
- *
- * Optional because a reading is only as wide as what was asked for: a blueprint that requires two
- * things produces a snapshot with two things in it, and no `os`, no `arch`, no `storage`. This
- * printer used to assume all of them and died on the first narrowed reading — `Cannot read properties
- * of undefined (reading 'display')` — while the same reading printed as JSON without complaint.
+ * Only what this reads out, and every part optional: a reading is only as wide as what was asked for, so a
+ * blueprint requiring two things produces a snapshot with two things and no `os` or `storage`.
  */
 type ReadMachine = {
   os?: { name?: string; kernel?: string; display?: { pretty?: string } };
@@ -25,16 +21,7 @@ type ReadMachine = {
   users?: Record<string, { name?: string }>;
 } & Record<string, unknown>;
 
-/**
- * What was read, as a person would want to see it.
- *
- * The sections that answer with one value each are printed as values; the ones that are maps are
- * printed as counts, because a machine with seven hundred processes on it is not readable as a list
- * and the stored result has every one of them.
- *
- * A section that was not asked about is not printed. Printing `unknown` for it would say something
- * false — that openstrap looked and could not tell — when the truth is that nobody asked.
- */
+/** What was read, as a person would want to see it. */
 export class FactsText implements CommandText<FactsCollectResult> {
   print(result: FactsCollectResult): string {
     const snapshot = result;

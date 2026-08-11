@@ -19,21 +19,9 @@ export type { Guard, Step, StepOutcome, StepStatus } from "#types/Step.js";
 /**
  * What to do about a machine that fell short, and doing it.
  *
- * The way into this module and the only one. Two questions, and they are deliberately two: what
- * would be done, and doing it. `--check` is the first without the second, and a thing that could
- * only answer both at once could not be asked to explain itself before it ran.
- *
- * What this module does not do is as much of its design as what it does. It does not read machines —
- * facts do that. It does not compare — requirements do that. It does not decide when to stop, or
- * whether it worked; that is a loop over all three, and a loop over three modules is a feature, not
- * a module. What is left is small on purpose: take a comparison apart, ask who knows what to do, do
- * it.
- *
- * And it knows nothing about any machine: not one program, not one way of starting things, not one
- * operating system, not one product. Every one of those lives in a resolver — in a plugin, or
- * written by hand in a blueprint — and the rule is kept by a test that greps this directory for
- * their names rather than by anyone remembering. That is what makes it an engine rather than a
- * catalogue: it can be pointed at anything, because it has never heard of anything.
+ * It does not read machines, does not compare, and does not decide when to stop — those are the other
+ * three stages, and a loop over them is a feature. And it knows nothing about any machine: not one
+ * program, not one operating system. A test greps this directory for their names.
  */
 export class Steps {
   constructor(
@@ -41,13 +29,7 @@ export class Steps {
     private readonly applying = new Applying(),
   ) {}
 
-  /**
-   * What is not true, and what would be done about it.
-   *
-   * The run goes in whole rather than a list of failures, because taking the failures out of it is
-   * this module's job and a caller doing it by hand is a caller with its own idea of which statuses
-   * mean the machine fell short.
-   */
+  /** What is not true, and what would be done about it. */
   plan(run: RequirementRun, facts: Immutable<FactSections>): Plan {
     return new Planning(this.resolvers).of(Unmet.in(run), facts);
   }
@@ -57,13 +39,7 @@ export class Steps {
     return this.applying.execute(steps);
   }
 
-  /**
-   * The same module, told about the steps a blueprint declared and where secrets come from.
-   *
-   * @param reveal What answers a name a step wrote instead of a value. Handed in, because which
-   * store an installation has is not this module's business — a keychain here, something else
-   * elsewhere, and the blueprint says neither.
-   */
+  /** The same module, told about the steps a blueprint declared and where secrets come from. */
   static declared(steps: readonly Step[], resolvers: readonly Resolver[] = [], reveal?: Reveal): Steps {
     return new Steps(
       steps.length === 0 ? resolvers : [new DeclaredSteps(steps), ...resolvers],

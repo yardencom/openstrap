@@ -3,48 +3,50 @@ import { z } from "zod";
 import type { ConfigSchemaNode } from "../../ConfigSchemaNode.js";
 import type { ZodSchemaMetadataRegistry } from "./ZodSchemaMetadataRegistry.js";
 
-export function createZodDiscriminatedUnion(
-  discriminator: string,
-  variants: Record<string, ConfigSchemaNode<object>>,
-  metadata: ZodSchemaMetadataRegistry,
-  unwrap: (variant: ConfigSchemaNode<object>) => z.ZodType,
-): z.ZodType {
-  const variantSchemas = Object.entries(variants).map(([variantKey, variant]) => {
-    assertVariantDiscriminator(discriminator, variantKey, variant, metadata);
-    return unwrap(variant);
-  });
-
-  const discriminatedUnion = z.discriminatedUnion as unknown as (
+export class ZodDiscriminatedUnionPolicy {
+  static create(
     discriminator: string,
-    variants: [z.ZodType, z.ZodType, ...z.ZodType[]],
-  ) => z.ZodType;
+    variants: Record<string, ConfigSchemaNode<object>>,
+    metadata: ZodSchemaMetadataRegistry,
+    unwrap: (variant: ConfigSchemaNode<object>) => z.ZodType,
+  ): z.ZodType {
+    const variantSchemas = Object.entries(variants).map(([variantKey, variant]) => {
+      ZodDiscriminatedUnionPolicy.assertVariantDiscriminator(discriminator, variantKey, variant, metadata);
+      return unwrap(variant);
+    });
 
-  return discriminatedUnion(discriminator, asUnionTuple(variantSchemas));
-}
+    const discriminatedUnion = z.discriminatedUnion as unknown as (
+      discriminator: string,
+      variants: [z.ZodType, z.ZodType, ...z.ZodType[]],
+    ) => z.ZodType;
 
-function assertVariantDiscriminator(
-  discriminator: string,
-  variantKey: string,
-  variant: ConfigSchemaNode<object>,
-  metadata: ZodSchemaMetadataRegistry,
-): void {
-  const discriminatorLiteral = metadata.getFieldLiteralValue(variant, discriminator);
-
-  if (discriminatorLiteral === undefined) {
-    throw new Error(`Config discriminated union variant '${variantKey}' must declare discriminator '${discriminator}'`);
+    return discriminatedUnion(discriminator, ZodDiscriminatedUnionPolicy.asUnionTuple(variantSchemas));
   }
 
-  if (discriminatorLiteral !== variantKey) {
-    throw new Error(
-      `Config discriminated union variant '${variantKey}' must use discriminator '${discriminator}' literal '${variantKey}'`,
-    );
-  }
-}
+  private static assertVariantDiscriminator(
+    discriminator: string,
+    variantKey: string,
+    variant: ConfigSchemaNode<object>,
+    metadata: ZodSchemaMetadataRegistry,
+  ): void {
+    const discriminatorLiteral = metadata.getFieldLiteralValue(variant, discriminator);
 
-function asUnionTuple<TValue>(values: readonly TValue[]): [TValue, TValue, ...TValue[]] {
-  if (values.length < 2) {
-    throw new Error("Expected at least two union variants");
+    if (discriminatorLiteral === undefined) {
+      throw new Error(`Config discriminated union variant '${variantKey}' must declare discriminator '${discriminator}'`);
+    }
+
+    if (discriminatorLiteral !== variantKey) {
+      throw new Error(
+        `Config discriminated union variant '${variantKey}' must use discriminator '${discriminator}' literal '${variantKey}'`,
+      );
+    }
   }
 
-  return values as [TValue, TValue, ...TValue[]];
+  private static asUnionTuple<TValue>(values: readonly TValue[]): [TValue, TValue, ...TValue[]] {
+    if (values.length < 2) {
+      throw new Error("Expected at least two union variants");
+    }
+
+    return values as [TValue, TValue, ...TValue[]];
+  }
 }

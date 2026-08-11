@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ConfigDefinition } from "../../ConfigDefinition.js";
 import type { JsonSchema } from "../../ports/ConfigJsonSchemaBackend.js";
-import { removeDefaultedFieldsFromRequired } from "./ZodJsonSchemaPolicy.js";
+import { ZodJsonSchemaPolicy } from "./ZodJsonSchemaPolicy.js";
 import type { ZodSchemaRegistry } from "./ZodSchemaRegistry.js";
 
 export class ZodJsonSchemaEmitter {
@@ -19,7 +19,7 @@ export class ZodJsonSchemaEmitter {
       reused: "ref",
     }) as JsonSchema;
 
-    removeDefaultedFieldsFromRequired(jsonSchema);
+    ZodJsonSchemaPolicy.removeDefaultedFieldsFromRequired(jsonSchema);
 
     const { $schema, ...body } = jsonSchema;
 

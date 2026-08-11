@@ -1,3 +1,5 @@
+import type { Asked } from "#types/FactDeclaration.js";
+import { connect } from "node:net";
 import { readFileSync } from "node:fs";
 
 import si from "systeminformation";
@@ -6,34 +8,66 @@ import type { FactSections, Network, NetworkInterface, PortFact } from "#types/F
 
 /** How this machine is reachable, and what is listening on it. */
 export class NetworkFacts {
-  async network(declared: Record<string, never> | undefined): Promise<FactSections["network"]> {
+  async network(declared: Asked | undefined): Promise<FactSections["network"]> {
     if (declared === undefined) {
       return undefined;
     }
 
     const [interfaces, connections] = await Promise.all([si.networkInterfaces(), si.networkConnections()]);
-
-    return this.reported(interfaces, connections);
-  }
-
-  private reported(
-    interfaces: si.Systeminformation.NetworkInterfacesData[] | si.Systeminformation.NetworkInterfacesData,
-    connections: si.Systeminformation.NetworkConnectionsData[],
-  ): Network {
     const list = Array.isArray(interfaces) ? interfaces : [interfaces];
 
     return {
       interfaces: Object.fromEntries(list.map((entry) => [entry.iface, this.networkInterface(entry)])),
       dns: this.resolver(),
-      ports: this.listeningPorts(connections),
+      ports: await this.ports(connections, declared.ports),
       firewall: { status: "unknown", reason: "not_read" },
       reachability: {},
     };
   }
 
+  /**
+   * The ports of this machine: the ones something is holding, and the ones a requirement named.
+   *
+   * Two questions, and a machine answers them differently about the same port. A container publishes
+   * one with a rule that rewrites the destination and claims nothing on the machine: the socket table
+   * is empty for it while a connection is answered. Only named ports are knocked on — trying every
+   * port is a port scan.
+   */
+  private async ports(
+    connections: si.Systeminformation.NetworkConnectionsData[],
+    asked: unknown,
+  ): Promise<Record<string, PortFact>> {
+    const ports = this.listeningPorts(connections);
+
+    for (const name of Object.keys(asked !== null && typeof asked === "object" ? asked : {})) {
+      const address = NetworkFacts.addressOf(name);
+
+      if (address === undefined || address.protocol !== "tcp") {
+        continue;
+      }
+
+      const reachable = await NetworkFacts.knock(address.port);
+      const held = ports[name];
+
+      ports[name] = held
+        ? { ...held, reachable }
+        // Nothing is holding it. Reachable anyway means something answered — a rule took the packet
+        // somewhere. Not reachable means the port is simply not there, which is an answer too.
+        : {
+            status: reachable ? "present" : "absent",
+            protocol: address.protocol,
+            port: address.port,
+            reachable,
+            ...(reachable ? { state: "reachable" } : { reason: "nothing_holds_it_and_it_does_not_answer" }),
+          };
+    }
+
+    return ports;
+  }
+
   private networkInterface(entry: si.Systeminformation.NetworkInterfacesData): NetworkInterface {
     const addresses = [
-      entry.ip4 ? { ip: entry.ip4, family: "ipv4", prefix: prefixOf(entry.ip4subnet) } : undefined,
+      entry.ip4 ? { ip: entry.ip4, family: "ipv4", prefix: NetworkFacts.prefixOf(entry.ip4subnet) } : undefined,
       entry.ip6 ? { ip: entry.ip6, family: "ipv6" } : undefined,
     ].filter((address): address is { ip: string; family: string; prefix?: number } => address !== undefined);
 
@@ -47,13 +81,7 @@ export class NetworkFacts {
     };
   }
 
-/**
-   * Which ports are being listened on, keyed by protocol and port.
-   *
-   * A requirement asks "is something listening on 22", so the key has to be the
-   * thing asked about. Both address families answer under the same key when they
-   * listen on the same port, which is what a caller means by "port 22 is open".
-   */
+/** Which ports are being listened on, keyed by protocol and port. */
   private listeningPorts(connections: si.Systeminformation.NetworkConnectionsData[]): Record<string, PortFact> {
     const ports: Record<string, PortFact> = {};
 
@@ -82,14 +110,7 @@ export class NetworkFacts {
     return ports;
   }
 
-/**
-   * The resolver configuration, read from the file that holds it.
-   *
-   * `/etc/resolv.conf` is generated on both Linux and macOS, and reading it is
-   * the only way to learn the resolvers without asking a program. A machine
-   * without one is answered with no resolvers rather than with a failure: no
-   * resolver configuration is a legitimate state.
-   */
+/** The resolver configuration, read from the file that holds it. */
   private resolver(): Network["dns"] {
     let content: string;
 
@@ -121,19 +142,45 @@ export class NetworkFacts {
 
     return { resolvers, search, domain };
   }
+
+  private static prefixOf(mask: string | undefined): number | undefined {
+    if (!mask) {
+      return undefined;
+    }
+
+    const octets = mask.split(".").map(Number);
+
+    if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+      return undefined;
+    }
+
+    return octets.reduce((bits, octet) => bits + octet.toString(2).split("1").length - 1, 0);
+  }
+
+  private static addressOf(name: string): { protocol: string; port: number } | undefined {
+    const [protocol, port] = name.split("/");
+    const number = Number(port);
+
+    return protocol && Number.isInteger(number) && number > 0 ? { protocol, port: number } : undefined;
+  }
+
+  /** Whether a connection to this port of this machine is accepted. */
+  private static knock(port: number, timeoutMs = 2000): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = connect({ host: "127.0.0.1", port });
+      const answer = (reachable: boolean) => () => {
+        socket.destroy();
+        resolve(reachable);
+      };
+
+      socket.setTimeout(timeoutMs);
+      socket.once("connect", answer(true));
+      socket.once("error", answer(false));
+      socket.once("timeout", answer(false));
+    });
+  }
 }
 
 /** `255.255.255.0` is a prefix of 24; a mask nobody reported is no prefix. */
-function prefixOf(mask: string | undefined): number | undefined {
-  if (!mask) {
-    return undefined;
-  }
 
-  const octets = mask.split(".").map(Number);
-
-  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
-    return undefined;
-  }
-
-  return octets.reduce((bits, octet) => bits + octet.toString(2).split("1").length - 1, 0);
-}
+/** A port as a requirement names it: `tcp/8080`. */

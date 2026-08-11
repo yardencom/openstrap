@@ -1,10 +1,4 @@
-/**
- * The image a target is pinned to is not the image that came back.
- *
- * A failure rather than a new pin, because the point of a pin is that the second machine is made
- * from the first machine's file. Something moved upstream, or the blueprint now asks for a
- * different image; either way it is a decision, and `--repin` is how a person makes it.
- */
+/** The image a target is pinned to is not the image that came back. */
 export class PinnedImageChangedError extends Error {
   constructor(
     readonly target: string,

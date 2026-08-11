@@ -1,38 +1,17 @@
 import { CheckOutcome } from "./CheckOutcome.js";
 import { Comparison } from "./Comparison.js";
-import { factSections, shapeOf, type FactSection, type FactShape } from "#types/Facts.js";
+import { factSections, Shape, type FactSection, type FactShape } from "#types/Facts.js";
 import type { Observed, ObservedStatus } from "#types/Facts.js";
 import type { CheckStatus, RequirementCheckNode, RequirementLeafCheck, RequirementResult, TargetlessRequirement } from "#types/Requirements.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 
-/**
- * Fields that name the requirement rather than a section of facts.
- *
- * `steps` is in the list and never reaches here: the loader takes the steps out of a requirement on
- * the way in, because a step is not a statement about a machine. It is named anyway, so that one
- * arriving by some other road is skipped rather than reported as a section nobody collected.
- */
+/** Fields that name the requirement rather than a section of facts. */
 const meta = new Set(["id", "optional", "steps"]);
 
 /** Statuses that mean the machine was not read, so nothing under them can be compared. */
 const unreadable = new Set<ObservedStatus>(["unknown", "unsupported", "error"]);
 
-/**
- * One requirement, against one reading of one machine.
- *
- * A requirement is shaped like the facts it is about, so checking it is walking the two together:
- * every key of the requirement is a key of the facts, until a leaf is reached and there is something
- * to compare. What comes back has the same shape again — a tree of results — because a requirement
- * that failed somewhere deep is only useful if it says where.
- *
- * The walk carries two things that decide what a missing value means, and both exist because
- * "absent" and "unknown" are different answers and neither is "openstrap failed to look":
- *
- * - what the machine said about the section it is inside, so a field under a section that could not
- *   be read is reported as unverifiable rather than as a failure;
- * - what the model says sits at this point, so a name missing from a map the machine filled in is an
- *   absence — nothing is listening on that port — rather than a hole in the reading.
- */
+/** One requirement, against one reading of one machine. */
 export class RequirementCheck {
   constructor(private readonly requirement: TargetlessRequirement) {}
 
@@ -45,7 +24,7 @@ export class RequirementCheck {
         target: targetName,
         snapshotId: null,
         status: "error",
-        checks: unanswered(blocks, "No FactSnapshot was collected for requirement target"),
+        checks: RequirementCheck.unanswered(blocks, "No FactSnapshot was collected for requirement target"),
       };
     }
 
@@ -55,7 +34,7 @@ export class RequirementCheck {
         actual: (snapshot.facts as Record<string, unknown> | undefined)?.[section],
         path: [section],
         observed: undefined,
-        shape: isFactSection(section) ? shapeOf(section) : undefined,
+        shape: RequirementCheck.isFactSection(section) ? Shape.of(section) : undefined,
       })]),
     );
 
@@ -80,16 +59,16 @@ export class RequirementCheck {
     observed: Observed | undefined;
     shape: FactShape | undefined;
   }): RequirementCheckNode {
-    if (!isRecord(at.expected) || Comparison.isAssertion(at.expected)) {
+    if (!RequirementCheck.isRecord(at.expected) || Comparison.isAssertion(at.expected)) {
       return this.leaf(at);
     }
 
-    const observed = asObserved(at.actual) ?? at.observed;
-    const entries = namedEntriesOf(at.shape);
+    const observed = RequirementCheck.asObserved(at.actual) ?? at.observed;
+    const entries = RequirementCheck.namedEntriesOf(at.shape);
     const checks: Record<string, RequirementCheckNode> = this.presence(at, observed);
 
     for (const [key, expected] of Object.entries(at.expected)) {
-      const actual = isRecord(at.actual) ? at.actual[key] : undefined;
+      const actual = RequirementCheck.isRecord(at.actual) ? at.actual[key] : undefined;
 
       checks[key] = this.node({
         expected,
@@ -97,46 +76,32 @@ export class RequirementCheck {
         // machine listed what it found, and this is not among them. `tcp/6443` missing from
         // `network.ports` means nothing is listening there, which is an answer — and reporting it as
         // "missing from normalized facts" said instead that openstrap had failed to look.
-        actual: actual === undefined && entries !== undefined && isRecord(at.actual)
+        actual: actual === undefined && entries !== undefined && RequirementCheck.isRecord(at.actual)
           ? { status: "absent" }
           : actual,
         path: [...at.path, key],
         observed,
-        shape: entries ?? fieldOf(at.shape, key),
+        shape: entries ?? RequirementCheck.fieldOf(at.shape, key),
       });
     }
 
     return checks;
   }
 
-  /**
-   * A thing a requirement named has to be there.
-   *
-   * Naming something is requiring it: a blueprint that says `paths.config` is saying the machine has
-   * that path, and everything written beside it is what else must be true of it. So a reading that
-   * came back `absent` fails, whether or not anything was asked about the fields.
-   *
-   * Without this, a requirement could pass against a machine that has nothing of what it named. It
-   * did: `paths: { config: { path: /etc/ssh/no-such-file } }` reported one check passed, because the
-   * only thing written was where to look, and openstrap had indeed looked there.
-   *
-   * A requirement that says what it expects the status to be is left alone — `exists: false` and
-   * `status: absent` are how a blueprint requires something to be gone, and they are answered by the
-   * comparison like anything else.
-   */
+  /** A thing a requirement named has to be there. */
   private presence(
     at: { expected: unknown; actual: unknown; path: readonly string[]; shape: FactShape | undefined },
     observed: Observed | undefined,
   ): Record<string, RequirementCheckNode> {
-    const named = at.path.length === 2 && namedEntriesOf(at.shape) === undefined;
-    const asked = isRecord(at.expected) && ("status" in at.expected || "exists" in at.expected);
+    const named = at.path.length === 2 && RequirementCheck.namedEntriesOf(at.shape) === undefined;
+    const asked = RequirementCheck.isRecord(at.expected) && ("status" in at.expected || "exists" in at.expected);
 
     if (!named || asked || observed === undefined || observed.status === "present") {
       return {};
     }
 
     return {
-      status: checked(
+      status: RequirementCheck.checked(
         observed.status === "absent" ? "failed" : "error",
         "present",
         observed.status,
@@ -156,88 +121,91 @@ export class RequirementCheck {
 
     if (at.actual === undefined) {
       if (at.observed?.status === "absent") {
-        return checked("failed", at.expected, null, `${where} expected ${format(at.expected)}, got absent`);
+        return RequirementCheck.checked("failed", at.expected, null, `${where} expected ${RequirementCheck.format(at.expected)}, got absent`);
       }
 
       return at.observed && unreadable.has(at.observed.status)
-        ? checked("error", at.expected, null, `${where} cannot be verified: ${at.observed.status}`)
-        : checked("error", at.expected, null, `${where} is missing from normalized facts`);
+        ? RequirementCheck.checked("error", at.expected, null, `${where} cannot be verified: ${at.observed.status}`)
+        : RequirementCheck.checked("error", at.expected, null, `${where} is missing from normalized facts`);
     }
 
     // The status itself stays comparable under an unreadable section: a requirement that asks
     // whether a service is `absent` is answered by the reading that said so.
     if (field !== "status" && at.observed && unreadable.has(at.observed.status)) {
-      return checked("error", at.expected, at.actual, `${where} cannot be verified: ${at.observed.status}`);
+      return RequirementCheck.checked("error", at.expected, at.actual, `${where} cannot be verified: ${at.observed.status}`);
     }
 
     const comparison = new Comparison(field, at.expected, at.actual).result();
 
-    return checked(
+    return RequirementCheck.checked(
       comparison.status,
       at.expected,
       at.actual,
-      comparison.message ?? `${where} expected ${format(at.expected)}, got ${format(at.actual)}`,
-    );
-  }
-}
-
-/**
- * The same tree, with every leaf saying the same thing.
- *
- * A requirement checked against nothing still reports every check it holds, because a result that
- * listed no checks would read as a requirement that asked for nothing.
- */
-function unanswered(expected: unknown, message: string): RequirementCheckNode {
-  if (isRecord(expected) && !Comparison.isAssertion(expected)) {
-    return Object.fromEntries(
-      Object.entries(expected).map(([key, value]) => [key, unanswered(value, message)]),
+      comparison.message ?? `${where} expected ${RequirementCheck.format(at.expected)}, got ${RequirementCheck.format(at.actual)}`,
     );
   }
 
-  return checked("error", expected, null, message);
+  /** The same tree, with every leaf saying the same thing. */
+  private static unanswered(expected: unknown, message: string): RequirementCheckNode {
+    if (RequirementCheck.isRecord(expected) && !Comparison.isAssertion(expected)) {
+      return Object.fromEntries(
+        Object.entries(expected).map(([key, value]) => [key, RequirementCheck.unanswered(value, message)]),
+      );
+    }
+
+    return RequirementCheck.checked("error", expected, null, message);
+  }
+
+  private static checked(status: CheckStatus, expected: unknown, actual: unknown, message: string): RequirementLeafCheck {
+    return {
+      status,
+      expected: {
+        passed: status === "passed" ? true : status === "failed" ? false : null,
+        value: expected,
+      },
+      actual,
+      details: { message },
+    };
+  }
+
+  private static namedEntriesOf(shape: FactShape | undefined): FactShape | undefined {
+    return shape && typeof shape === "object" && "named" in shape ? shape.named : undefined;
+  }
+
+  private static fieldOf(shape: FactShape | undefined, key: string): FactShape | undefined {
+    return shape && typeof shape === "object" && "fields" in shape ? shape.fields[key] : undefined;
+  }
+
+  private static asObserved(value: unknown): Observed | undefined {
+    if (!RequirementCheck.isRecord(value) || typeof value.status !== "string") {
+      return undefined;
+    }
+
+    return ["present", "absent", "unknown", "unsupported", "error"].includes(value.status)
+      ? value as Observed
+      : undefined;
+  }
+
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
+  private static format(value: unknown): string {
+    return JSON.stringify(value);
+  }
+
+  private static isFactSection(name: string): name is FactSection {
+    return name in factSections;
+  }
 }
 
-function checked(status: CheckStatus, expected: unknown, actual: unknown, message: string): RequirementLeafCheck {
-  return {
-    status,
-    expected: {
-      passed: status === "passed" ? true : status === "failed" ? false : null,
-      value: expected,
-    },
-    actual,
-    details: { message },
-  };
-}
+
 
 /** What one entry of a map looks like, when the model says this point holds named entries. */
-function namedEntriesOf(shape: FactShape | undefined): FactShape | undefined {
-  return shape && typeof shape === "object" && "named" in shape ? shape.named : undefined;
-}
 
-function fieldOf(shape: FactShape | undefined, key: string): FactShape | undefined {
-  return shape && typeof shape === "object" && "fields" in shape ? shape.fields[key] : undefined;
-}
 
 /** What the machine said about a thing, when what it said has the shape of an answer. */
-function asObserved(value: unknown): Observed | undefined {
-  if (!isRecord(value) || typeof value.status !== "string") {
-    return undefined;
-  }
 
-  return ["present", "absent", "unknown", "unsupported", "error"].includes(value.status)
-    ? value as Observed
-    : undefined;
-}
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function format(value: unknown): string {
-  return JSON.stringify(value);
-}
 
 /** Whether this key of a requirement names a section a machine is read into. */
-function isFactSection(name: string): name is FactSection {
-  return name in factSections;
-}

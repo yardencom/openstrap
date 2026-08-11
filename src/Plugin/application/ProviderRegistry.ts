@@ -23,7 +23,7 @@ export class ProviderRegistry {
   private readonly providers = new Map<string, RegisteredProvider>();
 
   register(provider: Provider, pluginName: string): void {
-    validateProvider(provider, pluginName);
+    ProviderRegistry.validateProvider(provider, pluginName);
 
     const existing = this.providers.get(provider.id);
     if (existing) {
@@ -57,24 +57,24 @@ export class ProviderRegistry {
   list(): readonly RegisteredProvider[] {
     return [...this.providers.values()];
   }
-}
 
-function validateProvider(provider: Provider, pluginName: string): void {
-  if (!provider.id || typeof provider.id !== "string") {
-    throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a provider without string id`);
-  }
+  private static validateProvider(provider: Provider, pluginName: string): void {
+    if (!provider.id || typeof provider.id !== "string") {
+      throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a provider without string id`);
+    }
 
-  if (!provider.capabilities || provider.capabilities.scopes.length === 0) {
-    throw new OpenStrapPluginError(`Provider "${provider.id}" must declare at least one scope capability`);
-  }
+    if (!provider.capabilities || provider.capabilities.scopes.length === 0) {
+      throw new OpenStrapPluginError(`Provider "${provider.id}" must declare at least one scope capability`);
+    }
 
-  if (provider.capabilities.types.length === 0) {
-    throw new OpenStrapPluginError(`Provider "${provider.id}" must declare at least one target type capability`);
-  }
+    if (provider.capabilities.types.length === 0) {
+      throw new OpenStrapPluginError(`Provider "${provider.id}" must declare at least one target type capability`);
+    }
 
-  for (const operation of requiredOperations) {
-    if (typeof provider[operation] !== "function") {
-      throw new OpenStrapPluginError(`Provider "${provider.id}" must expose ${operation}()`);
+    for (const operation of requiredOperations) {
+      if (typeof provider[operation] !== "function") {
+        throw new OpenStrapPluginError(`Provider "${provider.id}" must expose ${operation}()`);
+      }
     }
   }
 }

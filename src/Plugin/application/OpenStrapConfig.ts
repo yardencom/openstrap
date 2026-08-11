@@ -7,17 +7,7 @@ import { OpenStrapPluginError } from "../errors/OpenStrapPluginError.js";
 
 const fileNames = ["openstrap.config.mjs", "openstrap.config.js"];
 
-/**
- * The runtime configuration of a project: which plugins it has.
- *
- * Found on disk rather than named on the command line, because what a project is built with is a
- * property of the project. A run may add to it — `--plugin` — but the list a project always has is
- * written down in it, and openstrap has to be able to read that list before it knows what any word
- * on the command line means.
- *
- * A project without the file is not an error: openstrap with no plugins can still read the machine
- * it runs on. It is the commands that plugins bring which then do not exist.
- */
+/** The runtime configuration of a project: which plugins it has. */
 export class OpenStrapConfig {
   constructor(
     private readonly cwd: string,
@@ -40,34 +30,34 @@ export class OpenStrapConfig {
 
     const module = await import(pathToFileURL(path).href) as Record<string, unknown>;
 
-    return validate(exported(module, path), path);
-  }
-}
-
-function exported(module: Record<string, unknown>, path: string): unknown {
-  if ("default" in module) {
-    return module.default;
+    return OpenStrapConfig.validate(OpenStrapConfig.exported(module, path), path);
   }
 
-  if ("openstrapConfig" in module) {
-    return module.openstrapConfig;
+  private static exported(module: Record<string, unknown>, path: string): unknown {
+    if ("default" in module) {
+      return module.default;
+    }
+
+    if ("openstrapConfig" in module) {
+      return module.openstrapConfig;
+    }
+
+    throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" must export default config`);
   }
 
-  throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" must export default config`);
-}
+  private static validate(value: unknown, path: string): OpenStrapPluginConfig {
+    if (!OpenStrapConfig.isRecord(value)) {
+      throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" must export an object`);
+    }
 
-function validate(value: unknown, path: string): OpenStrapPluginConfig {
-  if (!isRecord(value)) {
-    throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" must export an object`);
+    if (value.plugins !== undefined && !Array.isArray(value.plugins)) {
+      throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" field plugins must be an array`);
+    }
+
+    return value as OpenStrapPluginConfig;
   }
 
-  if (value.plugins !== undefined && !Array.isArray(value.plugins)) {
-    throw new OpenStrapPluginError(`OpenStrap plugin config "${path}" field plugins must be an array`);
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
   }
-
-  return value as OpenStrapPluginConfig;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }

@@ -14,18 +14,7 @@ import { Redaction } from "../redaction/Redaction.js";
 /** How much of an artifact is kept when the caller asks for its content. */
 const contentLimitBytes = 1024 * 1024;
 
-/**
- * What is at each path the caller named.
- *
- * The paths arrive named — `{ workspace: "/src/app" }` — and the facts come back
- * under those names: a requirement asks whether `workspace` is writable, never
- * whether `/src/app` is. The path that was actually inspected travels inside the
- * fact, so a reader can still see what was looked at.
- *
- * A path that is not there is an answer, not a failure. A path that is there but
- * fails what the caller required of it is an error, because the caller said what
- * would make it acceptable and it is not.
- */
+/** What is at each path the caller named. */
 export class PathFacts {
   constructor(private readonly platform: Platform) {}
 
@@ -35,7 +24,7 @@ export class PathFacts {
     }
 
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
-      const where = wherePathIs(id, declaration.path);
+      const where = PathFacts.wherePathIs(id, declaration.path);
 
       if (!this.platform.matches(declaration.platforms)) {
         return [id, { status: "unsupported" as const, path: where, reason: "platform_not_selected" }];
@@ -51,7 +40,7 @@ export class PathFacts {
     }
 
     return Object.fromEntries(Object.entries(declared).map(([id, declaration]) => {
-      const where = wherePathIs(id, declaration.path);
+      const where = PathFacts.wherePathIs(id, declaration.path);
 
       if (!this.platform.matches(declaration.platforms)) {
         return [id, { status: "unsupported" as const, path: where, reason: "platform_not_selected" }];
@@ -61,13 +50,7 @@ export class PathFacts {
     }));
   }
 
-  /**
-   * A path expanded the way the machine being read would expand it.
-   *
-   * `$HOME` means the home directory of the account this reading runs as, which
-   * is why it is expanded here and not by whoever wrote the declaration: on a
-   * guest that is a different account on a different machine.
-   */
+  /** A path expanded the way the machine being read would expand it. */
   private expanded(path: string): string {
     for (const prefix of ["$HOME", "~"]) {
       if (path === prefix) {
@@ -102,15 +85,7 @@ export class PathFacts {
     }, required);
   }
 
-  /**
-   * What the path is, following links.
-   *
-   * A symlink to a directory is the directory as far as anyone asking "is my
-   * cache directory there" is concerned. A link whose target is gone is still an
-   * entry on the disk, so it reads as a symlink rather than as nothing: calling
-   * a broken link "absent" would hide it behind a fact that looks like empty
-   * space.
-   */
+  /** What the path is, following links. */
   private entry(path: string): { type: string; sizeBytes: number; mode: string } | undefined {
     try {
       const stat = statSync(path);
@@ -206,13 +181,7 @@ export class PathFacts {
     }
   }
 
-  /**
-   * The artifact itself, up to a limit.
-   *
-   * A snapshot is meant to be read and compared, so an unbounded file would make
-   * it unusable. Truncation is recorded rather than silent: a reader has to be
-   * able to tell a short file from a shortened one.
-   */
+  /** The artifact itself, up to a limit. */
   private captured(found: ArtifactFact, declaration: ArtifactDeclaration): ArtifactFact {
     let content: string;
 
@@ -240,16 +209,9 @@ export class PathFacts {
       return false;
     }
   }
-}
 
-/**
- * Where a declared path is.
- *
- * The name usually is the path — `/etc/ssh/sshd_config` is both — so a declaration that says nothing
- * more is asking about the thing it named. `home` is the one name that is not a path anywhere and
- * means the same thing everywhere, and it is spelled here rather than by whoever wrote the
- * declaration because only this machine knows whose home it is.
- */
-function wherePathIs(name: string, declared: string | undefined): string {
-  return declared ?? (name === "home" ? "$HOME" : name);
+  /** Where a declared path is. */
+  private static wherePathIs(name: string, declared: string | undefined): string {
+    return declared ?? (name === "home" ? "$HOME" : name);
+  }
 }

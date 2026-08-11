@@ -5,38 +5,11 @@ import type { WrittenStep } from "./BlueprintConfig.js";
 /** Exactly one of these says what the step does. It is the word a person writes. */
 const actions = ["run", "exec", "write", "remove", "download"] as const;
 
-/**
- * A step as a person writes one.
- *
- * Written the way the rest of this field writes them, because a format nobody can read is a format
- * nobody reviews:
- *
- *     steps:
- *       - run: curl -sfL https://get.k3s.io | sh -
- *
- * The word that says what to do is the key. There is no `kind` field — that is the discriminator of
- * a union in the type system, and it was in this file only because the type's internals had been
- * copied into the document a person writes. There is no `describes` either: the action says what it
- * does, and a sentence repeating it is a sentence that goes stale.
- *
- * Two ways of running something, and the difference is the one every tool in this field makes:
- * `run` is a shell line, which is what a pipe or a redirect needs; `exec` is a program and its
- * arguments, with no shell to reinterpret them. A person reaching for a pipe should not have to know
- * to write `sh -c` themselves, and a person passing a filename with a space in it should not have to
- * worry about quoting.
- */
+/** A step as a person writes one. */
 export class StepSchema {
   constructor(private readonly schema: ConfigSchema) {}
 
-  /**
-   * The steps written in one place — inside a requirement, or beside them all.
-   *
-   * @param guard What may be said about the facts, which is the requirements' language. Handed in
-   * rather than built here: the blueprint is the one thing that holds both and can introduce them.
-   * @param answers Whether a step here names the requirements it is for. Steps written inside a
-   * requirement do not: they are for the one they sit in, and a second answer to that question is
-   * a second answer that can disagree.
-   */
+  /** The steps written in one place — inside a requirement, or beside them all. */
   ofOnePlace(
     guard: ConfigSchemaNode<Record<string, unknown>>,
     answers: "named" | "implied",
@@ -72,7 +45,7 @@ export class StepSchema {
         ),
         timeoutMs: this.schema.optional(this.schema.number({ int: true, positive: true })),
       }) as ConfigSchemaNode<WrittenStep>,
-      doesOneThing,
+      StepSchema.doesOneThing,
     );
   }
 
@@ -99,18 +72,7 @@ export class StepSchema {
     });
   }
 
-  /**
-   * A value a step is given: the value, or the name of a secret to fetch it by.
-   *
-   * ```yaml
-   * environment:
-   *   PGPASSWORD: { secret: openstrap-server.database-password }
-   * ```
-   *
-   * The store is not named here. Which one holds it belongs to the installation — a keychain on one
-   * machine, a vault somewhere else — and a blueprint naming one would be a blueprint that works in
-   * one place. This says only that the value is not written down.
-   */
+  /** A value a step is given: the value, or the name of a secret to fetch it by. */
   private get value(): ConfigSchemaNode<StepValue> {
     return this.schema.union<StepValue>([
       this.schema.string(),
@@ -137,26 +99,20 @@ export class StepSchema {
   private get access(): ConfigSchemaNode<"executable" | "private" | "readable"> {
     return this.schema.enum(["executable", "private", "readable"] as const);
   }
-}
 
-/**
- * One step, one thing.
- *
- * The cost of making the action the key rather than a field: nothing in the shape of the document
- * stops a person writing two of them, and the shape cannot be made to. Two would mean one of them
- * silently not happening, so both are refused and the person is told which two.
- */
-function doesOneThing(step: WrittenStep): ConfigIssue[] {
-  const written = actions.filter((action) => step[action] !== undefined);
+  /** One step, one thing. */
+  private static doesOneThing(step: WrittenStep): ConfigIssue[] {
+    const written = actions.filter((action) => step[action] !== undefined);
 
-  if (written.length === 1) {
-    return [];
+    if (written.length === 1) {
+      return [];
+    }
+
+    return [{
+      path: [],
+      message: written.length === 0
+        ? `a step has to do one of: ${actions.join(", ")}`
+        : `a step does one thing, and this one writes ${written.join(" and ")}`,
+    }];
   }
-
-  return [{
-    path: [],
-    message: written.length === 0
-      ? `a step has to do one of: ${actions.join(", ")}`
-      : `a step does one thing, and this one writes ${written.join(" and ")}`,
-  }];
 }

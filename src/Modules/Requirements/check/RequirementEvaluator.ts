@@ -15,17 +15,7 @@ export type EvaluationRequest = {
   purpose?: string;
 };
 
-/**
- * Every requirement of one machine, checked, and written down as one run.
- *
- * The judging itself is not here — one requirement against one reading is `RequirementCheck`. What
- * is here is the run: which machine it was about, when, what each requirement came to, and what they
- * come to together.
- *
- * A requirement is handed only the reading of the machine it is about. Requirements of one machine
- * answered by another machine's facts is the kind of mistake that produces a green run meaning
- * nothing, so the snapshot is looked up by target rather than taken from the pile.
- */
+/** Every requirement of one machine, checked, and written down as one run. */
 export class RequirementEvaluator {
   evaluate(request: EvaluationRequest): RequirementRun {
     const evaluatedAt = request.now ?? new Date();
@@ -47,15 +37,16 @@ export class RequirementEvaluator {
         [request.target.name]: request.target.name,
       },
       results,
-      details: status === "passed" ? undefined : { message: whatWentWrong(results) },
+      details: status === "passed" ? undefined : { message: RequirementEvaluator.whatWentWrong(results) },
     };
+  }
+
+  private static whatWentWrong(results: readonly RequirementResult[]): string {
+    return results
+      .filter((result) => result.status !== "passed")
+      .map((result) => `${result.requirementId}: ${result.status}`)
+      .join("; ");
   }
 }
 
 /** The short of it: which requirements are not passing, and how each is not passing. */
-function whatWentWrong(results: readonly RequirementResult[]): string {
-  return results
-    .filter((result) => result.status !== "passed")
-    .map((result) => `${result.requirementId}: ${result.status}`)
-    .join("; ");
-}

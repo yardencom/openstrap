@@ -3,13 +3,7 @@ import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { ConnectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-/**
- * `openstrap connect` — reach a machine openstrap created, and optionally run something.
- *
- * The only command whose output is not openstrap's own: with `--run` it hands back what
- * the machine printed, unchanged and undecorated, and exits with the code the machine
- * exited with. Anything added around that would be openstrap talking over the answer.
- */
+/** `openstrap connect` — reach a machine openstrap created, and optionally run something. */
 /** What reaching a machine produced: what it said, and how it ended. */
 export type ConnectResult = {
   output: string;

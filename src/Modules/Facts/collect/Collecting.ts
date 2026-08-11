@@ -17,14 +17,7 @@ import { StorageFacts } from "./storage/StorageFacts.js";
 import { ToolFacts } from "./tools/ToolFacts.js";
 import { VirtualizationFacts } from "./virtualization/VirtualizationFacts.js";
 
-/**
- * One reading of a machine, section by section.
- *
- * Every section is collected by the one class responsible for it, and every one of them is called:
- * what the order holds for that section is handed over, and what to do with nothing is the
- * collector's own business. There is no deciding here, because the order has already decided — it
- * says what to collect, and this collects it.
- */
+/** One reading of a machine, section by section. */
 export class Collecting {
   private readonly platform = Platform.current();
   private readonly operatingSystem = new OsFacts(this.platform);
@@ -70,17 +63,7 @@ export class Collecting {
     };
   }
 
-  /**
-   * The `transports` section: the channel these facts were read through, when there was one.
-   *
-   * Nothing on a machine can answer this — a machine does not know how anyone got in — so it is
-   * recorded only when whoever opened the channel says so. It matters because a requirement can be
-   * written about the channel itself.
-   *
-   * Nothing is invented. openstrap reading the machine it is on opened nothing, so it names nothing;
-   * a `local` transport written in anyway was an invention, and a requirement about a `local`
-   * transport was passing against exactly that.
-   */
+  /** The channel these facts were read through, when there was one. */
   private transports(channel: FactChannel | undefined): Record<string, TransportFact> {
     if (channel === undefined) {
       return {};

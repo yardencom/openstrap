@@ -5,12 +5,7 @@ export type TargetRecord = {
   scope: TargetScope;
   type: TargetType;
   provider?: string;
-  /**
-   * What reached this machine, once something has.
-   *
-   * Absent until then: a machine being made has not been reached yet, and the blueprint that
-   * declared it need not have said how it would be. Whoever opens the channel writes it down.
-   */
+  /** What reached this machine, once something has. */
   transport?: string;
 };
 
@@ -64,12 +59,7 @@ export type FactSnapshotRecord = {
   data: unknown;
 };
 
-/**
- * The image a target was made from: the file, not the name that was asked for.
- *
- * One record for two questions with one answer — what `create` must build from again, and what
- * openstrap has to be built for to run on that machine.
- */
+/** The image a target was made from: the file, not the name that was asked for. */
 export type MachineImageRecord = {
   reference: string;
   url: string;

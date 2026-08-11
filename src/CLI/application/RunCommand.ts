@@ -1,16 +1,13 @@
 import { Blueprints } from "../../Modules/Blueprint/index.js";
-import { runSucceeded } from "../../Modules/Requirements/index.js";
+import { Checks } from "../../Modules/Requirements/index.js";
 import { Run, type RunResult as RunOutcome } from "#features/Run/Run.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { RunArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 /**
- * What a run found: which machines it was about, and how they measured up.
- *
- * The targets are reported as the blueprint declared them. What each machine turned out to be is on
- * the snapshot it produced, which is the only place it is known: a blueprint names a provider, and
- * the provider is what says whether that makes a vm or a container.
+ * What a run found. Targets as the blueprint declared them; what each machine turned out to be is on its
+ * snapshot, which is the only place it is known — the provider says what it makes, not the file.
  */
 export type RunResult = RunOutcome & {
   targets: Array<{
@@ -20,14 +17,7 @@ export type RunResult = RunOutcome & {
   }>;
 };
 
-/**
- * `openstrap run` — take a blueprint from what it declares to what is true.
- *
- * Every target: a machine with a provider is made, started and read where it is; the machine
- * openstrap is on is read here. What that means step by step belongs to the feature, and this
- * command does a command's work — find the blueprint, hand over the store and the runtime, turn
- * the answer into an exit code.
- */
+/** `openstrap run` — take a blueprint from what it declares to what is true. */
 export class RunCommand implements CliCommand<RunArgs, RunResult> {
   constructor(
     private readonly blueprints = new Blueprints(),
@@ -61,7 +51,7 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
             transport: target.transport,
           })),
         },
-        exitCode: runSucceeded(run.requirementRun.status) ? 0 : 1,
+        exitCode: Checks.succeeded(run.requirementRun.status) ? 0 : 1,
       };
     } finally {
       store.close();

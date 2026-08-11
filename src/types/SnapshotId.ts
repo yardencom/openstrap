@@ -1,13 +1,6 @@
 import type { Moment } from "./Moment.js";
 
-/**
- * What a snapshot is called.
- *
- * A type of its own because the name is not free text: it is the machine it is about and the moment
- * it was taken, in that order, and everything downstream — the state store, a requirement result, a
- * report — refers to a snapshot by it. Made here and nowhere else, so no caller has to know the shape
- * and none can spell it differently.
- */
+/** What a snapshot is called. */
 export class SnapshotId {
   private constructor(private readonly value: string) {
     Object.freeze(this);

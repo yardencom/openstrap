@@ -1,13 +1,7 @@
 import type { CreatedTarget } from "../../application/CreateCommand.js";
 import type { CommandText } from "../types.js";
 
-/**
- * What `create` did, and how to reach what it made.
- *
- * The steps are printed whether they ran or were skipped, because "already present" is the
- * answer to running the command twice and a reader has to be able to tell that from
- * "created".
- */
+/** What `create` did, and how to reach what it made. */
 export class CreateText implements CommandText<CreatedTarget> {
   print(result: CreatedTarget): string {
     const lines: string[] = [];

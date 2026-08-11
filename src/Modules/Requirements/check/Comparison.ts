@@ -20,23 +20,9 @@ const assertionKeys = new Set([
   "contains",
 ]);
 
-/**
- * One thing a requirement expects, against one thing the machine reported.
- *
- * The whole of the assertion language lives here and nowhere else: written flat, a requirement means
- * "exactly this"; written as an object with one of the words above, it means a condition. Which of
- * the two it is is the only question this class asks before it starts comparing.
- *
- * A type that does not fit the assertion is an error rather than a failure — `minimum` against a
- * string is a blueprint that asks a question of the wrong thing, and calling that "the machine does
- * not comply" would blame the machine for it.
- */
+/** One thing a requirement expects, against one thing the machine reported. */
 export class Comparison {
-  /**
-   * @param field The name of the field being compared. Only one field is read differently from the
-   * rest: `version`, where a plain string is a SemVer range rather than the text to match. `">=24"`
-   * as an exact string would never match any version anyone has.
-   */
+  /** @param field The name of the field being compared. */
   constructor(
     private readonly field: string,
     private readonly expected: unknown,
@@ -45,7 +31,7 @@ export class Comparison {
 
   /** Whether this is a condition rather than a value to match exactly. */
   static isAssertion(value: unknown): value is Record<string, unknown> {
-    return isRecord(value) && Object.keys(value).some((key) => assertionKeys.has(key));
+    return Comparison.isRecord(value) && Object.keys(value).some((key) => assertionKeys.has(key));
   }
 
   result(): Comparisons {
@@ -73,8 +59,8 @@ export class Comparison {
       message: `version expected ${range}, got ${this.actual}`,
     };
   }
-}
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
 }

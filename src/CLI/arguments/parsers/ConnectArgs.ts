@@ -1,13 +1,13 @@
 import type { CommandArgsParser, ConnectArgs } from "../types.js";
-import { CommandArguments, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
+import { CommandArguments } from "../CommandArguments.js";
 
 export class ConnectArgsParser implements CommandArgsParser {
   readonly command = "connect";
 
   parse(args: readonly string[]): ConnectArgs {
     const read = new CommandArguments(args, {
-      ...runtimeOptions,
-      values: [...(runtimeOptions.values ?? []), "run"],
+      ...CommandArguments.runtimeOptions,
+      values: [...(CommandArguments.runtimeOptions.values ?? []), "run"],
     });
     const [target] = read.positionals;
 
@@ -23,7 +23,7 @@ export class ConnectArgsParser implements CommandArgsParser {
       command: "connect",
       target,
       run: read.value("run"),
-      ...runtimeArgsIn(read),
+      ...CommandArguments.runtimeArgsIn(read),
     };
   }
 }

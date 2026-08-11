@@ -2,13 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { FactRedaction } from "#types/FactDeclaration.js";
 
-/**
- * What a snapshot is allowed to carry from output that may hold a secret.
- *
- * Applied where the output is produced rather than where it is stored: a secret
- * that reached the snapshot has already left the machine, and no amount of
- * filtering afterwards puts it back.
- */
+/** What a snapshot is allowed to carry from output that may hold a secret. */
 export class Redaction {
   constructor(private readonly declared: FactRedaction | undefined) {}
 

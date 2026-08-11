@@ -2,31 +2,19 @@ import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 
 import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import { Create, type CreateResult } from "#features/Create/Create.js";
-import { runSucceeded } from "../../Modules/Requirements/index.js";
+import { Checks } from "../../Modules/Requirements/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import type { CreateArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
 
 
-/**
- * What creating a target produced.
- *
- * The target's name is part of it: anything reading this result needs to know which
- * machine it is about, and asking the caller to remember alongside is how a report ends
- * up naming the wrong one.
- */
+/** What creating a target produced. The name is part of it, or a report can name the wrong machine. */
 export type CreatedTarget = CreateResult & {
   target: string;
 };
 
-/**
- * `openstrap create` — bring a declared target into being and check what it promised.
- *
- * One target, named on the command line. `openstrap run` is the same thing for every target a
- * blueprint declares, and both ask the same feature, so a machine made either way is made the
- * same way.
- */
+/** `openstrap create` — bring a declared target into being and check what it promised. */
 export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
   constructor(
     private readonly blueprints = new Blueprints(),
@@ -38,7 +26,7 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
 
     return {
       result: created,
-      exitCode: runSucceeded(created.requirementRun?.status) ? 0 : 1,
+      exitCode: Checks.succeeded(created.requirementRun?.status) ? 0 : 1,
     };
   }
 

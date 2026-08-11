@@ -10,7 +10,7 @@ export class SecretStoreRegistry {
   private readonly stores = new Map<string, RegisteredSecretStore>();
 
   register(store: SecretStore, pluginName: string): void {
-    validateSecretStore(store, pluginName);
+    SecretStoreRegistry.validateSecretStore(store, pluginName);
 
     const existing = this.stores.get(store.id);
     if (existing) {
@@ -44,16 +44,16 @@ export class SecretStoreRegistry {
   list(): readonly RegisteredSecretStore[] {
     return [...this.stores.values()];
   }
-}
 
-function validateSecretStore(store: SecretStore, pluginName: string): void {
-  if (!store.id || typeof store.id !== "string") {
-    throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a secret store without string id`);
-  }
+  private static validateSecretStore(store: SecretStore, pluginName: string): void {
+    if (!store.id || typeof store.id !== "string") {
+      throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a secret store without string id`);
+    }
 
-  for (const operation of ["read", "write", "remove"] as const) {
-    if (typeof store[operation] !== "function") {
-      throw new OpenStrapPluginError(`Secret store "${store.id}" must expose ${operation}()`);
+    for (const operation of ["read", "write", "remove"] as const) {
+      if (typeof store[operation] !== "function") {
+        throw new OpenStrapPluginError(`Secret store "${store.id}" must expose ${operation}()`);
+      }
     }
   }
 }

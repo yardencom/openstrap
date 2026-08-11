@@ -13,26 +13,7 @@ const run = promisify(execFile);
 export class ServiceFacts {
   constructor(private readonly platform: Platform) {}
 
-  /**
-   * Services, answered one declared name at a time.
-   *
-   * A machine is never asked for all of its services: no requirement is written
-   * against a list, and no service manager answers such a question the same way
-   * twice. Asking by name is both what callers need and what every platform can
-   * actually answer.
-   *
-   * A service is present when it is running. A service that is installed but
-   * stopped reads as absent — deliberately, because that is the strongest claim
-   * that holds on every platform: launchd offers no way to ask whether a label
-   * exists without asking whether it is loaded, and to anything that depends on a
-   * service the two states are the same. `running` carries the same answer
-   * explicitly, so a requirement can be written either way.
-   *
-   * Whether it comes back after a reboot is a different question, and it is asked separately — see
-   * `startsAtBoot`. systeminformation answers `running` and has nothing to say about the other:
-   * `services()` on Linux and macOS is `ps` matched by name, and a process list cannot know what a
-   * service manager will start next time.
-   */
+  /** Services, answered one declared name at a time. */
   async services(declared: Record<string, ServiceDeclaration> | undefined): Promise<Record<string, ServiceFact>> {
     if (declared === undefined) {
       return {};
@@ -90,20 +71,10 @@ export class ServiceFacts {
   /**
    * Whether the service manager will start this service on its own next time the machine boots.
    *
-   * A separate question from whether it is running, and the two disagree often enough to matter: a
-   * service started by hand is running and will not be there after a reboot, and a service that is
-   * enabled and has crashed is the other way round. A blueprint that says a cluster must survive a
-   * restart is asking this one.
-   *
-   * Asked of the service manager, because it is the only thing that knows. Nothing is parsed —
-   * `systemctl is-enabled` answers in its exit status, which is the same shape as the one other
-   * place in this module where openstrap asks a program a yes-or-no question rather than reading a
-   * value out of an API.
-   *
-   * Nothing comes back when there is nothing to ask. launchd has no equivalent single question, and
-   * a manager the blueprint named itself is a manager this knows nothing about; in both cases the
-   * field is left off rather than guessed at, and a requirement about it reports that it could not
-   * be verified — which is true, and is not the same as saying the service is not enabled.
+   * Asked of the service manager, the only thing that knows: `services()` here is `ps` matched by
+   * name, and a process list cannot know what starts next time. Nothing is parsed — `systemctl
+   * is-enabled` answers in its exit status. Nothing comes back where there is nothing to ask, and a
+   * requirement then reports that it could not be verified, which is not "not enabled".
    */
   private async startsAtBoot(name: string, manager: string): Promise<{ enabled?: boolean }> {
     if (manager !== "systemd") {

@@ -28,7 +28,7 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
 
   load(request: ConfigLoaderBackendRequest): LoadedConfig | undefined {
     if ("content" in request) {
-      return parseInlineYaml(request);
+      return LilconfigConfigLoader.parseInlineYaml(request);
     }
 
     if ("path" in request) {
@@ -94,9 +94,9 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
       searchPlaces: this.searchPlaces(filePatterns),
       stopDir,
       loaders: {
-        ".yaml": loadYaml,
-        ".yml": loadYaml,
-        noExt: loadYaml,
+        ".yaml": LilconfigConfigLoader.loadYaml,
+        ".yml": LilconfigConfigLoader.loadYaml,
+        noExt: LilconfigConfigLoader.loadYaml,
       },
     });
   }
@@ -125,7 +125,7 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
           path: result.filepath,
           format: "yaml",
           searchRoot: params.searchRoot,
-          matchedPattern: findMatchedPattern(result.filepath, params.searchRoot, this.searchPlaces(params.filePatterns)),
+          matchedPattern: LilconfigConfigLoader.findMatchedPattern(result.filepath, params.searchRoot, this.searchPlaces(params.filePatterns)),
         },
       };
     } catch (error) {
@@ -133,7 +133,7 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
         throw error;
       }
 
-      if (isNotFoundError(error)) {
+      if (LilconfigConfigLoader.isNotFoundError(error)) {
         return undefined;
       }
 
@@ -147,50 +147,50 @@ export class LilconfigConfigLoader implements ConfigLoaderBackend {
   private searchPlaces(filePatterns: readonly string[]): string[] {
     return filePatterns.length > 0 ? [...filePatterns] : [...defaultFilePatterns];
   }
-}
 
-function parseInlineYaml(request: Extract<ConfigLoadRequest, { content: string }>): LoadedConfig {
-  return {
-    format: "yaml",
-    source: {
-      type: "inline",
-      name: request.name,
-    },
-    value: loadYaml(request.name ?? "<inline>", request.content),
-  };
-}
+  private static parseInlineYaml(request: Extract<ConfigLoadRequest, { content: string }>): LoadedConfig {
+    return {
+      format: "yaml",
+      source: {
+        type: "inline",
+        name: request.name,
+      },
+      value: LilconfigConfigLoader.loadYaml(request.name ?? "<inline>", request.content),
+    };
+  }
 
-function loadYaml(_filepath: string, content: string): unknown {
-  const parsedDocument = parseDocument(content);
+  private static loadYaml(_filepath: string, content: string): unknown {
+    const parsedDocument = parseDocument(content);
 
-  if (parsedDocument.errors.length > 0) {
-    throw new ConfigParseError(
-      parsedDocument.errors.map((error) => ({
-        path: [],
-        message: error.message,
-        code: "YAML_PARSE_ERROR",
-      })),
+    if (parsedDocument.errors.length > 0) {
+      throw new ConfigParseError(
+        parsedDocument.errors.map((error) => ({
+          path: [],
+          message: error.message,
+          code: "YAML_PARSE_ERROR",
+        })),
+      );
+    }
+
+    return parsedDocument.toJS();
+  }
+
+  private static findMatchedPattern(filePath: string, searchRoot: string | undefined, searchPlaces: readonly string[]): string | undefined {
+    if (!searchRoot) {
+      return undefined;
+    }
+
+    const relativePath = relative(searchRoot, filePath);
+
+    return searchPlaces.find((searchPlace) => searchPlace === relativePath);
+  }
+
+  private static isNotFoundError(error: unknown): boolean {
+    return Boolean(
+      error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: unknown }).code === "ENOENT",
     );
   }
-
-  return parsedDocument.toJS();
-}
-
-function findMatchedPattern(filePath: string, searchRoot: string | undefined, searchPlaces: readonly string[]): string | undefined {
-  if (!searchRoot) {
-    return undefined;
-  }
-
-  const relativePath = relative(searchRoot, filePath);
-
-  return searchPlaces.find((searchPlace) => searchPlace === relativePath);
-}
-
-function isNotFoundError(error: unknown): boolean {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as { code?: unknown }).code === "ENOENT",
-  );
 }

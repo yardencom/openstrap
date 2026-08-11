@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { main } from "../src/CLI/Main.js";
+import { Cli } from "../src/CLI/Main.js";
 
 /**
  * Where this run keeps what it writes.
@@ -248,7 +248,7 @@ targets:
 async function captureCli(argv: readonly string[], cwd = process.cwd()) {
   let stdout = "";
   let stderr = "";
-  const exitCode = await main(["node", "openstrap", ...argv], {
+  const exitCode = await Cli.main(["node", "openstrap", ...argv], {
     cwd,
     stdout: {
       write: (chunk: string) => {

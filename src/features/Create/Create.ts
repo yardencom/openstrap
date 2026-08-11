@@ -25,27 +25,13 @@ export type CreateRequest = {
 
 /** A machine brought into being, and what it turned out to be. */
 export type CreateResult = CreateMachineResult & {
-  /** Which machine this is, in the words its provider uses. */
   machine: Target;
   requirementRun?: RequirementRun;
   /** What the machine was read to be, when anything was required of it. */
   snapshot?: FactSnapshot;
 };
 
-/**
- * `create` — bring a declared target into being, and confirm it is what it promised.
- *
- * One action and not two. A machine that is up but was never checked is not what anyone asked for by
- * declaring requirements, and a caller left to run the check itself is a caller that decides when to
- * skip it. That decision used to live in the CLI, along with looking up the machine's key and naming
- * the channel to verify over — and it named `ssh` in a literal while the target declared its own
- * transport, so the two could only agree by coincidence.
- *
- * Verifying reads the machine itself: openstrap is delivered there and asked, and what comes back is
- * compared with what the blueprint required. That is why it belongs here rather than beside it — a
- * created machine and a read machine are the same machine, and nothing between them should be able to
- * lose that.
- */
+/** `create` — bring a declared target into being, and confirm it is what it promised. */
 export class Create {
   constructor(
     private readonly machines = new CreateMachine(),
@@ -53,13 +39,7 @@ export class Create {
     private readonly locks = new RunLock(new StateHome().locks()),
   ) {}
 
-  /**
-   * The lock is held here rather than by whoever asks.
-   *
-   * Making a machine reserves a host port and writes provider state, and two of these at once would
-   * each believe they owned both. It used to be taken by the CLI, which was fine while `create` was
-   * the only caller; a run creating every machine a blueprint declares would have gone around it.
-   */
+  /** The lock is held here rather than by whoever asks. */
   async execute(request: CreateRequest): Promise<CreateResult> {
     const target = request.target;
 
@@ -79,7 +59,7 @@ export class Create {
   ): Promise<CreateResult> {
     const machine: Target = {
       name: target.name,
-      ...machineKind(provider),
+      ...Create.machineKind(provider),
       displayName: target.displayName,
     };
     const created = await this.machines.execute({
@@ -114,25 +94,15 @@ export class Create {
 
     return { ...created, machine, requirementRun: verified.requirementRun, snapshot: verified.snapshot };
   }
-}
 
-/**
- * What kind of machine a provider makes.
- *
- * Asked of the provider, which declares it: `utm` says it makes a guest and that a guest is a vm.
- * That a blueprint named a provider says only that openstrap is not talking about the machine it
- * runs on — which of the other kinds it is is the provider's to say, and was `guest`/`vm` written
- * out here for as long as there was one provider to be wrong about.
- *
- * A provider that declares several can make several, and nothing so far says which one this is:
- * refused rather than answered with the first of a list.
- */
-function machineKind(provider: Provider): { scope: Target["scope"]; type: Target["type"] } {
-  const { scopes, types } = provider.capabilities;
+  /** What kind of machine a provider makes. */
+  private static machineKind(provider: Provider): { scope: Target["scope"]; type: Target["type"] } {
+    const { scopes, types } = provider.capabilities;
 
-  if (scopes.length !== 1 || types.length !== 1) {
-    throw new AmbiguousMachineKindError(provider.id, scopes, types);
+    if (scopes.length !== 1 || types.length !== 1) {
+      throw new AmbiguousMachineKindError(provider.id, scopes, types);
+    }
+
+    return { scope: scopes[0]!, type: types[0]! };
   }
-
-  return { scope: scopes[0]!, type: types[0]! };
 }

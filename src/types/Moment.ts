@@ -1,12 +1,4 @@
-/**
- * A moment, as facts record one.
- *
- * A type of its own rather than a `Date` or a string, because the two things openstrap does with a
- * moment are exactly the two a bare value gets wrong: it writes it into a name, and it writes it into
- * JSON. A `Date` in JSON is whatever `JSON.stringify` decides; a string is a moment nobody can
- * compare. Here both spellings come from the same instant, so a snapshot's name and its time can
- * never disagree.
- */
+/** A moment, as facts record one. */
 export class Moment {
   private readonly at: Date;
 
@@ -32,12 +24,7 @@ export class Moment {
     return new Moment(at);
   }
 
-  /**
-   * The same instant with nothing in it a name cannot carry.
-   *
-   * Ids are read by people and typed into queries, so the separators go rather than being escaped
-   * later by whoever uses one.
-   */
+  /** The same instant with nothing in it a name cannot carry. */
   stamp(): string {
     return this.at.toISOString().replace(/[-:.]/g, "");
   }

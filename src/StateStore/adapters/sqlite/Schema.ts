@@ -1,11 +1,4 @@
-/**
- * The state store holds what is true of this machine only.
- *
- * Allocated ports, provider resource ids, runs, fact snapshots and the image a
- * target was made from are all true of the machine openstrap ran on. The
- * machine's actual state is not stored — that is read back from the provider,
- * so there is only ever one source of truth for it.
- */
+/** The state store holds what is true of this machine only. */
 export const stateStoreSchema = [
   `CREATE TABLE IF NOT EXISTS target (
      name        TEXT PRIMARY KEY,
@@ -17,22 +10,7 @@ export const stateStoreSchema = [
      updated_at  TEXT NOT NULL
    )`,
 
-  /**
-   * The image a target was made from: the file, not the name that was asked for.
-   *
-   * Two questions are answered by this one row, because they have one answer. `create` asks it
-   * before it resolves anything, so the second create of a target is made from the first one's file:
-   * `ubuntu:24.04` is a name, and the URL it names serves whatever is current. Delivering openstrap
-   * to the machine asks it too — a build for one platform does not run on another, and what the
-   * machine is was settled when the image was chosen.
-   *
-   * `reference` is kept beside the file so a changed blueprint reads as what it is: asking for
-   * `ubuntu:26.04` where this says `ubuntu:24.04` is a different intention, not an image that moved.
-   *
-   * Here rather than derived from the run history, which records the same thing: a journal is
-   * something one may delete, and deleting it must not unpin a machine. It belongs to the target and
-   * goes when the target goes.
-   */
+  /** The image a target was made from: the file, not the name that was asked for. */
   `CREATE TABLE IF NOT EXISTS machine_image (
      target       TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
      reference    TEXT NOT NULL,
@@ -108,13 +86,7 @@ export const stateStoreSchema = [
      data           TEXT NOT NULL
    )`,
 
-  /**
-   * The image one run actually used.
-   *
-   * As data, because the run's steps say it as a sentence for a person to read — with the checksum
-   * cut to twelve characters — and a sentence cannot be compared with anything. This is the history:
-   * which file each run built with, still true after the target has been repinned or deleted.
-   */
+  /** The image one run actually used. */
   `CREATE TABLE IF NOT EXISTS run_image (
      run_id       TEXT PRIMARY KEY REFERENCES run(id) ON DELETE CASCADE,
      reference    TEXT NOT NULL,

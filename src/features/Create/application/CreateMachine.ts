@@ -8,15 +8,10 @@ import type { Target } from "#types/Target.js";
 
 export type CreateMachineRequest = {
   target: BlueprintTarget;
-  /** Which machine this is, as its provider says. */
   machine: Target;
   provider: Provider;
   store: SqliteStateStore;
-  /**
-   * Replaces the image this target is pinned to with whatever its name resolves to now.
-   *
-   * Off by default: a pin that moves on its own is not a pin, so moving it is a person's decision.
-   */
+  /** Replaces the image this target is pinned to with whatever its name resolves to now. */
   repin?: boolean;
   hostPort: number;
   user?: string;
@@ -27,14 +22,7 @@ export type CreateStep = {
   name: string;
   status: "succeeded" | "skipped";
   detail?: string;
-  /**
-   * When the step finished.
-   *
-   * Taken as it happens, because the steps are written to the store only once the run is over and
-   * nothing about a finished step says when it ran. Every step used to be recorded as having started
-   * and finished at the instant the run began — one stamp copied over a whole run of work. They run
-   * one after another, so a step started when the one before it finished and one stamp each says when.
-   */
+  /** When the step finished. */
   finishedAt: string;
 };
 
@@ -55,13 +43,7 @@ const sizes: Record<string, { cpuCores: number; memoryBytes: number; diskBytes: 
   large: { cpuCores: 4, memoryBytes: 4096 * 1024 * 1024, diskBytes: 40 * 1024 * 1024 * 1024 },
 };
 
-/**
- * Brings a declared target into being.
- *
- * Running it twice does not produce a second machine: an existing one is
- * adopted and reported, because a create that destroys what is already there
- * is not something anyone can run twice.
- */
+/** Brings a declared target into being. */
 export class CreateMachine {
   constructor(
     private readonly secrets = new KeychainSecretStore(),
@@ -186,13 +168,7 @@ export class CreateMachine {
     }
   }
 
-  /**
-   * How the machine is reached, asked of the provider that made it and written down.
-   *
-   * The blueprint wins when it named a transport, because a person naming one is choosing. When it
-   * did not, the provider's answer is the answer — `ssh` used to be written here on the way in, and
-   * a provider handing back anything else would have been connected to over a channel nobody opened.
-   */
+  /** How the machine is reached, asked of the provider that made it and written down. */
   private async reached(
     request: CreateMachineRequest,
     record: Omit<TargetRecord, "transport">,
@@ -209,16 +185,7 @@ export class CreateMachine {
     return access;
   }
 
-  /**
-   * The image this target is made from — the same file every time, once there has been a first time.
-   *
-   * A pin is read before the provider is asked, and handed to it, so the provider fetches that file
-   * rather than whatever the name means today. What comes back is checked against the pin anyway: a
-   * provider is a plugin, and a rule that only holds while every plugin obeys it is not a rule.
-   *
-   * With no pin — the first create of this target, or `--repin` — what the name resolves to now
-   * becomes the pin.
-   */
+  /** The image this target is made from — the same file every time, once there has been a first time. */
   private async image(request: CreateMachineRequest, timestamp: string): Promise<ResolvedImage> {
     const reference = request.target.image ?? "ubuntu:24.04";
     const pinned = request.repin ? null : request.store.readMachineImage(request.target.name);
@@ -237,21 +204,13 @@ export class CreateMachine {
     }
 
     if (!pinned) {
-      request.store.saveMachineImage(request.target.name, madeFrom(reference, image), timestamp);
+      request.store.saveMachineImage(request.target.name, CreateMachine.madeFrom(reference, image), timestamp);
     }
 
     return image;
   }
 
-  /**
-   * Leaves an adopted machine in the state a created one would be left in.
-   *
-   * `create` promises a machine you can connect to, and it has to keep that
-   * promise the second time it is run as well. A machine that was found stopped
-   * and left stopped would satisfy "it already exists" and nothing else: every
-   * step that follows — verifying it, connecting to it — is waiting on a machine
-   * that is never going to answer.
-   */
+  /** Leaves an adopted machine in the state a created one would be left in. */
   private async ensureRunning(provider: Provider, machine: MachineHandle): Promise<Omit<CreateStep, "finishedAt">> {
     const state = await provider.inspect(machine);
 
@@ -278,17 +237,18 @@ export class CreateMachine {
       });
     });
   }
+
+  private static madeFrom(reference: string, image: ResolvedImage): MachineImageRecord {
+    return {
+      reference,
+      url: image.url,
+      sha256: image.sha256,
+      platform: image.platform,
+      architecture: image.architecture,
+      format: image.format,
+      boot: image.boot,
+    };
+  }
 }
 
 /** What is written down about an image: the file, and the name that was asked for. */
-function madeFrom(reference: string, image: ResolvedImage): MachineImageRecord {
-  return {
-    reference,
-    url: image.url,
-    sha256: image.sha256,
-    platform: image.platform,
-    architecture: image.architecture,
-    format: image.format,
-    boot: image.boot,
-  };
-}

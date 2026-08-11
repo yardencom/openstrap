@@ -2,12 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import type { Comparisons } from "#types/Requirements.js";
 
-/**
- * A condition written out: what has to be true of the value, rather than what the value is.
- *
- * Several may be written together — `minimum` with `multipleOf` — and all of them are checked, so
- * the message says everything that is wrong rather than the first thing.
- */
+/** A condition written out: what has to be true of the value, rather than what the value is. */
 export class Assertions {
   private readonly failures: string[] = [];
 
@@ -77,8 +72,8 @@ export class Assertions {
   }
 
   /**
-   * A list is checked for membership, not for equality: a requirement says the account is in `sudo`,
-   * and which other groups it is in is not the question.
+   * A list is checked for membership, not for equality: a requirement says the account is in `sudo`, and
+   * which other groups it is in is not the question.
    */
   private list(): Comparisons | undefined {
     if (!("contains" in this.expected)) {

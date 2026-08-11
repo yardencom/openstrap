@@ -1,5 +1,5 @@
 import type { CommandArgsParser, CreateArgs } from "../types.js";
-import { CommandArguments, hostPortIn, runtimeArgsIn, runtimeOptions } from "../CommandArguments.js";
+import { CommandArguments } from "../CommandArguments.js";
 
 /** What openstrap knows how to create. */
 const kinds = ["vm"] as const;
@@ -9,9 +9,9 @@ export class CreateArgsParser implements CommandArgsParser {
 
   parse(args: readonly string[]): CreateArgs {
     const read = new CommandArguments(args, {
-      ...runtimeOptions,
+      ...CommandArguments.runtimeOptions,
       flags: ["json", "repin"],
-      values: [...(runtimeOptions.values ?? []), "config", "host-port"],
+      values: [...(CommandArguments.runtimeOptions.values ?? []), "config", "host-port"],
     });
     const [kind, target] = read.positionals;
 
@@ -32,10 +32,10 @@ export class CreateArgsParser implements CommandArgsParser {
       kind: "vm",
       target,
       configPath: read.value("config"),
-      hostPort: hostPortIn(read.value("host-port")),
+      hostPort: CommandArguments.hostPortIn(read.value("host-port")),
       repin: read.flag("repin"),
       json: read.flag("json"),
-      ...runtimeArgsIn(read),
+      ...CommandArguments.runtimeArgsIn(read),
     };
   }
 }
