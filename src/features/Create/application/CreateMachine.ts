@@ -1,8 +1,8 @@
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
 import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineAccess, MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
-import { KeychainSecretStore, SSHKeyPair } from "../../../Secrets/index.js";
+import type { MachineAccess, MachineHandle, Provider, ResolvedImage, SecretStore } from "../../../Plugin/index.js";
+import { SSHKeyPair } from "../../../Secrets/index.js";
 import type { MachineImageRecord, SqliteStateStore, TargetRecord } from "../../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 
@@ -11,6 +11,8 @@ export type CreateMachineRequest = {
   machine: Target;
   provider: Provider;
   store: SqliteStateStore;
+  /** Where this machine's key is put. A plugin provides it: openstrap keeps no secrets of its own. */
+  secrets: SecretStore;
   /** Replaces the image this target is pinned to with whatever its name resolves to now. */
   repin?: boolean;
   hostPort: number;
@@ -45,10 +47,7 @@ const sizes: Record<string, { cpuCores: number; memoryBytes: number; diskBytes: 
 
 /** Brings a declared target into being. */
 export class CreateMachine {
-  constructor(
-    private readonly secrets = new KeychainSecretStore(),
-    private readonly keys = new SSHKeyPair(),
-  ) {}
+  constructor(private readonly keys = new SSHKeyPair()) {}
 
   async execute(request: CreateMachineRequest): Promise<CreateMachineResult> {
     const target = request.target;
@@ -109,8 +108,8 @@ export class CreateMachine {
       }
 
       const pair = this.keys.generate(`${user}@${target.name}`);
-      const reference = this.secrets.reference(`${target.name}.ssh-identity`);
-      await this.secrets.write(reference, pair.privateKey);
+      const reference = { store: request.secrets.id, name: `${target.name}.ssh-identity` };
+      await request.secrets.write(reference, pair.privateKey);
       request.store.saveSecretReference({
         target: target.name,
         purpose: "ssh-identity",

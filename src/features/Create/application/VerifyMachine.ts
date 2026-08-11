@@ -7,7 +7,6 @@ import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStra
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { Target } from "#types/Target.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
-import { KeychainSecretStore } from "../../../Secrets/index.js";
 import type { SqliteStateStore } from "../../../StateStore/index.js";
 
 export type VerifyRequest = {
@@ -29,10 +28,6 @@ export type VerifyResult = {
 
 /** Confirms what the machine actually is, once it is up. */
 export class VerifyMachine {
-  constructor(
-    private readonly secrets = new KeychainSecretStore(),
-  ) {}
-
   async execute(request: VerifyRequest): Promise<VerifyResult> {
     const endpoint = request.access.endpoint;
 
@@ -43,7 +38,7 @@ export class VerifyMachine {
       target: request.target.name,
       endpoint,
       identity: request.identity,
-      reveal: (reference) => this.secrets.read(reference),
+      reveal: (reference) => request.runtime.secretStores.require(reference.store).read(reference),
     });
 
     try {

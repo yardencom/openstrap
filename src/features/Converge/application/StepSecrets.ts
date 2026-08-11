@@ -1,11 +1,11 @@
-import { KeychainSecretStore, keychainStoreId } from "../../../Secrets/index.js";
 import type { Reveal } from "../../../Modules/Steps/index.js";
 import type { SecretStore } from "../../../Plugin/index.js";
 import type { Step } from "#types/Step.js";
 
 /** Where a step's secret comes from, wherever the step is running. */
 export class StepSecrets {
-  constructor(private readonly store: SecretStore = new KeychainSecretStore()) {}
+  /** @param store Absent where openstrap was delivered: over there the environment is the only source. */
+  constructor(private readonly store?: SecretStore) {}
 
   /** What `Steps` is handed to answer a name a step wrote instead of a value. */
   reveal(): Reveal {
@@ -28,7 +28,9 @@ export class StepSecrets {
   }
 
   private read(name: string): Promise<string | null> {
-    return this.store.read({ store: this.store.id ?? keychainStoreId, name });
+    return this.store === undefined
+      ? Promise.resolve(null)
+      : this.store.read({ store: this.store.id, name });
   }
 
   private static named(steps: readonly Step[]): readonly string[] {

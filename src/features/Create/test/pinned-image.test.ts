@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ImageRequest, MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
+import type { ImageRequest, MachineHandle, Provider, ResolvedImage, SecretStore } from "../../../Plugin/index.js";
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import { CreateMachine } from "../application/CreateMachine.js";
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
@@ -158,7 +158,7 @@ function create(
   target: Partial<BlueprintTarget> = {},
   request: { repin?: boolean } = {},
 ) {
-  return new CreateMachine(fakeSecrets(), fakeKeys()).execute({
+  return new CreateMachine(fakeKeys()).execute({
     target: {
       name: "ubuntu-vm",
       provider: "utm",
@@ -169,6 +169,7 @@ function create(
     machine: { name: "ubuntu-vm", scope: "guest", type: "vm" },
     provider,
     store,
+    secrets: fakeSecrets(),
     hostPort: 2222,
     repin: request.repin,
     now: nextInstant(),
@@ -217,18 +218,18 @@ function fakeProvider(sha256: string): FakeProvider {
   return provider;
 }
 
-/** No keychain is touched by a test: it would write into the machine the test runs on. */
-function fakeSecrets() {
+/** No real store is touched by a test: it would write into the machine the test runs on. */
+function fakeSecrets(): SecretStore {
   return {
-    reference: (name: string) => ({ store: "test", name }),
+    id: "test",
     read: async () => null,
     write: async () => {},
     remove: async () => {},
-  } as unknown as ConstructorParameters<typeof CreateMachine>[0];
+  };
 }
 
 function fakeKeys() {
   return {
     generate: () => ({ privateKey: "private", publicKey: "ssh-ed25519 AAAA test" }),
-  } as unknown as ConstructorParameters<typeof CreateMachine>[1];
+  } as unknown as ConstructorParameters<typeof CreateMachine>[0];
 }

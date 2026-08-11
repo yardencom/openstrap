@@ -67,6 +67,7 @@ export class Create {
       machine,
       provider,
       store: request.store,
+      secrets: request.runtime.secretStores.sole(),
       repin: request.repin,
       hostPort: request.store.hostPortFor(target.name, request.hostPort),
       now: request.now,

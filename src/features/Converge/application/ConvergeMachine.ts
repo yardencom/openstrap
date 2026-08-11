@@ -20,10 +20,9 @@ export type ConvergeMachineRequest = {
 
 /** A machine openstrap created, brought to what the blueprint declares by openstrap on it. */
 export class ConvergeMachine {
-  constructor(private readonly secrets = new StepSecrets()) {}
-
   async execute(request: ConvergeMachineRequest): Promise<ConvergingResult> {
     const declared = request.target;
+    const secrets = new StepSecrets(request.runtime.secretStores.soleIfAny());
     const recorded = request.store.readTarget(declared.name);
     const platform = request.store.readMachineImage(declared.name);
 
@@ -52,8 +51,8 @@ export class ConvergeMachine {
         target: machine,
         requirements: declared.requirements,
         steps: declared.steps && WrittenSteps.asWritten(declared.steps),
-        // Fetched here, because the store is here: a delivered openstrap has no keychain to ask.
-        secrets: await this.secrets.forDelivery(declared.steps ?? []),
+        // Fetched here, because the store is here: a delivered openstrap has no store to ask.
+        secrets: await secrets.forDelivery(declared.steps ?? []),
         check: request.check,
         maxPasses: request.maxPasses,
         channel: { type: connection.access.transport, authMethods: connection.transport.authMethods },

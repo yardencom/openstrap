@@ -1,7 +1,6 @@
 import { MachineNotRunningError } from "./errors/MachineNotRunningError.js";
 import { UnknownMachineError } from "./errors/UnknownMachineError.js";
 import type { MachineAccess, TransportConnection, OpenStrapRuntime } from "../../Plugin/index.js";
-import { KeychainSecretStore } from "../../Secrets/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 
 
@@ -24,8 +23,6 @@ export type Connection = {
 
 /** Opens a session to a target, hiding how it is reached. */
 export class Connect {
-  constructor(private readonly secrets = new KeychainSecretStore()) {}
-
   async execute(request: ConnectRequest): Promise<Connection> {
     const resource = request.store.readProviderResource(request.target);
     const recorded = request.store.readTarget(request.target);
@@ -50,7 +47,9 @@ export class Connect {
       target: request.target,
       endpoint: access.endpoint,
       identity: identity ? { store: identity.store, name: identity.name } : undefined,
-      reveal: (reference) => this.secrets.read(reference),
+      // Asked of the store the reference names, not of a store openstrap picked: a reference that
+      // says where it lives and is then read somewhere else is not a reference.
+      reveal: (reference) => request.runtime.secretStores.require(reference.store).read(reference),
     });
 
     return { access, transport: connection, close: () => connection.close() };
