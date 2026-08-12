@@ -94,6 +94,22 @@ export const stateStoreSchema = [
      sha256       TEXT NOT NULL
    )`,
 
+  /**
+   * A run that has reached a server, and what it is called there.
+   *
+   * A run made on this machine with no server to tell is still something that happened, and when a
+   * server appears it has to hear about it. A row here means it already has: the server gave the run
+   * an id of its own, so this is both the mark that it went and the way back to it.
+   *
+   * A table rather than a column on `run`, because a local store made before this existed has no such
+   * column and nothing here migrates one in.
+   */
+  `CREATE TABLE IF NOT EXISTS carried_run (
+     run_id     TEXT PRIMARY KEY REFERENCES run(id) ON DELETE CASCADE,
+     server_run TEXT NOT NULL,
+     carried_at TEXT NOT NULL
+   )`,
+
   "CREATE INDEX IF NOT EXISTS run_by_target ON run(target, started_at)",
   "CREATE INDEX IF NOT EXISTS fact_snapshot_by_target ON fact_snapshot(target, captured_at)",
 ] as const;

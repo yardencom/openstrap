@@ -2,6 +2,7 @@ export { StateHome } from "./StateHome.js";
 export { SqliteStateStore } from "./adapters/sqlite/SqliteStateStore.js";
 export type {
   AllocatedPortRecord,
+  CarriedRunCandidate,
   FactSnapshotRecord,
   MachineImageRecord,
   ProviderResourceRecord,

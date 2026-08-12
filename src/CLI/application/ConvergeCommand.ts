@@ -25,6 +25,10 @@ export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult>
 
     const recorded = new WhereMachinesAreRecorded();
 
+    // Anything this machine did while no server was listening goes first: a run that never
+    // left is a machine the team cannot see, and a server is now there to be told.
+    await recorded.carry(context.now);
+
     try {
       const result = await this.converge.execute({
         target,

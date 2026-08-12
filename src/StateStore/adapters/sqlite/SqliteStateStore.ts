@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   MachineImageRecord,
   AllocatedPortRecord,
+  CarriedRunCandidate,
   FactSnapshotRecord,
   ProviderResourceRecord,
   RunImageRecord,
@@ -361,6 +362,64 @@ export class SqliteStateStore {
     }
 
     return {
+      id: String(row.id),
+      target: String(row.target),
+      runId: row.run_id ?? undefined,
+      schemaVersion: String(row.schema_version),
+      capturedAt: String(row.captured_at),
+      data: JSON.parse(String(row.data)),
+    };
+  }
+
+  /**
+   * Runs that happened here and have not been told to a server, oldest first.
+   *
+   * Finished ones only: a run still marked running is one this process is in the middle of, or one a
+   * crash left behind, and neither is something to report as an outcome.
+   */
+  runsToCarry(): CarriedRunCandidate[] {
+    const rows = this.database.prepare(`
+      SELECT r.id, r.target, r.command, r.status, r.started_at, r.finished_at
+      FROM run r
+      LEFT JOIN carried_run c ON c.run_id = r.id
+      WHERE c.run_id IS NULL AND r.status IN ('succeeded', 'failed')
+      ORDER BY r.started_at, r.rowid
+    `).all() as Record<string, string | null>[];
+
+    return rows.map((row) => {
+      const id = String(row.id);
+      const target = String(row.target);
+
+      return {
+        id,
+        target,
+        command: String(row.command),
+        status: String(row.status) as "succeeded" | "failed",
+        startedAt: String(row.started_at),
+        finishedAt: row.finished_at ?? undefined,
+        declaration: this.readDesiredState(target)?.declaration,
+        recorded: this.readTarget(target) ?? undefined,
+        image: this.readMachineImage(target) ?? undefined,
+        resource: this.readProviderResource(target) ?? undefined,
+        steps: this.listSteps(id),
+        snapshot: this.snapshotOfRun(id),
+      };
+    });
+  }
+
+  /** This run has been told to a server, and there it is called this. */
+  markCarried(runId: string, serverRunId: string, at: string): void {
+    this.database.prepare(
+      "INSERT INTO carried_run (run_id, server_run, carried_at) VALUES (?, ?, ?) ON CONFLICT(run_id) DO NOTHING",
+    ).run(runId, serverRunId, at);
+  }
+
+  private snapshotOfRun(runId: string): FactSnapshotRecord | undefined {
+    const row = this.database.prepare(
+      "SELECT id, target, run_id, schema_version, captured_at, data FROM fact_snapshot WHERE run_id = ? ORDER BY captured_at DESC, rowid DESC LIMIT 1",
+    ).get(runId) as Record<string, string | null> | undefined;
+
+    return row === undefined ? undefined : {
       id: String(row.id),
       target: String(row.target),
       runId: row.run_id ?? undefined,

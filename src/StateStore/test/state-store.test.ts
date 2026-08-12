@@ -121,6 +121,7 @@ describe("State store", () => {
 
     expect(tableNames).toEqual([
       "allocated_port",
+      "carried_run",
       "desired_state",
       "fact_snapshot",
       "machine_image",

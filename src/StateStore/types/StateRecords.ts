@@ -76,3 +76,26 @@ export type RunImageRecord = {
   url: string;
   sha256: string;
 };
+
+/**
+ * A run this machine has and a server has not, with everything needed to tell it about it.
+ *
+ * The blueprint as it was, the file the machine was made from, its id at the provider, the steps and
+ * the reading — gathered here because a run is told in one go and these are five tables.
+ */
+export type CarriedRunCandidate = {
+  id: string;
+  target: string;
+  command: string;
+  status: "succeeded" | "failed";
+  startedAt: string;
+  finishedAt?: string;
+  /** The blueprint this run was against, as it was written then. */
+  declaration?: unknown;
+  /** What kind of machine it is, which the blueprint never said: the provider did. */
+  recorded?: TargetRecord;
+  image?: MachineImageRecord;
+  resource?: ProviderResourceRecord;
+  steps: readonly RunStepRecord[];
+  snapshot?: FactSnapshotRecord;
+};
