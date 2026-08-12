@@ -11,13 +11,10 @@ import type {
   MachineResources,
   Provider,
   ResolvedImage,
-  SecretReference,
-  SecretStore,
 } from "../../../Plugin/index.js";
 import type { CreateStep } from "./CreateStep.js";
 import { ReportRun } from "./ReportRun.js";
 import type { DeclaredTarget, Host, OpenStrapServer } from "../../../Server/index.js";
-import { SSHKeyPair } from "../../../Secrets/index.js";
 import type { MachineImageRecord, SqliteStateStore, TargetRecord } from "../../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 
@@ -29,8 +26,8 @@ export type CreateMachineRequest = {
   store?: SqliteStateStore;
   /** The record a team shares. Where there is one it decides, and the store is not written. */
   server?: OpenStrapServer;
-  /** Where this machine's key is put, where openstrap is the one making it. */
-  secrets?: SecretStore;
+  /** The public half to plant, from the connector that owns the key. Not needed with a server. */
+  publicKey?: string;
   /** Replaces the image this target is pinned to with whatever its name resolves to now. */
   repin?: boolean;
   /** Which host port to ask for. A server may answer with a different one, and its answer wins. */
@@ -49,8 +46,8 @@ export type CreateMachineResult = {
   image: ResolvedImage;
   steps: CreateStep[];
   created: boolean;
-  /** How the key is come by afterwards: a reference, or the value a server issued. */
-  identity: { reference?: SecretReference; privateKey?: string };
+  /** The key a server issued, where one did. Absent means the connector has its own.  */
+  identity: { privateKey?: string };
 };
 
 /**
@@ -67,8 +64,8 @@ type Opened = {
   user: string;
   hostPort: number;
   publicKey: string;
-  /** How the key is come by afterwards: a reference to look up, or the value a server issued. */
-  identity: { reference?: SecretReference; privateKey?: string };
+  /** The key a server issued, where one did. Absent means the connector has its own. */
+  identity: { privateKey?: string };
 };
 
 const sizes: Record<string, MachineResources> = {
@@ -79,8 +76,6 @@ const sizes: Record<string, MachineResources> = {
 
 /** Brings a declared target into being. */
 export class CreateMachine {
-  constructor(private readonly keys = new SSHKeyPair()) {}
-
   async execute(request: CreateMachineRequest): Promise<CreateMachineResult> {
     const target = request.target;
     const timestamp = (request.now ?? new Date()).toISOString();
@@ -276,18 +271,10 @@ export class CreateMachine {
     store.recordRunImage(runId, { reference: image.reference, url: image.url, sha256: image.sha256 });
 
     const user = request.user ?? "openstrap";
-    const pair = this.keys.generate(`${user}@${target.name}`);
-    const secrets = request.secrets!;
-    const reference = { store: secrets.id, name: `${target.name}.ssh-identity` };
 
-    await secrets.write(reference, pair.privateKey);
-    store.saveSecretReference({
-      target: target.name,
-      purpose: "ssh-identity",
-      store: reference.store,
-      name: reference.name,
-    }, timestamp);
-    done({ name: "generate identity", status: "succeeded", detail: `${reference.store}:${reference.name}` });
+    // Made by the connector that will use it, and openstrap sees only the half that goes into the
+    // machine. Which is why there is nothing here to write down about it.
+    done({ name: "plant identity", status: "succeeded", detail: request.publicKey!.slice(0, 40) });
 
     store.allocatePort({ hostPort: request.hostPort, target: target.name, guestPort: 22, protocol: "tcp" }, timestamp);
     done({ name: "reserve host port", status: "succeeded", detail: String(request.hostPort) });
@@ -298,8 +285,8 @@ export class CreateMachine {
       resources: sizes[target.size ?? "medium"] ?? sizes.medium!,
       user,
       hostPort: request.hostPort,
-      publicKey: pair.publicKey,
-      identity: { reference },
+      publicKey: request.publicKey!,
+      identity: {},
     };
   }
 

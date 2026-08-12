@@ -74,8 +74,9 @@ export class Create {
       provider,
       store: request.store,
       server: request.server,
-      // Only where openstrap is the one making the key: a server issues its own and keeps it.
-      ...(request.server ? {} : { secrets: request.runtime.secretStores.sole() }),
+      // Only where openstrap is not being handed one: a server issues its own and keeps it. The
+      // connector makes the key and openstrap sees the half that goes into the machine, nothing more.
+      ...(request.server ? {} : { publicKey: await Create.publicKeyFor(target, request) }),
       repin: request.repin,
       // A proposal. A server answers with the port that is actually free on this host, and its
       // answer wins.
@@ -99,7 +100,6 @@ export class Create {
         // used here before was the blueprint's `transport` — and when a blueprint said nothing, the
         // word `ssh`, put there by the loader because a provider had been named at all.
         access: created.access,
-        identity: created.identity.reference,
         privateKey: created.identity.privateKey,
         platform: { platform: created.image.platform, architecture: created.image.architecture },
         runtime: request.runtime,
@@ -134,6 +134,13 @@ export class Create {
       ...(verified ? { snapshot: verified.snapshot, requirementRun: verified.requirementRun } : {}),
       ...(error === undefined ? {} : { error }),
     });
+  }
+
+  /** The public half to plant, from the connector that will later be the one entering with it. */
+  private static async publicKeyFor(target: BlueprintTarget, request: CreateRequest): Promise<string> {
+    const connector = request.runtime.transports.require(target.transport ?? "ssh");
+
+    return (await connector.identityFor(target.name)).publicKey;
   }
 
   /** What kind of machine a provider makes. */

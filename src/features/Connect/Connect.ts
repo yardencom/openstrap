@@ -1,12 +1,7 @@
 import { MachineNotRunningError } from "./errors/MachineNotRunningError.js";
 import { UnknownMachineError } from "./errors/UnknownMachineError.js";
 import { UnrecognisedMachineKindError } from "./errors/UnrecognisedMachineKindError.js";
-import type {
-  MachineAccess,
-  OpenStrapRuntime,
-  SecretReference,
-  TransportConnection,
-} from "../../Plugin/index.js";
+import type { MachineAccess, OpenStrapRuntime, TransportConnection } from "../../Plugin/index.js";
 import { ServerRefusedError, type OpenStrapServer } from "../../Server/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { MachinePlatform } from "#types/Machine.js";
@@ -48,9 +43,7 @@ type Recorded = {
   scope: TargetScope;
   type: TargetType;
   machine?: MachinePlatform;
-  /** A key to look up, where a store holds it. */
-  identity?: SecretReference;
-  /** The key itself, where a server issued it and there is nothing to look up. */
+  /** The key itself, where a server issued it. Absent means the connector has its own. */
   privateKey?: string;
 };
 
@@ -82,14 +75,13 @@ export class Connect {
     const access = await provider.access(handle);
     const connector = request.runtime.transports.require(access.transport);
 
+    // No key where the record holds none: the connector made this machine's key and knows where it
+    // put it. A key is passed only when something else owns it, which is a server issuing one for a
+    // machine a whole organization can reach.
     const connection = await connector.connect({
       target: request.target,
       endpoint: access.endpoint,
-      identity: recorded.identity ?? (recorded.privateKey === undefined ? undefined : Connect.issued(request.target)),
-      // Asked of the store the reference names, not of a store openstrap picked — except where the
-      // value came with the record and there is nothing to look up.
-      reveal: async (reference) => recorded.privateKey
-        ?? await request.runtime.secretStores.require(reference.store).read(reference),
+      ...(recorded.privateKey === undefined ? {} : { privateKey: recorded.privateKey }),
     });
 
     return {
@@ -111,7 +103,6 @@ export class Connect {
     }
 
     const image = store.readMachineImage(target);
-    const identity = store.readSecretReference(target, "ssh-identity");
 
     return {
       provider: resource.provider,
@@ -119,7 +110,6 @@ export class Connect {
       scope: recorded.scope,
       type: recorded.type,
       ...(image ? { machine: { platform: image.platform, architecture: image.architecture } } : {}),
-      ...(identity ? { identity: { store: identity.store, name: identity.name } } : {}),
     };
   }
 
@@ -143,11 +133,6 @@ export class Connect {
       ...(access.machine ? { machine: access.machine } : {}),
       privateKey: access.identity.privateKey,
     };
-  }
-
-  /** The key came with the record, so this names where it came from rather than where to find it. */
-  private static issued(target: string): SecretReference {
-    return { store: "openstrap-server", name: `${target}.ssh-identity` };
   }
 
   private static oneOf<TWord extends string>(

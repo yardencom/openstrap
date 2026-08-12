@@ -1,7 +1,7 @@
 import { connect } from "node:net";
 
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../Plugin/index.js";
+import type { MachineAccess, OpenStrapRuntime } from "../../../Plugin/index.js";
 import { Requirements, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
@@ -13,8 +13,7 @@ export type VerifyRequest = {
   target: BlueprintTarget;
   machine: Target;
   access: MachineAccess;
-  identity?: SecretReference;
-  /** The key itself, where a server issued it and there is nothing to look up. */
+  /** The key itself, where a server issued it. Absent means the connector has its own. */
   privateKey?: string;
   /** What a build of openstrap for this machine has to be built for, as the image it was made from says. */
   platform?: MachinePlatform;
@@ -39,9 +38,7 @@ export class VerifyMachine {
     const connection = await connector.connect({
       target: request.target.name,
       endpoint,
-      identity: request.identity,
-      reveal: async (reference) => request.privateKey
-        ?? await request.runtime.secretStores.require(reference.store).read(reference),
+      ...(request.privateKey === undefined ? {} : { privateKey: request.privateKey }),
     });
 
     try {

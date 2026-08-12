@@ -34,6 +34,7 @@ export type {
   TransportConnectionRequest,
   TransportConnector,
   TransportEndpoint,
+  TransportIdentity,
 } from "./Transport.js";
 export type {
   BinaryFileWriteOptions,

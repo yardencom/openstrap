@@ -189,6 +189,7 @@ function createNoopProvider(id: string): Provider {
 function createNoopTransport(id: string): TransportConnector {
   return {
     id,
+    identityFor: async () => ({ publicKey: "ssh-ed25519 AAAA test" }),
     connect: async () => {
       throw new Error("not used in this test");
     },
