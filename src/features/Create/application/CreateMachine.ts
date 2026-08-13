@@ -105,7 +105,7 @@ export class CreateMachine {
         done(await CreateMachine.ensureRunning(request.provider, existing));
 
         const access = await this.reached(request, existing, timestamp);
-        await this.recordResource(request, opened.runId, existing, timestamp);
+        await this.recordResource(request, opened.runId, existing);
 
         return {
           runId: opened.runId,
@@ -131,7 +131,7 @@ export class CreateMachine {
 
       // Written the moment the provider hands an id back, before anything else can fail: a machine
       // that exists and is recorded nowhere is one nothing can find again.
-      await this.recordResource(request, opened.runId, handle, timestamp);
+      await this.recordResource(request, opened.runId, handle);
       done({ name: "create machine", status: "succeeded", detail: handle.id });
 
       await request.provider.start(handle);
@@ -276,8 +276,7 @@ export class CreateMachine {
     // machine. Which is why there is nothing here to write down about it.
     done({ name: "plant identity", status: "succeeded", detail: request.publicKey!.slice(0, 40) });
 
-    store.allocatePort({ hostPort: request.hostPort, target: target.name, guestPort: 22, protocol: "tcp" }, timestamp);
-    done({ name: "reserve host port", status: "succeeded", detail: String(request.hostPort) });
+    done({ name: "forward host port", status: "succeeded", detail: String(request.hostPort) });
 
     return {
       runId,
@@ -290,24 +289,19 @@ export class CreateMachine {
     };
   }
 
-  /** The machine exists and this is its id at the provider. */
+  /**
+   * The machine exists and this is its id at the provider.
+   *
+   * Only where a server is keeping the record. On this machine nothing is written: the provider knows
+   * its own machines by name, and a remembered id is a second answer that can go stale while the
+   * provider's cannot.
+   */
   private async recordResource(
     request: CreateMachineRequest,
     runId: string,
     handle: MachineHandle,
-    timestamp: string,
   ): Promise<void> {
-    if (request.server) {
-      await request.server.recordResource(runId, { provider: request.provider.id, resourceId: handle.id });
-
-      return;
-    }
-
-    request.store!.saveProviderResource({
-      target: request.target.name,
-      provider: request.provider.id,
-      resourceId: handle.id,
-    }, timestamp);
+    await request.server?.recordResource(runId, { provider: request.provider.id, resourceId: handle.id });
   }
 
   /** How the machine is reached, asked of the provider that made it. */

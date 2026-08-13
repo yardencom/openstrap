@@ -49,42 +49,22 @@ describe("State store", () => {
     expect(store.listSteps("run-1")[1]!.detail).toBe("no space");
   });
 
-  it("maps a target to the resource the provider created", () => {
-    store.saveProviderResource({ target: "ubuntu-vm", provider: "utm", resourceId: "UUID-1" }, now);
+  it("keeps the verdict a run reached, so it can travel with the rest of what happened", () => {
+    store.startRun({ id: "run-1", target: "ubuntu-vm", command: "create", startedAt: now });
+    store.saveRequirementRun({
+      id: "req-1",
+      target: "ubuntu-vm",
+      runId: "run-1",
+      status: "satisfied",
+      evaluatedAt: now,
+      results: [{ id: "kubernetes-running", status: "satisfied" }],
+    });
 
-    expect(store.readProviderResource("ubuntu-vm")?.resourceId).toBe("UUID-1");
-  });
-
-  it("refuses to hand the same host port to a second target", () => {
-    store.saveTarget({ name: "other-vm", scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, now);
-    store.allocatePort({ hostPort: 2222, target: "ubuntu-vm", guestPort: 22, protocol: "tcp" }, now);
-
-    expect(() =>
-      store.allocatePort({ hostPort: 2222, target: "other-vm", guestPort: 22, protocol: "tcp" }, now),
-    ).toThrow(/already reserved for target "ubuntu-vm"/);
-  });
-
-  it("lets the same target reclaim the port it already holds", () => {
-    store.allocatePort({ hostPort: 2222, target: "ubuntu-vm", guestPort: 22, protocol: "tcp" }, now);
-    store.allocatePort({ hostPort: 2222, target: "ubuntu-vm", guestPort: 22, protocol: "tcp" }, now);
-
-    expect(store.listAllocatedPorts()).toHaveLength(1);
-  });
-
-  it("frees a port once the target releases it", () => {
-    store.allocatePort({ hostPort: 2222, target: "ubuntu-vm", guestPort: 22, protocol: "tcp" }, now);
-    store.releasePorts("ubuntu-vm");
-
-    expect(store.listAllocatedPorts()).toEqual([]);
-  });
-
-  it("stores where a secret lives, never the secret", () => {
-    store.saveSecretReference({ target: "ubuntu-vm", purpose: "ssh-identity", store: "keychain", name: "openstrap.ubuntu-vm" }, now);
-
-    const reference = store.readSecretReference("ubuntu-vm", "ssh-identity");
-
-    expect(reference).toMatchObject({ store: "keychain", name: "openstrap.ubuntu-vm" });
-    expect(JSON.stringify(reference)).not.toContain("PRIVATE KEY");
+    expect(store.readRequirementRun("run-1")).toMatchObject({
+      id: "req-1",
+      status: "satisfied",
+      results: [{ id: "kubernetes-running", status: "satisfied" }],
+    });
   });
 
   it("returns the most recent fact snapshot for a target", () => {
@@ -96,15 +76,13 @@ describe("State store", () => {
 
   it("forgets everything recorded about a target that is deleted", () => {
     store.startRun({ id: "run-1", target: "ubuntu-vm", command: "create", startedAt: now });
-    store.allocatePort({ hostPort: 2222, target: "ubuntu-vm", guestPort: 22, protocol: "tcp" }, now);
-    store.saveProviderResource({ target: "ubuntu-vm", provider: "utm", resourceId: "UUID-1" }, now);
+    store.saveFactSnapshot({ id: "snap-1", target: "ubuntu-vm", schemaVersion: "facts.v1", capturedAt: now, data: {} });
 
     store.forgetTarget("ubuntu-vm");
 
     expect(store.readTarget("ubuntu-vm")).toBeNull();
     expect(store.readRun("run-1")).toBeNull();
-    expect(store.listAllocatedPorts()).toEqual([]);
-    expect(store.readProviderResource("ubuntu-vm")).toBeNull();
+    expect(store.readLatestFactSnapshot("ubuntu-vm")).toBeNull();
   });
 
   it("does not record a run for a target it does not know", () => {
@@ -120,16 +98,14 @@ describe("State store", () => {
       .sort();
 
     expect(tableNames).toEqual([
-      "allocated_port",
       "carried_run",
       "desired_state",
       "fact_snapshot",
       "machine_image",
-      "provider_resource",
+      "requirement_run",
       "run",
       "run_image",
       "run_step",
-      "secret_reference",
       "target",
     ]);
   });

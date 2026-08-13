@@ -4,14 +4,12 @@ import { DatabaseSync } from "node:sqlite";
 
 import type {
   MachineImageRecord,
-  AllocatedPortRecord,
   CarriedRunCandidate,
   FactSnapshotRecord,
-  ProviderResourceRecord,
+  RequirementRunRecord,
   RunImageRecord,
   RunRecord,
   RunStepRecord,
-  SecretReferenceRecord,
   TargetRecord,
 } from "../../types/StateRecords.js";
 import { stateStoreSchema } from "./Schema.js";
@@ -187,92 +185,6 @@ export class SqliteStateStore {
     }));
   }
 
-  saveProviderResource(resource: ProviderResourceRecord, now: string): void {
-    this.database.prepare(`
-      INSERT INTO provider_resource (target, provider, resource_id, created_at)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(target) DO UPDATE SET
-        provider = excluded.provider,
-        resource_id = excluded.resource_id
-    `).run(resource.target, resource.provider, resource.resourceId, now);
-  }
-
-  readProviderResource(target: string): ProviderResourceRecord | null {
-    const row = this.database.prepare(
-      "SELECT target, provider, resource_id FROM provider_resource WHERE target = ?",
-    ).get(target) as Record<string, string> | undefined;
-
-    return row
-      ? { target: String(row.target), provider: String(row.provider), resourceId: String(row.resource_id) }
-      : null;
-  }
-
-  /** Reserves a host port, refusing one already held by another target. */
-  allocatePort(port: AllocatedPortRecord, now: string): void {
-    const existing = this.database.prepare(
-      "SELECT target FROM allocated_port WHERE host_port = ?",
-    ).get(port.hostPort) as { target: string } | undefined;
-
-    if (existing && existing.target !== port.target) {
-      throw new Error(`Host port ${port.hostPort} is already reserved for target "${existing.target}"`);
-    }
-
-    this.database.prepare(`
-      INSERT INTO allocated_port (host_port, target, guest_port, protocol, created_at)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(host_port) DO UPDATE SET
-        guest_port = excluded.guest_port,
-        protocol = excluded.protocol
-    `).run(port.hostPort, port.target, port.guestPort, port.protocol, now);
-  }
-
-  /** The port this target already holds, or the first free one at or above `from`. */
-  hostPortFor(target: string, from: number): number {
-    const held = this.database.prepare(
-      "SELECT host_port FROM allocated_port WHERE target = ? ORDER BY host_port LIMIT 1",
-    ).get(target) as { host_port: number } | undefined;
-
-    if (held) {
-      return Number(held.host_port);
-    }
-
-    const taken = new Set(this.listAllocatedPorts().map((port) => port.hostPort));
-    let candidate = from;
-
-    while (taken.has(candidate)) {
-      candidate += 1;
-    }
-
-    return candidate;
-  }
-
-  releasePorts(target: string): void {
-    this.database.prepare("DELETE FROM allocated_port WHERE target = ?").run(target);
-  }
-
-  listAllocatedPorts(): AllocatedPortRecord[] {
-    const rows = this.database.prepare(
-      "SELECT host_port, target, guest_port, protocol FROM allocated_port ORDER BY host_port",
-    ).all() as Record<string, string | number>[];
-
-    return rows.map((row) => ({
-      hostPort: Number(row.host_port),
-      target: String(row.target),
-      guestPort: Number(row.guest_port),
-      protocol: String(row.protocol),
-    }));
-  }
-
-  saveSecretReference(reference: SecretReferenceRecord, now: string): void {
-    this.database.prepare(`
-      INSERT INTO secret_reference (target, purpose, store, name, created_at)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(target, purpose) DO UPDATE SET
-        store = excluded.store,
-        name = excluded.name
-    `).run(reference.target, reference.purpose, reference.store, reference.name, now);
-  }
-
   /** Records the image a target was made from. */
   saveMachineImage(target: string, image: MachineImageRecord, now: string): void {
     this.database.prepare(`
@@ -322,16 +234,6 @@ export class SqliteStateStore {
 
     return row
       ? { reference: String(row.reference), url: String(row.url), sha256: String(row.sha256) }
-      : null;
-  }
-
-  readSecretReference(target: string, purpose: string): SecretReferenceRecord | null {
-    const row = this.database.prepare(
-      "SELECT target, purpose, store, name FROM secret_reference WHERE target = ? AND purpose = ?",
-    ).get(target, purpose) as Record<string, string> | undefined;
-
-    return row
-      ? { target: String(row.target), purpose: String(row.purpose), store: String(row.store), name: String(row.name) }
       : null;
   }
 
@@ -400,7 +302,7 @@ export class SqliteStateStore {
         declaration: this.readDesiredState(target)?.declaration,
         recorded: this.readTarget(target) ?? undefined,
         image: this.readMachineImage(target) ?? undefined,
-        resource: this.readProviderResource(target) ?? undefined,
+        requirementRun: this.readRequirementRun(id),
         steps: this.listSteps(id),
         snapshot: this.snapshotOfRun(id),
       };
@@ -412,6 +314,30 @@ export class SqliteStateStore {
     this.database.prepare(
       "INSERT INTO carried_run (run_id, server_run, carried_at) VALUES (?, ?, ?) ON CONFLICT(run_id) DO NOTHING",
     ).run(runId, serverRunId, at);
+  }
+
+  /** How the machine measured up, so a verdict reached where nobody was listening can still travel. */
+  saveRequirementRun(run: RequirementRunRecord): void {
+    this.database.prepare(`
+      INSERT INTO requirement_run (id, target, run_id, status, evaluated_at, results)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET status = excluded.status, results = excluded.results
+    `).run(run.id, run.target, run.runId ?? null, run.status, run.evaluatedAt, JSON.stringify(run.results));
+  }
+
+  readRequirementRun(runId: string): RequirementRunRecord | undefined {
+    const row = this.database.prepare(
+      "SELECT id, target, run_id, status, evaluated_at, results FROM requirement_run WHERE run_id = ?",
+    ).get(runId) as Record<string, string | null> | undefined;
+
+    return row === undefined ? undefined : {
+      id: String(row.id),
+      target: String(row.target),
+      runId: row.run_id ?? undefined,
+      status: String(row.status),
+      evaluatedAt: String(row.evaluated_at),
+      results: JSON.parse(String(row.results)),
+    };
   }
 
   private snapshotOfRun(runId: string): FactSnapshotRecord | undefined {

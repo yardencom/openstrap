@@ -21,6 +21,13 @@ export class CarryLocalRuns {
     private readonly store: SqliteStateStore,
     private readonly server: OpenStrapServer,
     private readonly host: { id: string; platform: string; architecture: string },
+    /**
+     * What the provider calls a machine, asked now rather than remembered then.
+     *
+     * Nothing here keeps provider ids: the provider knows its own machines by name. A run whose
+     * machine is gone carries without one, which is honest — it happened, and the machine did not last.
+     */
+    private readonly resourceOf: (provider: string, target: string) => Promise<string | null> = async () => null,
   ) {}
 
   /** How many went, and what stopped the rest. */
@@ -57,11 +64,11 @@ export class CarryLocalRuns {
       ...(run.image ? { proposedImage: CarryLocalRuns.imageOf(run.image) } : {}),
     });
 
-    if (run.resource) {
-      await this.server.recordResource(opened.runId, {
-        provider: run.resource.provider,
-        resourceId: run.resource.resourceId,
-      });
+    const provider = declared.provider;
+    const resourceId = provider === undefined ? null : await this.resourceOf(provider, declared.name);
+
+    if (provider !== undefined && resourceId !== null) {
+      await this.server.recordResource(opened.runId, { provider, resourceId });
     }
 
     await this.server.finishRun(opened.runId, {
@@ -73,6 +80,14 @@ export class CarryLocalRuns {
         finishedAt: step.finishedAt ?? step.startedAt,
         ...(step.detail === undefined ? {} : { detail: step.detail }),
       })),
+      ...(run.requirementRun ? {
+        requirementRun: {
+          id: run.requirementRun.id,
+          status: run.requirementRun.status,
+          evaluatedAt: run.requirementRun.evaluatedAt,
+          results: run.requirementRun.results,
+        },
+      } : {}),
       ...(run.snapshot ? {
         snapshot: {
           id: run.snapshot.id,

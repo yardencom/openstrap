@@ -15,6 +15,9 @@ beforeEach(() => {
 });
 
 /** A server that answers every call and remembers what it was told. */
+const found = async (_provider: string, target: string) => `RES-${target}`;
+const gone = async () => null;
+
 function serverListening(answers: { openFails?: number } = {}) {
   const asked: Array<{ path: string; body: unknown }> = [];
   let opens = 0;
@@ -43,7 +46,7 @@ function serverListening(answers: { openFails?: number } = {}) {
 }
 
 /** A machine made here with nothing shared, left exactly as `create` leaves one. */
-function madeHere(name: string, options: { snapshot?: boolean; resource?: boolean; target?: boolean } = {}): string {
+function madeHere(name: string, options: { snapshot?: boolean; target?: boolean } = {}): string {
   const runId = `run_${name}_local`;
 
   if (options.target !== false) {
@@ -56,10 +59,6 @@ function madeHere(name: string, options: { snapshot?: boolean; resource?: boolea
 
   store.startRun({ id: runId, target: name, command: "create", startedAt: at });
   store.recordStep({ runId, ordinal: 1, name: "create machine", status: "succeeded", startedAt: at, finishedAt: at });
-
-  if (options.resource !== false) {
-    store.saveProviderResource({ target: name, provider: "utm", resourceId: `RES-${name}` }, at);
-  }
 
   if (options.snapshot) {
     store.saveFactSnapshot({
@@ -78,7 +77,7 @@ describe("What happened here while no server was listening", () => {
     madeHere("ubuntu-vm", { snapshot: true });
     const listening = serverListening();
 
-    const outcome = await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    const outcome = await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(outcome).toEqual({ carried: 1, failures: [] });
     expect(listening.asked.map((call) => call.path)).toEqual([
@@ -98,7 +97,7 @@ describe("What happened here while no server was listening", () => {
     }, at);
     const listening = serverListening();
 
-    await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(listening.asked[0]!.body).toMatchObject({
       proposedImage: { sha256: "a".repeat(64), platform: "linux", architecture: "arm64" },
@@ -109,7 +108,7 @@ describe("What happened here while no server was listening", () => {
     madeHere("ubuntu-vm");
     const listening = serverListening();
 
-    await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(listening.asked[0]!.body).toMatchObject({
       target: { name: "ubuntu-vm", scope: "guest", type: "vm", transport: "ssh", provider: "utm" },
@@ -120,7 +119,7 @@ describe("What happened here while no server was listening", () => {
     madeHere("ubuntu-vm", { snapshot: true });
     const listening = serverListening();
 
-    await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(listening.asked[2]!.body).toMatchObject({
       status: "succeeded",
@@ -131,7 +130,7 @@ describe("What happened here while no server was listening", () => {
   it("goes once, because a run told twice is two machines in a history that had one", async () => {
     madeHere("ubuntu-vm");
     const listening = serverListening();
-    const carry = () => new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    const carry = () => new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     await carry();
 
@@ -139,11 +138,13 @@ describe("What happened here while no server was listening", () => {
     expect(store.runsToCarry()).toEqual([]);
   });
 
-  it("says nothing about a machine the provider never gave an id for", async () => {
-    madeHere("ubuntu-vm", { resource: false });
+  it("says nothing about a machine the provider no longer has", async () => {
+    madeHere("ubuntu-vm");
     const listening = serverListening();
 
-    await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    // The run still goes: it happened, and the machine not lasting is part of the history rather
+    // than a reason to lose it.
+    await new CarryLocalRuns(store, listening.server, host, gone).all(carriedAt);
 
     expect(listening.asked.map((call) => call.path)).toEqual(["/v1/runs", "/v1/runs/server_run_1/finish"]);
   });
@@ -152,7 +153,7 @@ describe("What happened here while no server was listening", () => {
     madeHere("ubuntu-vm");
     const listening = serverListening({ openFails: 1 });
 
-    const outcome = await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    const outcome = await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(outcome.carried).toBe(0);
     expect(outcome.failures[0]).toMatch(/being worked on right now/);
@@ -164,7 +165,7 @@ describe("What happened here while no server was listening", () => {
     madeHere("ubuntu-vm", { target: false });
     const listening = serverListening();
 
-    const outcome = await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    const outcome = await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(outcome.carried).toBe(0);
     expect(outcome.failures[0]).toMatch(/nothing was recorded about what "ubuntu-vm" is/);
@@ -177,7 +178,7 @@ describe("What happened here while no server was listening", () => {
     store.startRun({ id: "run_open", target: "ubuntu-vm", command: "create", startedAt: at });
     const listening = serverListening();
 
-    const outcome = await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    const outcome = await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(outcome.carried).toBe(0);
     expect(listening.asked).toEqual([]);
@@ -189,7 +190,7 @@ describe("What happened here while no server was listening", () => {
     store.finishRun("run_second", "succeeded", "2026-08-11T12:01:00.000Z");
     const listening = serverListening();
 
-    await new CarryLocalRuns(store, listening.server, host).all(carriedAt);
+    await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
 
     expect(listening.asked.filter((call) => call.path === "/v1/runs")).toHaveLength(2);
   });

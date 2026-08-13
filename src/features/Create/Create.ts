@@ -3,6 +3,7 @@ import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { OpenStrapRuntime, Provider } from "../../Plugin/index.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { RequirementRun } from "../../Modules/Requirements/index.js";
+import { FreeHostPort } from "../../utils/FreeHostPort.js";
 import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { StateHome, type SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
@@ -78,9 +79,10 @@ export class Create {
       // connector makes the key and openstrap sees the half that goes into the machine, nothing more.
       ...(request.server ? {} : { publicKey: await Create.publicKeyFor(target, request) }),
       repin: request.repin,
-      // A proposal. A server answers with the port that is actually free on this host, and its
-      // answer wins.
-      hostPort: request.store?.hostPortFor(target.name, request.hostPort) ?? request.hostPort,
+      // Free on this host right now, asked of the kernel. A server answers with one of its own and
+      // its answer wins; without one this is the answer, and nothing writes it down — the provider
+      // is the one forwarding it and can be asked again at any time.
+      hostPort: request.server ? request.hostPort : await new FreeHostPort().from(request.hostPort),
       now: request.now,
     });
 

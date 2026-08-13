@@ -1,4 +1,5 @@
 import { CarryLocalRuns } from "./CarryLocalRuns.js";
+import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import { OpenStrapServer } from "../../Server/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import { hostname } from "node:os";
@@ -30,11 +31,23 @@ export class WhereMachinesAreRecorded {
     return this.server ? undefined : this.local;
   }
 
-  /** What happened here while nothing was listening, told to a server that now is. */
-  carry(now?: Date): Promise<{ carried: number; failures: readonly string[] }> {
-    return this.server === undefined
-      ? Promise.resolve({ carried: 0, failures: [] })
-      : new CarryLocalRuns(this.local, this.server, WhereMachinesAreRecorded.thisHost()).all(now);
+  /**
+   * What happened here while nothing was listening, told to a server that now is.
+   *
+   * @param runtime Where the provider ids come from: nothing keeps them, so each machine is looked up
+   * by name at the moment its run is carried.
+   */
+  carry(runtime: OpenStrapRuntime, now?: Date): Promise<{ carried: number; failures: readonly string[] }> {
+    if (this.server === undefined) {
+      return Promise.resolve({ carried: 0, failures: [] });
+    }
+
+    return new CarryLocalRuns(
+      this.local,
+      this.server,
+      WhereMachinesAreRecorded.thisHost(),
+      async (provider, target) => (await runtime.providers.require(provider).find(target))?.id ?? null,
+    ).all(now);
   }
 
   close(): void {

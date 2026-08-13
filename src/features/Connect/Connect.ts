@@ -39,7 +39,8 @@ export type Connection = {
  */
 type Recorded = {
   provider: string;
-  resourceId: string;
+  /** Where a server keeps the record it holds this too; on this machine the provider is asked. */
+  resourceId?: string;
   scope: TargetScope;
   type: TargetType;
   machine?: MachinePlatform;
@@ -65,7 +66,16 @@ export class Connect {
       : Connect.fromStore(request.store, request.target);
 
     const provider = request.runtime.providers.require(recorded.provider);
-    const handle = { id: recorded.resourceId, name: request.target };
+    // Asked of the provider where nothing recorded an id: it knows its own machines by name, and an
+    // id remembered here is a second answer that goes stale the moment a machine is remade.
+    const handle = recorded.resourceId === undefined
+      ? await provider.find(request.target)
+      : { id: recorded.resourceId, name: request.target };
+
+    if (!handle) {
+      throw new UnknownMachineError(request.target);
+    }
+
     const state = await provider.inspect(handle);
 
     if (state.status !== "running") {
@@ -95,18 +105,16 @@ export class Connect {
 
   /** A machine this openstrap made, on this machine, with nothing shared. */
   private static fromStore(store: SqliteStateStore | undefined, target: string): Recorded {
-    const resource = store?.readProviderResource(target);
     const recorded = store?.readTarget(target);
 
-    if (!store || !resource || !recorded) {
+    if (!store || !recorded?.provider) {
       throw new UnknownMachineError(target);
     }
 
     const image = store.readMachineImage(target);
 
     return {
-      provider: resource.provider,
-      resourceId: resource.resourceId,
+      provider: recorded.provider,
       scope: recorded.scope,
       type: recorded.type,
       ...(image ? { machine: { platform: image.platform, architecture: image.architecture } } : {}),

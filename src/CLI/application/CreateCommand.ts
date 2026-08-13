@@ -43,7 +43,7 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
 
     // Anything this machine did while no server was listening goes first: a run that never
     // left is a machine the team cannot see, and a server is now there to be told.
-    await recorded.carry(context.now);
+    await recorded.carry(await context.runtime(), context.now);
 
     try {
       const created = await new Create().execute({

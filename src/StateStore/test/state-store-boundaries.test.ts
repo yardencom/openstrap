@@ -32,11 +32,17 @@ describe("State store boundaries", () => {
     }
   });
 
-  it("keeps secret values out of the schema", () => {
+  /**
+   * There is no longer even a reference to a secret here, which is stronger than there being one.
+   *
+   * The store used to say where a machine's key was kept, and something had to be trusted not to keep
+   * the key beside it. Now the connector that uses a key is the only thing that knows one exists, so
+   * this file has nothing to be careful about.
+   */
+  it("says nothing about secrets at all, not even where they are", () => {
     const schema = readFileSync(join(process.cwd(), "src/StateStore/adapters/sqlite/Schema.ts"), "utf8");
 
-    expect(schema).toMatch(/secret_reference/);
-    expect(schema).not.toMatch(/private_key|secret_value|password/);
+    expect(schema).not.toMatch(/secret|private_key|password/i);
   });
 
   /**

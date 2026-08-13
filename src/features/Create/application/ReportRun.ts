@@ -97,6 +97,17 @@ export class ReportRun {
       });
     }
 
+    if (outcome.requirementRun !== undefined) {
+      store.saveRequirementRun({
+        id: String(outcome.requirementRun.id),
+        target: outcome.target,
+        runId: outcome.runId,
+        status: outcome.requirementRun.status,
+        evaluatedAt: String(outcome.requirementRun.evaluatedAt),
+        results: outcome.requirementRun.results,
+      });
+    }
+
     if (outcome.snapshot !== undefined) {
       store.saveFactSnapshot({
         id: String(outcome.snapshot.id),

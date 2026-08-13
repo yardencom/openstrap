@@ -30,26 +30,6 @@ export type RunStepRecord = {
   detail?: string;
 };
 
-export type ProviderResourceRecord = {
-  target: string;
-  provider: string;
-  resourceId: string;
-};
-
-export type AllocatedPortRecord = {
-  hostPort: number;
-  target: string;
-  guestPort: number;
-  protocol: string;
-};
-
-export type SecretReferenceRecord = {
-  target: string;
-  purpose: string;
-  store: string;
-  name: string;
-};
-
 export type FactSnapshotRecord = {
   id: string;
   target: string;
@@ -95,7 +75,17 @@ export type CarriedRunCandidate = {
   /** What kind of machine it is, which the blueprint never said: the provider did. */
   recorded?: TargetRecord;
   image?: MachineImageRecord;
-  resource?: ProviderResourceRecord;
   steps: readonly RunStepRecord[];
   snapshot?: FactSnapshotRecord;
+  requirementRun?: RequirementRunRecord;
+};
+
+/** How a machine measured up against what was required of it. */
+export type RequirementRunRecord = {
+  id: string;
+  target: string;
+  runId?: string;
+  status: string;
+  evaluatedAt: string;
+  results: unknown;
 };

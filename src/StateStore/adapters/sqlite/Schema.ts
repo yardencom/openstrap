@@ -53,29 +53,8 @@ export const stateStoreSchema = [
      UNIQUE (run_id, ordinal)
    )`,
 
-  `CREATE TABLE IF NOT EXISTS provider_resource (
-     target      TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
-     provider    TEXT NOT NULL,
-     resource_id TEXT NOT NULL,
-     created_at  TEXT NOT NULL
-   )`,
 
-  `CREATE TABLE IF NOT EXISTS allocated_port (
-     host_port   INTEGER PRIMARY KEY,
-     target      TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     guest_port  INTEGER NOT NULL,
-     protocol    TEXT NOT NULL,
-     created_at  TEXT NOT NULL
-   )`,
 
-  `CREATE TABLE IF NOT EXISTS secret_reference (
-     target      TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     purpose     TEXT NOT NULL,
-     store       TEXT NOT NULL,
-     name        TEXT NOT NULL,
-     created_at  TEXT NOT NULL,
-     PRIMARY KEY (target, purpose)
-   )`,
 
   `CREATE TABLE IF NOT EXISTS fact_snapshot (
      id             TEXT PRIMARY KEY,
@@ -92,6 +71,16 @@ export const stateStoreSchema = [
      reference    TEXT NOT NULL,
      url          TEXT NOT NULL,
      sha256       TEXT NOT NULL
+   )`,
+
+  /** How a machine measured up against what was required of it, so the verdict can travel too. */
+  `CREATE TABLE IF NOT EXISTS requirement_run (
+     id           TEXT PRIMARY KEY,
+     target       TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
+     run_id       TEXT REFERENCES run(id) ON DELETE CASCADE,
+     status       TEXT NOT NULL,
+     evaluated_at TEXT NOT NULL,
+     results      TEXT NOT NULL
    )`,
 
   /**
