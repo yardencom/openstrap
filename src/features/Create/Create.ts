@@ -5,11 +5,11 @@ import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { RequirementRun } from "../../Modules/Requirements/index.js";
 import { FreeHostPort } from "../../utils/FreeHostPort.js";
 import { RunLock } from "../../utils/RunLock/RunLock.js";
-import { StateHome, type SqliteStateStore } from "../../StateStore/index.js";
+import { StateHome, type Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
 import { CreateMachine, type CreateMachineResult } from "./application/CreateMachine.js";
 import { MissingProviderError } from "./errors/MissingProviderError.js";
-import type { OpenStrapServer } from "../../OpenStrapServer/index.js";
+import type { OpenStrapServer } from "../../Api/index.js";
 import { ReportRun } from "./application/ReportRun.js";
 import { VerifyMachine } from "./application/VerifyMachine.js";
 
@@ -22,7 +22,7 @@ export type CreateRequest = {
   target: BlueprintTarget;
   runtime: OpenStrapRuntime;
   /** This machine's own record, which is where a machine lives when a run has no server. */
-  store?: SqliteStateStore;
+  store?: Store;
   /** The record a team shares. Where there is one it decides, and the store is not written. */
   server?: OpenStrapServer;
   hostPort: number;

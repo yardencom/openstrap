@@ -1,7 +1,7 @@
 import { CarryLocalRuns } from "./CarryLocalRuns.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
-import { OpenStrapServer } from "../../OpenStrapServer/index.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { OpenStrapServer } from "../../Api/index.js";
+import { Store, StateHome } from "../../Store/index.js";
 import { hostname } from "node:os";
 
 /**
@@ -19,15 +19,15 @@ import { hostname } from "node:os";
 export class WhereMachinesAreRecorded {
   readonly server: OpenStrapServer | undefined;
   /** This machine's own file. Open either way: what happened here has to be readable to be told. */
-  readonly local: SqliteStateStore;
+  readonly local: Store;
 
   constructor(stateHome = new StateHome(), environment = process.env) {
     this.server = OpenStrapServer.fromEnvironment(environment);
-    this.local = new SqliteStateStore(stateHome.database());
+    this.local = new Store(stateHome.database());
   }
 
   /** Where to write. Nothing, when a server is the record. */
-  get store(): SqliteStateStore | undefined {
+  get store(): Store | undefined {
     return this.server ? undefined : this.local;
   }
 

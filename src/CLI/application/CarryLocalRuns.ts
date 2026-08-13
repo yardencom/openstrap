@@ -1,5 +1,5 @@
-import type { CarriedRunCandidate, SqliteStateStore } from "../../StateStore/index.js";
-import type { DeclaredTarget, OpenStrapServer, ResolvedImage } from "../../OpenStrapServer/index.js";
+import type { CarriedRunCandidate, Store } from "../../Store/index.js";
+import type { DeclaredTarget, OpenStrapServer, ResolvedImage } from "../../Api/index.js";
 
 /**
  * What happened on this machine while no server was listening, told to one that now is.
@@ -18,7 +18,7 @@ import type { DeclaredTarget, OpenStrapServer, ResolvedImage } from "../../OpenS
  */
 export class CarryLocalRuns {
   constructor(
-    private readonly store: SqliteStateStore,
+    private readonly store: Store,
     private readonly server: OpenStrapServer,
     private readonly host: { id: string; platform: string; architecture: string },
     /**
@@ -35,7 +35,7 @@ export class CarryLocalRuns {
     const failures: string[] = [];
     let carried = 0;
 
-    for (const run of this.store.runsToCarry()) {
+    for (const run of this.store.carried.waiting()) {
       const declared = CarryLocalRuns.declaredIn(run);
 
       // A run whose target was never written down cannot be opened anywhere else: the server is told
@@ -101,7 +101,7 @@ export class CarryLocalRuns {
       } : {}),
     });
 
-    this.store.markCarried(run.id, opened.runId, now.toISOString());
+    this.store.carried.mark(run.id, opened.runId, now.toISOString());
   }
 
   /**

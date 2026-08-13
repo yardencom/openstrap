@@ -2,8 +2,8 @@ import { MachineNotRunningError } from "./errors/MachineNotRunningError.js";
 import { UnknownMachineError } from "./errors/UnknownMachineError.js";
 import { UnrecognisedMachineKindError } from "./errors/UnrecognisedMachineKindError.js";
 import type { MachineAccess, OpenStrapRuntime, TransportConnection } from "../../Plugin/index.js";
-import { ServerRefusedError, type OpenStrapServer } from "../../OpenStrapServer/index.js";
-import type { SqliteStateStore } from "../../StateStore/index.js";
+import { ServerRefusedError, type OpenStrapServer } from "../../Api/index.js";
+import type { Store } from "../../Store/index.js";
 import type { MachinePlatform } from "#types/Machine.js";
 import type { TargetScope, TargetType } from "#types/Target.js";
 
@@ -14,7 +14,7 @@ export type ConnectRequest = {
   target: string;
   runtime: OpenStrapRuntime;
   /** This machine's own record, which is where a machine lives when a run has no server. */
-  store?: SqliteStateStore;
+  store?: Store;
   /** The record a team shares. Where there is one it is the record, and the store is not asked. */
   server?: OpenStrapServer;
 };
@@ -104,14 +104,14 @@ export class Connect {
   }
 
   /** A machine this openstrap made, on this machine, with nothing shared. */
-  private static fromStore(store: SqliteStateStore | undefined, target: string): Recorded {
-    const recorded = store?.readTarget(target);
+  private static fromStore(store: Store | undefined, target: string): Recorded {
+    const recorded = store?.machines.read(target);
 
     if (!store || !recorded?.provider) {
       throw new UnknownMachineError(target);
     }
 
-    const image = store.readMachineImage(target);
+    const image = store.machines.pinOf(target);
 
     return {
       provider: recorded.provider,

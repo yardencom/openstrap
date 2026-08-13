@@ -1,8 +1,8 @@
 import type { CreateStep } from "./CreateStep.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
-import type { OpenStrapServer } from "../../../OpenStrapServer/index.js";
+import type { OpenStrapServer } from "../../../Api/index.js";
 import type { RequirementRun } from "../../../Modules/Requirements/index.js";
-import type { SqliteStateStore } from "../../../StateStore/index.js";
+import type { Store } from "../../../Store/index.js";
 
 export type RunOutcome = {
   target: string;
@@ -11,7 +11,7 @@ export type RunOutcome = {
   startedAt: string;
   steps: readonly CreateStep[];
   status: "succeeded" | "failed";
-  store?: SqliteStateStore;
+  store?: Store;
   server?: OpenStrapServer;
   /** What the machine was read to be, where anything was required of it. */
   snapshot?: FactSnapshot;
@@ -74,7 +74,7 @@ export class ReportRun {
     }
 
     outcome.steps.forEach((step, index) => {
-      store.recordStep({
+      store.runs.recordStep({
         runId: outcome.runId,
         ordinal: index + 1,
         name: step.name,
@@ -86,7 +86,7 @@ export class ReportRun {
     });
 
     if (outcome.error !== undefined) {
-      store.recordStep({
+      store.runs.recordStep({
         runId: outcome.runId,
         ordinal: outcome.steps.length + 1,
         name: "failed",
@@ -98,7 +98,7 @@ export class ReportRun {
     }
 
     if (outcome.requirementRun !== undefined) {
-      store.saveRequirementRun({
+      store.runs.recordVerdict({
         id: String(outcome.requirementRun.id),
         target: outcome.target,
         runId: outcome.runId,
@@ -109,7 +109,7 @@ export class ReportRun {
     }
 
     if (outcome.snapshot !== undefined) {
-      store.saveFactSnapshot({
+      store.runs.recordSnapshot({
         id: String(outcome.snapshot.id),
         target: outcome.target,
         runId: outcome.runId,
@@ -119,6 +119,6 @@ export class ReportRun {
       });
     }
 
-    store.finishRun(outcome.runId, outcome.status, new Date().toISOString());
+    store.runs.finish(outcome.runId, outcome.status, new Date().toISOString());
   }
 }

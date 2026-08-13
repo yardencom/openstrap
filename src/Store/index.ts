@@ -1,5 +1,8 @@
 export { StateHome } from "./StateHome.js";
-export { SqliteStateStore } from "./adapters/sqlite/SqliteStateStore.js";
+export { Store } from "./Store.js";
+export { Machines } from "./Machines.js";
+export { Runs } from "./Runs.js";
+export { Carried } from "./Carried.js";
 export type {
   CarriedRunCandidate,
   FactSnapshotRecord,
@@ -10,4 +13,4 @@ export type {
   RunStatus,
   RunStepRecord,
   TargetRecord,
-} from "./types/StateRecords.js";
+} from "./types/Records.js";

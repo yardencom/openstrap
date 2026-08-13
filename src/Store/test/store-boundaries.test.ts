@@ -13,19 +13,24 @@ describe("State store boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps SQL inside the sqlite adapter", () => {
-    const outsideAdapter = storeSourceFiles().filter(
-      (filePath: string) => !filePath.includes("/adapters/sqlite/"),
-    );
-    const offenders = outsideAdapter.filter((filePath: string) =>
-      /CREATE TABLE|INSERT INTO|SELECT .* FROM/.test(readFileSync(filePath, "utf8")),
-    );
+  /**
+   * One file writes SQL, and it writes the statements that make an empty file into these tables.
+   *
+   * Everything else asks through the schema, so a column renamed in one place is a compile error
+   * rather than a query that returns undefined at run time in a case nobody exercised.
+   */
+  it("writes SQL in one file and queries through the schema everywhere else", () => {
+    const offenders = storeSourceFiles()
+      .filter((filePath: string) => !filePath.endsWith("Schema.ts"))
+      .filter((filePath: string) =>
+        /CREATE TABLE|INSERT INTO|SELECT .+ FROM|UPDATE .+ SET|DELETE FROM/.test(readFileSync(filePath, "utf8")),
+      );
 
     expect(offenders).toEqual([]);
   });
 
   it("does not keep the machine's actual state", () => {
-    const schema = readFileSync(join(process.cwd(), "src/StateStore/adapters/sqlite/Schema.ts"), "utf8");
+    const schema = readFileSync(join(process.cwd(), "src/Store/Schema.ts"), "utf8");
 
     for (const absent of ["actual_state", "machine_status", "current_state"]) {
       expect(schema).not.toContain(absent);
@@ -40,7 +45,7 @@ describe("State store boundaries", () => {
    * this file has nothing to be careful about.
    */
   it("says nothing about secrets at all, not even where they are", () => {
-    const schema = readFileSync(join(process.cwd(), "src/StateStore/adapters/sqlite/Schema.ts"), "utf8");
+    const schema = readFileSync(join(process.cwd(), "src/Store/Schema.ts"), "utf8");
 
     expect(schema).not.toMatch(/secret|private_key|password/i);
   });
@@ -82,7 +87,7 @@ describe("State store boundaries", () => {
 });
 
 function storeSourceFiles(): string[] {
-  return listSourceFiles(join(process.cwd(), "src/StateStore")).filter(
+  return listSourceFiles(join(process.cwd(), "src/Store")).filter(
     (filePath: string) => !filePath.includes("/test/"),
   );
 }

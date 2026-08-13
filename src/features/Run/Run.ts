@@ -8,8 +8,8 @@ import {
   type RequirementRun,
   type TargetlessRequirement,
 } from "../../Modules/Requirements/index.js";
-import type { OpenStrapServer } from "../../OpenStrapServer/index.js";
-import type { SqliteStateStore } from "../../StateStore/index.js";
+import type { OpenStrapServer } from "../../Api/index.js";
+import type { Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
 import { Converge } from "../Converge/Converge.js";
 import { Create } from "../Create/Create.js";
@@ -19,7 +19,7 @@ export type RunRequest = {
   blueprint: Blueprint;
   runtime: OpenStrapRuntime;
   /** This machine's own record, which is where a machine lives when a run has no server. */
-  store?: SqliteStateStore;
+  store?: Store;
   /** The record a team shares. Where there is one it decides, and the store is not written. */
   server?: OpenStrapServer;
   workspaceRoot?: string;
@@ -118,9 +118,9 @@ export class Run {
 
     // Only where this machine keeps its own record. A run against the host makes nothing and reaches
     // nothing, so there is no run to open on a server and nothing there to tell about it.
-    request.store?.saveTarget({ ...machine, transport: target.transport }, at);
-    request.store?.saveDesiredState(target.name, target, at);
-    request.store?.saveFactSnapshot({
+    request.store?.machines.save({ ...machine, transport: target.transport }, at);
+    request.store?.machines.declare(target.name, target, at);
+    request.store?.runs.recordSnapshot({
       id: String(snapshot.id),
       target: target.name,
       schemaVersion: snapshot.schemaVersion,

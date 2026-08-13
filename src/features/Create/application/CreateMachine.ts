@@ -14,8 +14,8 @@ import type {
 } from "../../../Plugin/index.js";
 import type { CreateStep } from "./CreateStep.js";
 import { ReportRun } from "./ReportRun.js";
-import type { DeclaredTarget, Host, OpenStrapServer } from "../../../OpenStrapServer/index.js";
-import type { MachineImageRecord, SqliteStateStore, TargetRecord } from "../../../StateStore/index.js";
+import type { DeclaredTarget, Host, OpenStrapServer } from "../../../Api/index.js";
+import type { MachineImageRecord, Store, TargetRecord } from "../../../Store/index.js";
 import type { Target } from "#types/Target.js";
 
 export type CreateMachineRequest = {
@@ -23,7 +23,7 @@ export type CreateMachineRequest = {
   machine: Target;
   provider: Provider;
   /** This machine's own record, which is where a machine lives when a run has no server. */
-  store?: SqliteStateStore;
+  store?: Store;
   /** The record a team shares. Where there is one it decides, and the store is not written. */
   server?: OpenStrapServer;
   /** The public half to plant, from the connector that owns the key. Not needed with a server. */
@@ -232,11 +232,11 @@ export class CreateMachine {
     // Written before anything else is: a port reservation, a key and a run all belong to a target,
     // and the row they point at has to be there first. How the machine is reached is not part of it
     // yet — nothing has reached it — and is written below, once the provider has said.
-    store.saveTarget({ ...CreateMachine.record(request), transport: target.transport }, timestamp);
-    store.saveDesiredState(target.name, target, timestamp);
+    store.machines.save({ ...CreateMachine.record(request), transport: target.transport }, timestamp);
+    store.machines.declare(target.name, target, timestamp);
 
     const runId = `run_${target.name}_${timestamp.replace(/[-:.]/g, "")}`;
-    store.startRun({ id: runId, target: target.name, command: "create", startedAt: timestamp });
+    store.runs.start({ id: runId, target: target.name, command: "create", startedAt: timestamp });
 
     // From here the run exists, so a failure is a run that failed rather than one left open forever.
     // The image is the first thing that can fail — a pin that no longer matches is a refusal, not a
@@ -268,7 +268,7 @@ export class CreateMachine {
     done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
 
     // Which file this run built with, as data. The step above says it as a sentence for a person.
-    store.recordRunImage(runId, { reference: image.reference, url: image.url, sha256: image.sha256 });
+    store.runs.recordImage(runId, { reference: image.reference, url: image.url, sha256: image.sha256 });
 
     const user = request.user ?? "openstrap";
 
@@ -314,7 +314,7 @@ export class CreateMachine {
 
     // Only here: a server was told what this target is when the run was opened, and telling it twice
     // is how the two answers start to differ.
-    request.store?.saveTarget({
+    request.store?.machines.save({
       ...CreateMachine.record(request),
       transport: request.target.transport ?? access.transport,
     }, timestamp);
@@ -326,7 +326,7 @@ export class CreateMachine {
   private async image(request: CreateMachineRequest, timestamp: string): Promise<ResolvedImage> {
     const store = request.store!;
     const reference = request.target.image ?? "ubuntu:24.04";
-    const pinned = request.repin ? null : store.readMachineImage(request.target.name);
+    const pinned = request.repin ? null : store.machines.pinOf(request.target.name);
     const image = await request.provider.resolveImage({
       name: reference,
       architecture: process.arch,
@@ -342,7 +342,7 @@ export class CreateMachine {
     }
 
     if (!pinned) {
-      store.saveMachineImage(request.target.name, CreateMachine.madeFrom(reference, image), timestamp);
+      store.machines.pin(request.target.name, CreateMachine.madeFrom(reference, image), timestamp);
     }
 
     return image;

@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CarryLocalRuns } from "../application/CarryLocalRuns.js";
-import { OpenStrapServer } from "../../OpenStrapServer/index.js";
-import { SqliteStateStore } from "../../StateStore/index.js";
+import { OpenStrapServer } from "../../Api/index.js";
+import { Store } from "../../Store/index.js";
 
 const host = { id: "mac-probe", platform: "darwin", architecture: "arm64" };
 const at = "2026-08-11T10:00:00.000Z";
 const carriedAt = new Date("2026-08-11T11:00:00.000Z");
 
-let store: SqliteStateStore;
+let store: Store;
 
 beforeEach(() => {
-  store = new SqliteStateStore(":memory:");
+  store = new Store(":memory:");
 });
 
 /** A server that answers every call and remembers what it was told. */
@@ -50,24 +50,24 @@ function madeHere(name: string, options: { snapshot?: boolean; target?: boolean 
   const runId = `run_${name}_local`;
 
   if (options.target !== false) {
-    store.saveTarget({ name, scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
-    store.saveDesiredState(name, { name, provider: "utm", image: "ubuntu:24.04", requirements: [] }, at);
+    store.machines.save({ name, scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
+    store.machines.declare(name, { name, provider: "utm", image: "ubuntu:24.04", requirements: [] }, at);
   } else {
     // A run needs a target row to exist at all; this one is left without the blueprint beside it.
-    store.saveTarget({ name, scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
+    store.machines.save({ name, scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
   }
 
-  store.startRun({ id: runId, target: name, command: "create", startedAt: at });
-  store.recordStep({ runId, ordinal: 1, name: "create machine", status: "succeeded", startedAt: at, finishedAt: at });
+  store.runs.start({ id: runId, target: name, command: "create", startedAt: at });
+  store.runs.recordStep({ runId, ordinal: 1, name: "create machine", status: "succeeded", startedAt: at, finishedAt: at });
 
   if (options.snapshot) {
-    store.saveFactSnapshot({
+    store.runs.recordSnapshot({
       id: `snap_${name}`, target: name, runId, schemaVersion: "facts.v1", capturedAt: at,
       data: { os: { name: "ubuntu" } },
     });
   }
 
-  store.finishRun(runId, "succeeded", at);
+  store.runs.finish(runId, "succeeded", at);
 
   return runId;
 }
@@ -89,7 +89,7 @@ describe("What happened here while no server was listening", () => {
 
   it("carries the pin it was made from, so the organization runs the same bytes", async () => {
     madeHere("ubuntu-vm");
-    store.saveMachineImage("ubuntu-vm", {
+    store.machines.pin("ubuntu-vm", {
       reference: "ubuntu:24.04",
       url: "https://images.example/noble-arm64.img",
       sha256: "a".repeat(64),
@@ -129,13 +129,13 @@ describe("What happened here while no server was listening", () => {
 
   it("carries what that run built with, not what the pin has since moved to", async () => {
     const runId = madeHere("ubuntu-vm");
-    store.recordRunImage(runId, {
+    store.runs.recordImage(runId, {
       reference: "ubuntu:24.04",
       url: "https://images.example/older.img",
       sha256: "a".repeat(64),
     });
     // The target has been repinned since; the machine that run made is still the older file.
-    store.saveMachineImage("ubuntu-vm", {
+    store.machines.pin("ubuntu-vm", {
       reference: "ubuntu:24.04",
       url: "https://images.example/newer.img",
       sha256: "b".repeat(64),
@@ -157,7 +157,7 @@ describe("What happened here while no server was listening", () => {
     await carry();
 
     await expect(carry()).resolves.toEqual({ carried: 0, failures: [] });
-    expect(store.runsToCarry()).toEqual([]);
+    expect(store.carried.waiting()).toEqual([]);
   });
 
   it("says nothing about a machine the provider no longer has", async () => {
@@ -180,7 +180,7 @@ describe("What happened here while no server was listening", () => {
     expect(outcome.carried).toBe(0);
     expect(outcome.failures[0]).toMatch(/being worked on right now/);
     // Still here, so the next command tries again rather than losing it.
-    expect(store.runsToCarry()).toHaveLength(1);
+    expect(store.carried.waiting()).toHaveLength(1);
   });
 
   it("leaves a run whose blueprint was never written down, because nothing can be opened from it", async () => {
@@ -195,9 +195,9 @@ describe("What happened here while no server was listening", () => {
   });
 
   it("does not carry a run that is still going, because it has no outcome to report", async () => {
-    store.saveTarget({ name: "ubuntu-vm", scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
-    store.saveDesiredState("ubuntu-vm", { name: "ubuntu-vm", requirements: [] }, at);
-    store.startRun({ id: "run_open", target: "ubuntu-vm", command: "create", startedAt: at });
+    store.machines.save({ name: "ubuntu-vm", scope: "guest", type: "vm", provider: "utm", transport: "ssh" }, at);
+    store.machines.declare("ubuntu-vm", { name: "ubuntu-vm", requirements: [] }, at);
+    store.runs.start({ id: "run_open", target: "ubuntu-vm", command: "create", startedAt: at });
     const listening = serverListening();
 
     const outcome = await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
@@ -208,8 +208,8 @@ describe("What happened here while no server was listening", () => {
 
   it("carries the oldest first, so a history arrives in the order it happened", async () => {
     madeHere("first-vm");
-    store.startRun({ id: "run_second", target: "first-vm", command: "converge", startedAt: "2026-08-11T12:00:00.000Z" });
-    store.finishRun("run_second", "succeeded", "2026-08-11T12:01:00.000Z");
+    store.runs.start({ id: "run_second", target: "first-vm", command: "converge", startedAt: "2026-08-11T12:00:00.000Z" });
+    store.runs.finish("run_second", "succeeded", "2026-08-11T12:01:00.000Z");
     const listening = serverListening();
 
     await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);

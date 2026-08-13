@@ -4,7 +4,7 @@ import type { ImageRequest, MachineHandle, Provider, ResolvedImage } from "../..
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import { CreateMachine } from "../application/CreateMachine.js";
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
-import { SqliteStateStore } from "../../../StateStore/index.js";
+import { Store } from "../../../Store/index.js";
 
 /**
  * Each create is given its own instant.
@@ -28,10 +28,10 @@ function nextInstant(): Date {
  * openstrap used to write recorded that after the fact and was never read back, which is a log.
  */
 describe("The image a target is pinned to", () => {
-  let store: SqliteStateStore;
+  let store: Store;
 
   beforeEach(() => {
-    store = new SqliteStateStore(":memory:");
+    store = new Store(":memory:");
   });
 
   afterEach(() => {
@@ -43,7 +43,7 @@ describe("The image a target is pinned to", () => {
 
     await create(store, provider);
 
-    expect(store.readMachineImage("ubuntu-vm")).toEqual({
+    expect(store.machines.pinOf("ubuntu-vm")).toEqual({
       reference: "ubuntu:24.04",
       url: "https://images.example/noble-arm64.img",
       sha256: "a".repeat(64),
@@ -77,7 +77,7 @@ describe("The image a target is pinned to", () => {
 
     await expect(create(store, provider)).rejects.toThrow(PinnedImageChangedError);
     await expect(create(store, provider)).rejects.toThrow(/pinned to ubuntu:24\.04 aaaaaaaaaaaa/);
-    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("a".repeat(64));
+    expect(store.machines.pinOf("ubuntu-vm")!.sha256).toBe("a".repeat(64));
   });
 
   it("fails the run when the blueprint asks for another image, which is a decision, not a drift", async () => {
@@ -94,7 +94,7 @@ describe("The image a target is pinned to", () => {
     provider.sha256 = "b".repeat(64);
     await create(store, provider, {}, { repin: true });
 
-    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("b".repeat(64));
+    expect(store.machines.pinOf("ubuntu-vm")!.sha256).toBe("b".repeat(64));
     // Asked for the name, not for the pin it is about to replace.
     expect(provider.asked[1]!.pinned).toBeUndefined();
   });
@@ -103,7 +103,7 @@ describe("The image a target is pinned to", () => {
     const provider = fakeProvider("a".repeat(64));
 
     await create(store, provider);
-    const image = store.readMachineImage("ubuntu-vm")!;
+    const image = store.machines.pinOf("ubuntu-vm")!;
 
     // Two questions with one answer: what to build from again, and what openstrap has to be built
     // for to run there. Two rows saying it would be two rows that can disagree.
@@ -114,11 +114,11 @@ describe("The image a target is pinned to", () => {
     const provider = fakeProvider("a".repeat(64));
 
     await create(store, provider);
-    const [run] = store.listRuns("ubuntu-vm");
+    const [run] = store.runs.of("ubuntu-vm");
 
     // The step says it as a sentence with the checksum cut to twelve characters, which no one can
     // compare with anything. The history is asked instead.
-    expect(store.readRunImage(run!.id)).toEqual({
+    expect(store.runs.imageOf(run!.id)).toEqual({
       reference: "ubuntu:24.04",
       url: "https://images.example/noble-arm64.img",
       sha256: "a".repeat(64),
@@ -131,11 +131,11 @@ describe("The image a target is pinned to", () => {
     provider.sha256 = "b".repeat(64);
     await create(store, provider, {}, { repin: true });
 
-    const runs = store.listRuns("ubuntu-vm");
-    const built = runs.map((run) => store.readRunImage(run.id)!.sha256).sort();
+    const runs = store.runs.of("ubuntu-vm");
+    const built = runs.map((run) => store.runs.imageOf(run.id)!.sha256).sort();
 
     expect(built).toEqual(["a".repeat(64), "b".repeat(64)]);
-    expect(store.readMachineImage("ubuntu-vm")!.sha256).toBe("b".repeat(64));
+    expect(store.machines.pinOf("ubuntu-vm")!.sha256).toBe("b".repeat(64));
   });
 
   it("records the failure as a run that failed, not as no run at all", async () => {
@@ -145,15 +145,15 @@ describe("The image a target is pinned to", () => {
 
     await expect(create(store, provider)).rejects.toThrow(PinnedImageChangedError);
 
-    const runs = store.listRuns("ubuntu-vm");
+    const runs = store.runs.of("ubuntu-vm");
 
     expect(runs[0]!.status).toBe("failed");
-    expect(store.listSteps(runs[0]!.id).at(-1)).toMatchObject({ name: "failed", status: "failed" });
+    expect(store.runs.steps(runs[0]!.id).at(-1)).toMatchObject({ name: "failed", status: "failed" });
   });
 });
 
 function create(
-  store: SqliteStateStore,
+  store: Store,
   provider: FakeProvider,
   target: Partial<BlueprintTarget> = {},
   request: { repin?: boolean } = {},
