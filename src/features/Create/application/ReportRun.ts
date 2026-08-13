@@ -1,6 +1,6 @@
 import type { CreateStep } from "./CreateStep.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
-import type { OpenStrapServer } from "../../../Server/index.js";
+import type { OpenStrapServer } from "../../../OpenStrapServer/index.js";
 import type { RequirementRun } from "../../../Modules/Requirements/index.js";
 import type { SqliteStateStore } from "../../../StateStore/index.js";
 

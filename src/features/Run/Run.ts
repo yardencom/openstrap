@@ -8,7 +8,7 @@ import {
   type RequirementRun,
   type TargetlessRequirement,
 } from "../../Modules/Requirements/index.js";
-import type { OpenStrapServer } from "../../Server/index.js";
+import type { OpenStrapServer } from "../../OpenStrapServer/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 import { Converge } from "../Converge/Converge.js";

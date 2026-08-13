@@ -1,6 +1,6 @@
 import { CarryLocalRuns } from "./CarryLocalRuns.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
-import { OpenStrapServer } from "../../Server/index.js";
+import { OpenStrapServer } from "../../OpenStrapServer/index.js";
 import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
 import { hostname } from "node:os";
 

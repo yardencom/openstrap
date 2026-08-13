@@ -9,7 +9,7 @@ import { StateHome, type SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 import { CreateMachine, type CreateMachineResult } from "./application/CreateMachine.js";
 import { MissingProviderError } from "./errors/MissingProviderError.js";
-import type { OpenStrapServer } from "../../Server/index.js";
+import type { OpenStrapServer } from "../../OpenStrapServer/index.js";
 import { ReportRun } from "./application/ReportRun.js";
 import { VerifyMachine } from "./application/VerifyMachine.js";
 

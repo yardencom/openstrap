@@ -2,7 +2,7 @@ import { MachineNotRunningError } from "./errors/MachineNotRunningError.js";
 import { UnknownMachineError } from "./errors/UnknownMachineError.js";
 import { UnrecognisedMachineKindError } from "./errors/UnrecognisedMachineKindError.js";
 import type { MachineAccess, OpenStrapRuntime, TransportConnection } from "../../Plugin/index.js";
-import { ServerRefusedError, type OpenStrapServer } from "../../Server/index.js";
+import { ServerRefusedError, type OpenStrapServer } from "../../OpenStrapServer/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { MachinePlatform } from "#types/Machine.js";
 import type { TargetScope, TargetType } from "#types/Target.js";

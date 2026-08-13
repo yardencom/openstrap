@@ -1,5 +1,5 @@
 import type { CarriedRunCandidate, SqliteStateStore } from "../../StateStore/index.js";
-import type { DeclaredTarget, OpenStrapServer, ResolvedImage } from "../../Server/index.js";
+import type { DeclaredTarget, OpenStrapServer, ResolvedImage } from "../../OpenStrapServer/index.js";
 
 /**
  * What happened on this machine while no server was listening, told to one that now is.

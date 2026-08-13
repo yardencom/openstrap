@@ -6,7 +6,7 @@ import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/er
 import { WrittenSteps, type BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import type { ConvergingResult } from "./Converging.js";
 import type { OpenStrapRuntime } from "../../../Plugin/index.js";
-import type { OpenStrapServer } from "../../../Server/index.js";
+import type { OpenStrapServer } from "../../../OpenStrapServer/index.js";
 import type { SqliteStateStore } from "../../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 

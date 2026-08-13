@@ -2,7 +2,7 @@ import { ConvergeMachine } from "./application/ConvergeMachine.js";
 import { Converging, type ConvergingResult } from "./application/Converging.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
-import type { OpenStrapServer } from "../../Server/index.js";
+import type { OpenStrapServer } from "../../OpenStrapServer/index.js";
 import type { SqliteStateStore } from "../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 

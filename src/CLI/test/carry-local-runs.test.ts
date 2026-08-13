@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CarryLocalRuns } from "../application/CarryLocalRuns.js";
-import { OpenStrapServer } from "../../Server/index.js";
+import { OpenStrapServer } from "../../OpenStrapServer/index.js";
 import { SqliteStateStore } from "../../StateStore/index.js";
 
 const host = { id: "mac-probe", platform: "darwin", architecture: "arm64" };

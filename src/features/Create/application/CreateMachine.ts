@@ -14,7 +14,7 @@ import type {
 } from "../../../Plugin/index.js";
 import type { CreateStep } from "./CreateStep.js";
 import { ReportRun } from "./ReportRun.js";
-import type { DeclaredTarget, Host, OpenStrapServer } from "../../../Server/index.js";
+import type { DeclaredTarget, Host, OpenStrapServer } from "../../../OpenStrapServer/index.js";
 import type { MachineImageRecord, SqliteStateStore, TargetRecord } from "../../../StateStore/index.js";
 import type { Target } from "#types/Target.js";
 
