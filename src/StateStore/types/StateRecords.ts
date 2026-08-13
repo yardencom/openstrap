@@ -74,7 +74,10 @@ export type CarriedRunCandidate = {
   declaration?: unknown;
   /** What kind of machine it is, which the blueprint never said: the provider did. */
   recorded?: TargetRecord;
+  /** The pin as it stands, which is what a first telling proposes to a server that has none. */
   image?: MachineImageRecord;
+  /** What this run itself built with, which a repin since then has moved the pin away from. */
+  builtWith?: RunImageRecord;
   steps: readonly RunStepRecord[];
   snapshot?: FactSnapshotRecord;
   requirementRun?: RequirementRunRecord;

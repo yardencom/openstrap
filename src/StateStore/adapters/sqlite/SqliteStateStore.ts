@@ -302,6 +302,7 @@ export class SqliteStateStore {
         declaration: this.readDesiredState(target)?.declaration,
         recorded: this.readTarget(target) ?? undefined,
         image: this.readMachineImage(target) ?? undefined,
+        builtWith: this.readRunImage(id) ?? undefined,
         requirementRun: this.readRequirementRun(id),
         steps: this.listSteps(id),
         snapshot: this.snapshotOfRun(id),

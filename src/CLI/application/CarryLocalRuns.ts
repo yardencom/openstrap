@@ -73,6 +73,9 @@ export class CarryLocalRuns {
 
     await this.server.finishRun(opened.runId, {
       status: run.status,
+      // What this run used, which is not what the server just handed back: a repin since then moved
+      // the pin, and the machine this run made was made from the older file.
+      ...(run.builtWith ? { image: run.builtWith } : {}),
       steps: run.steps.map((step) => ({
         name: step.name,
         status: step.status,

@@ -78,6 +78,8 @@ export type RecordResourceRequest = {
 
 export type FinishRunRequest = {
   status: "succeeded" | "failed";
+  /** The file this run actually built with, where the caller knows better than the server does. */
+  image?: { reference: string; url: string; sha256: string };
   endpoint?: { host: string; port: number; user: string };
   steps: Array<{
     name: string;

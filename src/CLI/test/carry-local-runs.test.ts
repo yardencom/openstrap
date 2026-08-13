@@ -127,6 +127,28 @@ describe("What happened here while no server was listening", () => {
     });
   });
 
+  it("carries what that run built with, not what the pin has since moved to", async () => {
+    const runId = madeHere("ubuntu-vm");
+    store.recordRunImage(runId, {
+      reference: "ubuntu:24.04",
+      url: "https://images.example/older.img",
+      sha256: "a".repeat(64),
+    });
+    // The target has been repinned since; the machine that run made is still the older file.
+    store.saveMachineImage("ubuntu-vm", {
+      reference: "ubuntu:24.04",
+      url: "https://images.example/newer.img",
+      sha256: "b".repeat(64),
+      platform: "linux", architecture: "arm64", format: "qcow2", boot: "uefi",
+    }, at);
+    const listening = serverListening();
+
+    await new CarryLocalRuns(store, listening.server, host, found).all(carriedAt);
+
+    expect(listening.asked[0]!.body).toMatchObject({ proposedImage: { sha256: "b".repeat(64) } });
+    expect(listening.asked[2]!.body).toMatchObject({ image: { sha256: "a".repeat(64) } });
+  });
+
   it("goes once, because a run told twice is two machines in a history that had one", async () => {
     madeHere("ubuntu-vm");
     const listening = serverListening();
