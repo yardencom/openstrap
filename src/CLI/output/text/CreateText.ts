@@ -18,7 +18,10 @@ export class CreateText implements CommandText<CreatedTarget> {
     lines.push("Image:");
     lines.push(`  ${result.image.reference} ${result.image.format}/${result.image.boot}`);
     lines.push(`  ${result.image.url}`);
-    lines.push(`  sha256 ${result.image.sha256}`);
+    // Only where its publisher published one. The word `undefined` under an image reads as a digest.
+    if (result.image.sha256 !== undefined) {
+      lines.push(`  sha256 ${result.image.sha256}`);
+    }
     lines.push("");
     lines.push(`Machine: ${result.target} (${result.handle.id})`);
 

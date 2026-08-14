@@ -81,6 +81,9 @@ describe("State store", () => {
       .flatMap((step) => step.statements)
       .flatMap((statement) => [...statement.matchAll(/CREATE TABLE `?(\w+)`?/g)])
       .map((match) => match[1]!)
+      // A column that stops being `NOT NULL` is a table SQLite cannot alter, so it is rebuilt beside
+      // itself and renamed over. `__new_x` is that scaffolding — it never outlives its own migration.
+      .filter((name) => !name.startsWith("__new_"))
       .sort();
 
     expect(tableNames).toEqual([

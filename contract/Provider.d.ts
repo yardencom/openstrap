@@ -37,7 +37,15 @@ export type ProviderAvailability = {
 export type ResolvedImage = {
   reference: string;
   url: string;
-  sha256: string;
+  /**
+   * The checksum the file was published with, where its publisher published one.
+   *
+   * Not everyone does. A publisher who serves an image and no digest for it is trusted for the
+   * bytes over the same TLS either way; what is lost is the pin holding a later fetch to the same
+   * file, and a URL that names a version is what holds it then. Present means it is checked, and a
+   * file that does not match is deleted rather than booted.
+   */
+  sha256?: string;
   /**
    * What a machine made from this image will be.
    *

@@ -208,7 +208,7 @@ export class CreateMachine {
     done({
       name: "resolve image",
       status: "succeeded",
-      detail: `${opened.image.reference} ${opened.image.sha256.slice(0, 12)}`,
+      detail: CreateMachine.said(opened.image),
     });
 
     return {
@@ -269,7 +269,7 @@ export class CreateMachine {
     const store = request.store!;
     const target = request.target;
     const image = await this.image(request, timestamp);
-    done({ name: "resolve image", status: "succeeded", detail: `${image.reference} ${image.sha256.slice(0, 12)}` });
+    done({ name: "resolve image", status: "succeeded", detail: CreateMachine.said(image) });
 
     // Which file this run built with, as data. The step above says it as a sentence for a person.
     store.runs.recordImage(runId, { reference: image.reference, url: image.url, sha256: image.sha256 });
@@ -324,6 +324,16 @@ export class CreateMachine {
     }, timestamp);
 
     return access;
+  }
+
+  /**
+   * The image, as a person reads it.
+   *
+   * The checksum where its publisher published one, and the name alone where nobody did — rather
+   * than a blank where a digest should be, which reads as a digest of nothing.
+   */
+  private static said(image: ResolvedImage): string {
+    return image.sha256 === undefined ? image.reference : `${image.reference} ${image.sha256.slice(0, 12)}`;
   }
 
   /** What the machine is made of, as somebody said it. Nobody having said is not a default. */

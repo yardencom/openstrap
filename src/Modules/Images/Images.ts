@@ -94,7 +94,7 @@ export class Images {
         return {
           reference,
           url: box.published.download_url!,
-          sha256: box.published.checksum!,
+          ...(box.published.checksum ? { sha256: box.published.checksum } : {}),
           platform: Images.platformOf(tag),
           architecture: arch,
           // A published box is a gzipped tar with a disk image inside it, and the disk is qcow2.
@@ -162,7 +162,9 @@ export class Images {
       one.name === "qemu"
       && one.architecture !== undefined
       && (architecture === undefined || one.architecture === architecture)
-      && (one.download_url === undefined || one.checksum_type === "sha256"));
+      // A published checksum openstrap cannot check is worse than none: sha512 and sha1 are both
+      // published here, and taking one for a sha256 would be comparing two different numbers.
+      && (one.checksum_type === "sha256" || one.checksum_type === "none" || !one.checksum));
   }
 
   /** Splits `owner/name:version` from `name:version`, which the registry writes as one word. */

@@ -43,7 +43,7 @@ export type FactSnapshotRecord = {
 export type MachineImageRecord = {
   reference: string;
   url: string;
-  sha256: string;
+  sha256?: string;
   platform: string;
   architecture: string;
   format: string;
@@ -54,7 +54,7 @@ export type MachineImageRecord = {
 export type RunImageRecord = {
   reference: string;
   url: string;
-  sha256: string;
+  sha256?: string;
 };
 
 /**

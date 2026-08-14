@@ -89,7 +89,7 @@ export class Machines {
     return row === undefined ? null : {
       reference: row.reference,
       url: row.url,
-      sha256: row.sha256,
+      sha256: row.sha256 ?? undefined,
       platform: row.platform,
       architecture: row.architecture,
       format: row.format,

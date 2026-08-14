@@ -34,5 +34,22 @@ export const migrations: readonly Migration[] = [
     "statements": [
       "-- A table from before the one that replaced it.\n--\n-- `machine_platform` said what kind of machine a target was; `machine_image` says that and what it\n-- was made from, in one row, because two rows about one thing drift (ADR 0003). The replacement\n-- landed and the old table stayed behind, unread, in every database made before it.\nDROP TABLE IF EXISTS machine_platform;"
     ]
+  },
+  {
+    "name": "20260814164024_groovy_machine_man",
+    "statements": [
+      "PRAGMA foreign_keys=OFF;",
+      "CREATE TABLE `__new_machine_image` (\n\t`target` text PRIMARY KEY,\n\t`reference` text NOT NULL,\n\t`url` text NOT NULL,\n\t`sha256` text,\n\t`platform` text NOT NULL,\n\t`architecture` text NOT NULL,\n\t`format` text NOT NULL,\n\t`boot` text NOT NULL,\n\t`created_at` text NOT NULL,\n\tCONSTRAINT `fk_machine_image_target_target_name_fk` FOREIGN KEY (`target`) REFERENCES `target`(`name`) ON DELETE CASCADE\n);",
+      "INSERT INTO `__new_machine_image`(`target`, `reference`, `url`, `sha256`, `platform`, `architecture`, `format`, `boot`, `created_at`) SELECT `target`, `reference`, `url`, `sha256`, `platform`, `architecture`, `format`, `boot`, `created_at` FROM `machine_image`;",
+      "DROP TABLE `machine_image`;",
+      "ALTER TABLE `__new_machine_image` RENAME TO `machine_image`;",
+      "PRAGMA foreign_keys=ON;",
+      "PRAGMA foreign_keys=OFF;",
+      "CREATE TABLE `__new_run_image` (\n\t`run_id` text PRIMARY KEY,\n\t`reference` text NOT NULL,\n\t`url` text NOT NULL,\n\t`sha256` text,\n\tCONSTRAINT `fk_run_image_run_id_run_id_fk` FOREIGN KEY (`run_id`) REFERENCES `run`(`id`) ON DELETE CASCADE\n);",
+      "INSERT INTO `__new_run_image`(`run_id`, `reference`, `url`, `sha256`) SELECT `run_id`, `reference`, `url`, `sha256` FROM `run_image`;",
+      "DROP TABLE `run_image`;",
+      "ALTER TABLE `__new_run_image` RENAME TO `run_image`;",
+      "PRAGMA foreign_keys=ON;"
+    ]
   }
 ];

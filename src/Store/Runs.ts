@@ -72,7 +72,7 @@ export class Runs {
   imageOf(runId: string): RunImageRecord | null {
     const row = this.database.select().from(runImage).where(eq(runImage.runId, runId)).get();
 
-    return row === undefined ? null : { reference: row.reference, url: row.url, sha256: row.sha256 };
+    return row === undefined ? null : { reference: row.reference, url: row.url, sha256: row.sha256 ?? undefined };
   }
 
   recordSnapshot(snapshot: FactSnapshotRecord): void {

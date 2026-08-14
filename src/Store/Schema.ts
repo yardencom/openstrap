@@ -23,7 +23,8 @@ export const machineImage = sqliteTable("machine_image", {
   target: text("target").primaryKey().references(() => target.name, { onDelete: "cascade" }),
   reference: text("reference").notNull(),
   url: text("url").notNull(),
-  sha256: text("sha256").notNull(),
+  /** Absent where the publisher published none. */
+  sha256: text("sha256"),
   platform: text("platform").notNull(),
   architecture: text("architecture").notNull(),
   format: text("format").notNull(),
@@ -64,7 +65,7 @@ export const runImage = sqliteTable("run_image", {
   runId: text("run_id").primaryKey().references(() => run.id, { onDelete: "cascade" }),
   reference: text("reference").notNull(),
   url: text("url").notNull(),
-  sha256: text("sha256").notNull(),
+  sha256: text("sha256"),
 });
 
 export const factSnapshot = sqliteTable("fact_snapshot", {

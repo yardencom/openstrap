@@ -31,7 +31,7 @@ export type Host = {
 export type ResolvedImage = {
   reference: string;
   url: string;
-  sha256: string;
+  sha256?: string;
   format: string;
   boot: string;
   platform: string;
@@ -79,7 +79,7 @@ export type RecordResourceRequest = {
 export type FinishRunRequest = {
   status: "succeeded" | "failed";
   /** The file this run actually built with, where the caller knows better than the server does. */
-  image?: { reference: string; url: string; sha256: string };
+  image?: { reference: string; url: string; sha256?: string };
   endpoint?: { host: string; port: number; user: string };
   steps: Array<{
     name: string;
@@ -110,7 +110,7 @@ export type TargetSummary = {
   transport: string;
   provider?: string;
   resourceId?: string;
-  image?: { reference: string; sha256: string };
+  image?: { reference: string; sha256?: string };
   /** Which machine last ran against it, so a laptop's vm is not shown as though it were shared. */
   host?: string;
   lastRunAt?: string;

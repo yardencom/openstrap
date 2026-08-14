@@ -14,7 +14,7 @@ export type ListedMachine = {
   name: string;
   provider?: string;
   transport?: string;
-  image?: { reference: string; sha256: string };
+  image?: { reference: string; sha256?: string };
   /** Where it was made, where anything says so: a laptop's vm is not a machine anyone else can reach. */
   host?: string;
   /**
