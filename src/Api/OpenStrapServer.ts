@@ -7,6 +7,7 @@ import type {
   OpenRunResponse,
   RecordResourceRequest,
   TargetAccessResponse,
+  TargetSummary,
 } from "./types/Api.js";
 
 export type OpenStrapServerRequest = {
@@ -69,6 +70,11 @@ export class OpenStrapServer {
   /** What happened: steps, the reading that was taken, how it measured up. */
   finishRun(runId: string, report: FinishRunRequest): Promise<void> {
     return this.nothing("POST", `/v1/runs/${encodeURIComponent(runId)}/finish`, report);
+  }
+
+  /** Every machine this organization has. Whether any is running is asked where the hypervisor is. */
+  async targets(): Promise<readonly TargetSummary[]> {
+    return (await this.json<{ targets: TargetSummary[] }>("GET", "/v1/targets")).targets;
   }
 
   /** How to reach a machine that already exists. */

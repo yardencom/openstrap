@@ -50,7 +50,12 @@ export type ConnectArgs = {
   run?: string;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs;
+export type ListArgs = {
+  command: "list";
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

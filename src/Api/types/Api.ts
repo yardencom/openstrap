@@ -102,6 +102,20 @@ export type FinishRunRequest = {
   };
 };
 
+/** One machine an organization has, as the server knows it. Whether it runs is asked of a provider. */
+export type TargetSummary = {
+  name: string;
+  scope: string;
+  type: string;
+  transport: string;
+  provider?: string;
+  resourceId?: string;
+  image?: { reference: string; sha256: string };
+  /** Which machine last ran against it, so a laptop's vm is not shown as though it were shared. */
+  host?: string;
+  lastRunAt?: string;
+};
+
 /** What is needed to reach a machine that already exists: `connect`, and reading its facts. */
 export type TargetAccessResponse = {
   provider: string;

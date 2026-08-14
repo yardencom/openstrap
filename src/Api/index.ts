@@ -11,4 +11,5 @@ export type {
   RecordResourceRequest,
   ResolvedImage,
   TargetAccessResponse,
+  TargetSummary,
 } from "./types/Api.js";

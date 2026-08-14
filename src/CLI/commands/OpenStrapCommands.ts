@@ -9,6 +9,9 @@ import { CreateArgsParser } from "../arguments/parsers/CreateArgs.js";
 import { CreateCommand } from "../application/CreateCommand.js";
 import { CreateText } from "../output/text/CreateText.js";
 import { FactsArgsParser } from "../arguments/FactsArgsParser.js";
+import { ListArgsParser } from "../arguments/parsers/ListArgs.js";
+import { ListCommand } from "../application/ListCommand.js";
+import { ListText } from "../output/text/ListText.js";
 import { FactsCollectCommand } from "../application/FactsCollectCommand.js";
 import { FactsText } from "../output/text/FactsText.js";
 import { RunArgsParser } from "../arguments/parsers/RunArgs.js";
@@ -52,6 +55,11 @@ export class OpenStrapCommands {
         "converge",
         "openstrap converge <host|target> [--check] [--max-passes n] [--json] [--plugin specifier]",
         new ConvergeArgsParser(), new ConvergeCommand(), new ConvergeText(),
+      ),
+      OpenStrapCommands.command(
+        "list",
+        "openstrap list [--json] [--plugin specifier]",
+        new ListArgsParser(), new ListCommand(), new ListText(),
       ),
       OpenStrapCommands.command(
         "connect",

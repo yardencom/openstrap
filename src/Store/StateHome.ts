@@ -6,9 +6,10 @@ import { join } from "node:path";
 export class StateHome {
   readonly path: string;
 
-  constructor() {
-    this.path = process.env.OPENSTRAP_STATE_HOME
-      ?? join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "openstrap");
+  /** @param environment Taken rather than read, so a test can be given a directory of its own. */
+  constructor(environment: NodeJS.ProcessEnv = process.env) {
+    this.path = environment.OPENSTRAP_STATE_HOME
+      ?? join(environment.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "openstrap");
   }
 
   /** Makes sure the directory is there, and says where the state database is. */
