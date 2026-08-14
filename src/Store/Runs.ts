@@ -28,22 +28,6 @@ export class Runs {
     this.database.update(run).set({ status, finishedAt }).where(eq(run.id, id)).run();
   }
 
-  read(id: string): RunRecord | null {
-    const row = this.database.select().from(run).where(eq(run.id, id)).get();
-
-    return row === undefined ? null : Runs.recordOf(row);
-  }
-
-  of(machine: string): RunRecord[] {
-    return this.database
-      .select()
-      .from(run)
-      .where(eq(run.target, machine))
-      .orderBy(desc(run.startedAt), desc(run.id))
-      .all()
-      .map(Runs.recordOf);
-  }
-
   /** A step recorded twice is the same step further along, not a second one. */
   recordStep(step: RunStepRecord): void {
     this.database.insert(runStep).values({
@@ -102,17 +86,6 @@ export class Runs {
     }).onConflictDoNothing().run();
   }
 
-  latestSnapshotOf(machine: string): FactSnapshotRecord | null {
-    const row = this.database
-      .select()
-      .from(factSnapshot)
-      .where(eq(factSnapshot.target, machine))
-      .orderBy(desc(factSnapshot.capturedAt), desc(factSnapshot.id))
-      .get();
-
-    return row === undefined ? null : Runs.snapshotOf(row);
-  }
-
   snapshotFrom(runId: string): FactSnapshotRecord | undefined {
     const row = this.database
       .select()
@@ -149,17 +122,6 @@ export class Runs {
       status: row.status,
       evaluatedAt: row.evaluatedAt,
       results: JSON.parse(row.results),
-    };
-  }
-
-  private static recordOf(row: typeof run.$inferSelect): RunRecord {
-    return {
-      id: row.id,
-      target: row.target,
-      command: row.command,
-      status: row.status as RunRecord["status"],
-      startedAt: row.startedAt,
-      finishedAt: row.finishedAt ?? undefined,
     };
   }
 

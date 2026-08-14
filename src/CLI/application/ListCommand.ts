@@ -44,17 +44,15 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
 
     try {
       const known = recorded.server
-        ? (await recorded.server.targets()).map((summary) => ({
+        ? (await recorded.server.targets()).filter(ListCommand.isAMachine).map((summary) => ({
           name: summary.name,
-          scope: summary.scope,
           provider: summary.provider,
           transport: summary.transport,
           image: summary.image,
           host: summary.host,
         }))
-        : recorded.local.machines.list().map((machine) => ({
+        : recorded.local.machines.list().filter(ListCommand.isAMachine).map((machine) => ({
           name: machine.name,
-          scope: machine.scope,
           provider: machine.provider,
           transport: machine.transport,
           image: ListCommand.pinOf(recorded.local, machine.name),
@@ -73,17 +71,22 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
   }
 
   /** The machine as the provider holding it reports it, or why it could not be asked. */
+  /**
+   * A machine, as against the computer the question is being asked on.
+   *
+   * A blueprint can declare the host — openstrap reads it and brings it to what is written — and that
+   * is recorded like anything else. It is not a machine anybody made, holds, or could lose, so a list
+   * of machines that included it would be answering a question nobody asked.
+   */
+  private static isAMachine(recorded: { scope: string }): boolean {
+    return recorded.scope !== "host";
+  }
+
   private static async asked(
-    machine: Omit<ListedMachine, "status" | "detail"> & { scope?: string },
+    listed: Omit<ListedMachine, "status" | "detail">,
     runtime: OpenStrapRuntime,
   ): Promise<ListedMachine> {
-    const { scope, ...listed } = machine;
-
-    // The machine openstrap is running on. Nobody made it and no provider holds it, so there is
-    // nothing to ask: it is here, which is why the question is being asked at all.
-    if (scope === "host") {
-      return { ...listed, status: "running", detail: "this computer" };
-    }
+    const machine = listed;
 
     if (machine.provider === undefined) {
       return { ...listed, status: "unreachable", detail: "nothing recorded which provider holds it" };

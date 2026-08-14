@@ -113,11 +113,14 @@ describe("The image a target is pinned to", () => {
   it("leaves the run history saying which file that run built with, as data", async () => {
     const provider = fakeProvider("a".repeat(64));
 
-    await create(store, provider);
-    const [run] = store.runs.of("ubuntu-vm");
+    const created = await create(store, provider);
+    store.runs.finish(created.runId, "succeeded", "2026-07-29T10:00:01.000Z");
+
+    const [run] = store.carried.waiting();
 
     // The step says it as a sentence with the checksum cut to twelve characters, which no one can
-    // compare with anything. The history is asked instead.
+    // compare with anything. The history is asked instead — through what carries it to a server,
+    // because that is the only thing that reads a run back.
     expect(store.runs.imageOf(run!.id)).toEqual({
       reference: "ubuntu:24.04",
       url: "https://images.example/noble-arm64.img",
@@ -127,12 +130,15 @@ describe("The image a target is pinned to", () => {
 
   it("keeps what a repinned run built with, because the history is not the pin", async () => {
     const provider = fakeProvider("a".repeat(64));
-    await create(store, provider);
+    const first = await create(store, provider);
     provider.sha256 = "b".repeat(64);
-    await create(store, provider, {}, { repin: true });
+    const second = await create(store, provider, {}, { repin: true });
 
-    const runs = store.runs.of("ubuntu-vm");
-    const built = runs.map((run) => store.runs.imageOf(run.id)!.sha256).sort();
+    for (const runId of [first.runId, second.runId]) {
+      store.runs.finish(runId, "succeeded", "2026-07-29T10:00:02.000Z");
+    }
+
+    const built = store.carried.waiting().map((run) => run.builtWith!.sha256).sort();
 
     expect(built).toEqual(["a".repeat(64), "b".repeat(64)]);
     expect(store.machines.pinOf("ubuntu-vm")!.sha256).toBe("b".repeat(64));
@@ -145,10 +151,10 @@ describe("The image a target is pinned to", () => {
 
     await expect(create(store, provider)).rejects.toThrow(PinnedImageChangedError);
 
-    const runs = store.runs.of("ubuntu-vm");
+    const [run] = store.carried.waiting();
 
-    expect(runs[0]!.status).toBe("failed");
-    expect(store.runs.steps(runs[0]!.id).at(-1)).toMatchObject({ name: "failed", status: "failed" });
+    expect(run!.status).toBe("failed");
+    expect(run!.steps.at(-1)).toMatchObject({ name: "failed", status: "failed" });
   });
 });
 

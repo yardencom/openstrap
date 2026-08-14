@@ -40,13 +40,16 @@ describe("State store", () => {
     store.runs.recordStep({ runId: "run-1", ordinal: 2, name: "create machine", status: "running", startedAt: now });
     store.runs.recordStep({ runId: "run-1", ordinal: 2, name: "create machine", status: "failed", startedAt: now, detail: "no space" });
     store.runs.finish("run-1", "failed", now);
+    store.machines.declare("ubuntu-vm", { name: "ubuntu-vm" }, now);
 
-    expect(store.runs.read("run-1")).toMatchObject({ status: "failed", finishedAt: now });
-    expect(store.runs.steps("run-1").map((step: { name: string; status: string }) => [step.name, step.status])).toEqual([
+    const [waiting] = store.carried.waiting();
+
+    expect(waiting).toMatchObject({ id: "run-1", status: "failed" });
+    expect(waiting!.steps.map((step) => [step.name, step.status])).toEqual([
       ["resolve image", "succeeded"],
       ["create machine", "failed"],
     ]);
-    expect(store.runs.steps("run-1")[1]!.detail).toBe("no space");
+    expect(waiting!.steps[1]!.detail).toBe("no space");
   });
 
   it("keeps the verdict a run reached, so it can travel with the rest of what happened", () => {
@@ -65,24 +68,6 @@ describe("State store", () => {
       status: "satisfied",
       results: [{ id: "kubernetes-running", status: "satisfied" }],
     });
-  });
-
-  it("returns the most recent fact snapshot for a target", () => {
-    store.runs.recordSnapshot({ id: "snap-1", target: "ubuntu-vm", schemaVersion: "facts.v1", capturedAt: "2026-07-27T09:00:00.000Z", data: { os: "old" } });
-    store.runs.recordSnapshot({ id: "snap-2", target: "ubuntu-vm", schemaVersion: "facts.v1", capturedAt: "2026-07-27T11:00:00.000Z", data: { os: "new" } });
-
-    expect(store.runs.latestSnapshotOf("ubuntu-vm")).toMatchObject({ id: "snap-2", data: { os: "new" } });
-  });
-
-  it("forgets everything recorded about a target that is deleted", () => {
-    store.runs.start({ id: "run-1", target: "ubuntu-vm", command: "create", startedAt: now });
-    store.runs.recordSnapshot({ id: "snap-1", target: "ubuntu-vm", schemaVersion: "facts.v1", capturedAt: now, data: {} });
-
-    store.machines.forget("ubuntu-vm");
-
-    expect(store.machines.read("ubuntu-vm")).toBeNull();
-    expect(store.runs.read("run-1")).toBeNull();
-    expect(store.runs.latestSnapshotOf("ubuntu-vm")).toBeNull();
   });
 
   it("does not record a run for a target it does not know", () => {

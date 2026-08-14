@@ -20,5 +20,19 @@ export const migrations: readonly Migration[] = [
       "CREATE TABLE `run_step` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT,\n\t`run_id` text NOT NULL,\n\t`ordinal` integer NOT NULL,\n\t`name` text NOT NULL,\n\t`status` text NOT NULL,\n\t`started_at` text NOT NULL,\n\t`finished_at` text,\n\t`detail` text,\n\tCONSTRAINT `fk_run_step_run_id_run_id_fk` FOREIGN KEY (`run_id`) REFERENCES `run`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT `run_step_run_id_ordinal_unique` UNIQUE(`run_id`,`ordinal`)\n);",
       "CREATE TABLE `target` (\n\t`name` text PRIMARY KEY,\n\t`scope` text NOT NULL,\n\t`type` text NOT NULL,\n\t`provider` text,\n\t`transport` text NOT NULL,\n\t`created_at` text NOT NULL,\n\t`updated_at` text NOT NULL\n);"
     ]
+  },
+  {
+    "name": "20260814105708_drop_what_nothing_reads",
+    "statements": [
+      "-- Three tables openstrap stopped writing and never read again.\n--\n-- `allocated_port` recorded which host port was forwarded, and the provider forwarding it answers\n-- that on request. `provider_resource` recorded a machine's id, and `provider.find(name)` answers\n-- that. `secret_reference` recorded where a key was kept, and keys became the transport's.\n--\n-- Written by hand because there is nothing to generate them from: a schema describes what is, and\n-- these have not been in it since they were removed. Drizzle can only diff against what it knows.\nDROP TABLE IF EXISTS allocated_port;",
+      "DROP TABLE IF EXISTS provider_resource;",
+      "DROP TABLE IF EXISTS secret_reference;"
+    ]
+  },
+  {
+    "name": "20260814105747_drop_machine_platform",
+    "statements": [
+      "-- A table from before the one that replaced it.\n--\n-- `machine_platform` said what kind of machine a target was; `machine_image` says that and what it\n-- was made from, in one row, because two rows about one thing drift (ADR 0003). The replacement\n-- landed and the old table stayed behind, unread, in every database made before it.\nDROP TABLE IF EXISTS machine_platform;"
+    ]
   }
 ];

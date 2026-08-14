@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, inArray, notInArray } from "drizzle-orm";
 
 import { carriedRun, run } from "./Schema.js";
 import type { Database } from "./Database.js";
@@ -58,10 +58,5 @@ export class Carried {
     this.database.insert(carriedRun).values({ runId, serverRun: serverRunId, carriedAt: at })
       .onConflictDoNothing()
       .run();
-  }
-
-  /** Where a run went, for anyone following a local history into the shared one. */
-  serverRunOf(runId: string): string | undefined {
-    return this.database.select().from(carriedRun).where(eq(carriedRun.runId, runId)).get()?.serverRun;
   }
 }

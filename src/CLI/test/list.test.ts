@@ -117,12 +117,13 @@ describe("What each machine is doing", () => {
     ]);
   });
 
-  it("is this computer for a host target, which no provider holds and nothing need be asked about", async () => {
+  it("leaves out the computer the question is being asked on, which is not a machine anybody made", async () => {
     seeding.local.machines.save({ name: "local", scope: "host", type: "host", transport: "local" }, at);
+    made("ubuntu-vm", "utm");
 
-    const listed = await listing({});
+    const listed = await listing({ utm: holding({ "ubuntu-vm": "running" }) });
 
-    expect(listed.result.machines[0]).toMatchObject({ status: "running", detail: "this computer" });
+    expect(listed.result.machines.map((machine) => machine.name)).toEqual(["ubuntu-vm"]);
   });
 
   it("says which record answered, so a short list is not mistaken for an empty world", async () => {

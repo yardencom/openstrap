@@ -97,11 +97,6 @@ export class Machines {
     };
   }
 
-  /** Forgetting a machine forgets everything recorded about it. */
-  forget(name: string): void {
-    this.database.delete(target).where(eq(target.name, name)).run();
-  }
-
   private static recordOf(row: typeof target.$inferSelect): TargetRecord {
     return {
       name: row.name,
