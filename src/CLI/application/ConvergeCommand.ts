@@ -1,8 +1,7 @@
-import { Blueprints } from "../../Modules/Blueprint/index.js";
+import { Blueprints, UnknownTargetError } from "../../Modules/Blueprint/index.js";
 import { Converge, type ConvergeResult } from "#features/Converge/Converge.js";
 import { Checks } from "../../Modules/Requirements/index.js";
 import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
-import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 import type { ConvergeArgs } from "../arguments/types.js";
 

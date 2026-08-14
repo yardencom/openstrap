@@ -1,9 +1,10 @@
-import { UnknownTargetError } from "../errors/UnknownTargetError.js";
 
-import { Blueprints, type BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import { Create, type CreateResult } from "#features/Create/Create.js";
+import { Blueprints } from "../../Modules/Blueprint/index.js";
+import { ConfigNotFoundError } from "../../ConfigCore/index.js";
 import { Checks } from "../../Modules/Requirements/index.js";
 import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
+import type { Blueprint } from "../../Modules/Blueprint/index.js";
 import type { CreateArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
@@ -28,17 +29,23 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
   }
 
   private async create(args: CreateArgs, context: CommandContext): Promise<CreatedTarget> {
-    const blueprint = this.blueprints.load({
-      explicitPath: args.configPath,
-      workspaceRoot: context.workspaceRoot,
-    });
-    const target = blueprint.targets[args.target];
+    const runtime = await context.runtime();
+    let blueprint: Readonly<Blueprint> | undefined;
 
-    if (!target) {
-      throw new UnknownTargetError(args.target, Object.keys(blueprint.targets));
+    try {
+      blueprint = this.blueprints.load({
+        explicitPath: args.configPath,
+        workspaceRoot: context.workspaceRoot,
+      });
+    } catch (error) {
+      // `create` is the one command that works without a blueprint: a machine can be asked for that
+      // nobody wrote down. Everything else openstrap does is about machines somebody did.
+      if (!(error instanceof ConfigNotFoundError)) {
+        throw error;
+      }
     }
 
-    const runtime = await context.runtime();
+    const target = blueprint?.targets[args.target];
     const recorded = new WhereMachinesAreRecorded();
 
     // Anything this machine did while no server was listening goes first: a run that never
@@ -47,7 +54,17 @@ export class CreateCommand implements CliCommand<CreateArgs, CreatedTarget> {
 
     try {
       const created = await new Create().execute({
-        target: target as BlueprintTarget,
+        // Each value is where it was said: on the command line, or in the blueprint.
+        target: {
+          name: args.target,
+          image: args.os ?? target?.image,
+          provider: args.provider ?? target?.provider,
+          transport: target?.transport,
+          size: target?.size,
+          displayName: target?.displayName,
+          requirements: target?.requirements ?? [],
+          steps: target?.steps,
+        },
         runtime,
         store: recorded.store,
         server: recorded.server,

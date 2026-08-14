@@ -11,16 +11,16 @@ export class CreateArgsParser implements CommandArgsParser {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
       flags: ["json", "repin"],
-      values: [...(CommandArguments.runtimeOptions.values ?? []), "config", "host-port"],
+      values: [...(CommandArguments.runtimeOptions.values ?? []), "config", "host-port", "os", "provider"],
     });
     const [kind, target] = read.positionals;
 
-    if (!kind || !target) {
-      throw new Error("Usage: openstrap create vm <target>");
+    if (kind !== undefined && !kinds.includes(kind as (typeof kinds)[number])) {
+      throw new Error(`Unknown kind "${kind}". Known kinds: ${kinds.join(", ")}`);
     }
 
-    if (!kinds.includes(kind as (typeof kinds)[number])) {
-      throw new Error(`Unknown kind "${kind}". Known kinds: ${kinds.join(", ")}`);
+    if (!kind || !target) {
+      throw new Error("Usage: openstrap create vm <target>");
     }
 
     if (read.positionals.length > 2) {
@@ -31,6 +31,8 @@ export class CreateArgsParser implements CommandArgsParser {
       command: "create",
       kind: "vm",
       target,
+      os: read.value("os"),
+      provider: read.value("provider"),
       configPath: read.value("config"),
       hostPort: CommandArguments.hostPortIn(read.value("host-port")),
       repin: read.flag("repin"),

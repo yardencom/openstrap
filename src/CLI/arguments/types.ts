@@ -1,4 +1,3 @@
-
 /** The arguments each command takes, once read. */
 export type RuntimeArgs = {
   runtimeConfigPath?: string;
@@ -26,6 +25,10 @@ export type CreateArgs = {
   command: "create";
   kind: "vm";
   target: string;
+  /** Which operating system to make it of, where no blueprint declares this machine. */
+  os?: string;
+  /** Which hypervisor makes it, where more than one plugin could. */
+  provider?: string;
   configPath?: string;
   hostPort?: number;
   /** Moves the image pin to whatever the target's image name resolves to now. */

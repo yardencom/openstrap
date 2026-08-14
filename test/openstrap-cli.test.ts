@@ -232,7 +232,7 @@ targets:
 
     expect(output.exitCode).toBe(2);
     expect(output.stderr).toContain("Missing command");
-    expect(output.stderr).toContain("openstrap create vm <target>");
+    expect(output.stderr).toContain("openstrap create vm <name>");
   });
 
   it("says what it does answer to when the word belongs to a plugin the project does not have", async () => {

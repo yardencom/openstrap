@@ -48,7 +48,7 @@ export class OpenStrapCommands {
       ),
       OpenStrapCommands.command(
         "create",
-        "openstrap create vm <target> [--config path] [--host-port n] [--repin] [--json] [--plugin specifier]",
+        "openstrap create vm <name> [--os distribution:version] [--provider id] [--config path] [--host-port n] [--repin] [--json]",
         new CreateArgsParser(), new CreateCommand(), new CreateText(),
       ),
       OpenStrapCommands.command(

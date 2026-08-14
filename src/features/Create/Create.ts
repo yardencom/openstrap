@@ -8,6 +8,7 @@ import { RunLock } from "../../utils/RunLock/RunLock.js";
 import { StateHome, type Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
 import { CreateMachine, type CreateMachineResult } from "./application/CreateMachine.js";
+import { AmbiguousProviderError } from "./errors/AmbiguousProviderError.js";
 import { MissingProviderError } from "./errors/MissingProviderError.js";
 import type { OpenStrapServer } from "../../Api/index.js";
 import { ReportRun } from "./application/ReportRun.js";
@@ -16,6 +17,8 @@ import { VerifyMachine } from "./application/VerifyMachine.js";
 export type { CreateMachineResult } from "./application/CreateMachine.js";
 export type { CreateStep } from "./application/CreateStep.js";
 export { ProviderUnavailableError } from "./errors/ProviderUnavailableError.js";
+export { AmbiguousProviderError } from "./errors/AmbiguousProviderError.js";
+export { MissingImageError } from "./errors/MissingImageError.js";
 export { MissingProviderError } from "./errors/MissingProviderError.js";
 
 export type CreateRequest = {
@@ -49,12 +52,7 @@ export class Create {
   /** The lock is held here rather than by whoever asks. */
   async execute(request: CreateRequest): Promise<CreateResult> {
     const target = request.target;
-
-    if (!target.provider) {
-      throw new MissingProviderError(target.name);
-    }
-
-    const provider = request.runtime.providers.require(target.provider);
+    const provider = Create.providerFor(target, request.runtime);
 
     return this.locks.during(target.name, "create", () => this.make(target, provider, request));
   }
@@ -75,6 +73,7 @@ export class Create {
       provider,
       store: request.store,
       server: request.server,
+      images: request.runtime.images,
       // Only where openstrap is not being handed one: a server issues its own and keeps it. The
       // connector makes the key and openstrap sees the half that goes into the machine, nothing more.
       ...(request.server ? {} : { publicKey: await Create.publicKeyFor(target, request) }),
@@ -136,6 +135,31 @@ export class Create {
       ...(verified ? { snapshot: verified.snapshot, requirementRun: verified.requirementRun } : {}),
       ...(error === undefined ? {} : { error }),
     });
+  }
+
+  /**
+   * Which hypervisor makes it.
+   *
+   * Named, or the only one there is. Answered here because this is where a provider is needed and
+   * where the runtime that has them is: whoever asked for the machine said what to make, not what
+   * happens to be installed on the host that makes it.
+   */
+  private static providerFor(target: BlueprintTarget, runtime: OpenStrapRuntime): Provider {
+    if (target.provider) {
+      return runtime.providers.require(target.provider);
+    }
+
+    const registered = runtime.providers.list();
+
+    if (registered.length === 0) {
+      throw new MissingProviderError(target.name);
+    }
+
+    if (registered.length > 1) {
+      throw new AmbiguousProviderError(registered.map((one) => one.provider.id));
+    }
+
+    return registered[0]!.provider;
   }
 
   /** The public half to plant, from the connector that will later be the one entering with it. */
