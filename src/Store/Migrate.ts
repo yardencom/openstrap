@@ -23,7 +23,9 @@ export class Migrate {
       (this.database.prepare("SELECT name FROM schema_migration").all() as { name: string }[])
         .map((row) => row.name),
     );
-    const pending = this.steps.filter((step) => !applied.has(step.name));
+    const pending = this.steps
+      .filter((step) => !applied.has(step.name))
+      .map((step) => (applied.size === 0 ? this.adopted(step) : step));
 
     if (pending.length === 0) {
       return 0;
@@ -49,5 +51,33 @@ export class Migrate {
     }
 
     return pending.length;
+  }
+
+  /**
+   * A step against a database that already has some of what it creates.
+   *
+   * openstrap kept a store before it kept migrations: the tables are there and nothing records how
+   * they got there, so the first step would try to create what is already in front of it and stop.
+   * Only the first step, and only where nothing has been applied yet — after that a `CREATE TABLE`
+   * that finds its table already present is a real disagreement and should say so.
+   *
+   * What such a database has and this schema no longer names — `allocated_port`,
+   * `provider_resource`, `secret_reference` — is left alone. Nothing reads it, and dropping a table
+   * to tidy up is how somebody's history goes missing.
+   */
+  private adopted(step: Migration): Migration {
+    const existing = new Set(
+      (this.database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[])
+        .map((row) => row.name),
+    );
+
+    return {
+      name: step.name,
+      statements: step.statements.filter((statement) => {
+        const created = /CREATE TABLE `?(\w+)`?/.exec(statement);
+
+        return created === null || !existing.has(created[1]!);
+      }),
+    };
   }
 }

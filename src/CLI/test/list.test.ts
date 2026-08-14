@@ -117,6 +117,14 @@ describe("What each machine is doing", () => {
     ]);
   });
 
+  it("is this computer for a host target, which no provider holds and nothing need be asked about", async () => {
+    seeding.local.machines.save({ name: "local", scope: "host", type: "host", transport: "local" }, at);
+
+    const listed = await listing({});
+
+    expect(listed.result.machines[0]).toMatchObject({ status: "running", detail: "this computer" });
+  });
+
   it("says which record answered, so a short list is not mistaken for an empty world", async () => {
     const listed = await listing({});
 

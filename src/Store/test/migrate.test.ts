@@ -53,6 +53,38 @@ describe("Bringing a database up to what the schema says", () => {
     expect(database.prepare("SELECT name FROM machine").all()).toEqual([{ name: "ubuntu-vm" }]);
   });
 
+  /**
+   * The database openstrap already left on somebody's disk.
+   *
+   * It has the tables and no record of how it got them, because it was made before any of this
+   * existed. The first step would try to create what is already in front of it and stop — which is
+   * exactly what happened to a real store the moment this shipped.
+   */
+  it("adopts a database that has the tables and no record of how it got them", () => {
+    const database = new DatabaseSync(":memory:");
+
+    database.exec("CREATE TABLE machine (name TEXT PRIMARY KEY)");
+    database.prepare("INSERT INTO machine (name) VALUES (?)").run("ubuntu-vm");
+
+    const both = { name: "0001_first", statements: [...first.statements, "CREATE TABLE later (id TEXT PRIMARY KEY)"] };
+
+    expect(new Migrate(database, [both]).apply()).toBe(1);
+    // What it lacked was made, what it had was left alone with its rows in it.
+    expect(columnsOf(database, "later")).toEqual(["id"]);
+    expect(database.prepare("SELECT name FROM machine").all()).toEqual([{ name: "ubuntu-vm" }]);
+  });
+
+  it("adopts only at the start: a table appearing under a later step is a real disagreement", () => {
+    const database = new DatabaseSync(":memory:");
+
+    new Migrate(database, [first]).apply();
+    database.exec("CREATE TABLE machine_extra (id TEXT PRIMARY KEY)");
+
+    const clashing = { name: "0002_clash", statements: ["CREATE TABLE machine_extra (id TEXT PRIMARY KEY)"] };
+
+    expect(() => new Migrate(database, [first, clashing]).apply()).toThrow(/already exists/);
+  });
+
   it("leaves the database as it was when a step fails halfway", () => {
     const database = new DatabaseSync(":memory:");
     const broken = { name: "0002_broken", statements: ["ALTER TABLE machine ADD COLUMN size TEXT", "NOT SQL"] };

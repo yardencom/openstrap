@@ -46,6 +46,7 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
       const known = recorded.server
         ? (await recorded.server.targets()).map((summary) => ({
           name: summary.name,
+          scope: summary.scope,
           provider: summary.provider,
           transport: summary.transport,
           image: summary.image,
@@ -53,6 +54,7 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
         }))
         : recorded.local.machines.list().map((machine) => ({
           name: machine.name,
+          scope: machine.scope,
           provider: machine.provider,
           transport: machine.transport,
           image: ListCommand.pinOf(recorded.local, machine.name),
@@ -72,27 +74,35 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
 
   /** The machine as the provider holding it reports it, or why it could not be asked. */
   private static async asked(
-    machine: Omit<ListedMachine, "status" | "detail">,
+    machine: Omit<ListedMachine, "status" | "detail"> & { scope?: string },
     runtime: OpenStrapRuntime,
   ): Promise<ListedMachine> {
+    const { scope, ...listed } = machine;
+
+    // The machine openstrap is running on. Nobody made it and no provider holds it, so there is
+    // nothing to ask: it is here, which is why the question is being asked at all.
+    if (scope === "host") {
+      return { ...listed, status: "running", detail: "this computer" };
+    }
+
     if (machine.provider === undefined) {
-      return { ...machine, status: "unreachable", detail: "nothing recorded which provider holds it" };
+      return { ...listed, status: "unreachable", detail: "nothing recorded which provider holds it" };
     }
 
     const provider = runtime.providers.get(machine.provider);
 
     if (provider === undefined) {
-      return { ...machine, status: "unreachable", detail: `no ${machine.provider} plugin on this computer` };
+      return { ...listed, status: "unreachable", detail: `no ${machine.provider} plugin on this computer` };
     }
 
     try {
       const handle = await provider.find(machine.name);
 
       return handle === null
-        ? { ...machine, status: "missing", detail: `${machine.provider} has no machine by that name` }
-        : { ...machine, status: (await provider.inspect(handle)).status };
+        ? { ...listed, status: "missing", detail: `${machine.provider} has no machine by that name` }
+        : { ...listed, status: (await provider.inspect(handle)).status };
     } catch (error) {
-      return { ...machine, status: "unreachable", detail: error instanceof Error ? error.message : String(error) };
+      return { ...listed, status: "unreachable", detail: error instanceof Error ? error.message : String(error) };
     }
   }
 
