@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/node-sqlite";
 import { Carried } from "./Carried.js";
 import { Machines } from "./Machines.js";
 import { Runs } from "./Runs.js";
-import { stateStoreSchema } from "./Schema.js";
+import { Migrate } from "./Migrate.js";
 
 /**
  * What openstrap knows about the machines of this one computer.
@@ -30,11 +30,12 @@ export class Store {
     }
 
     this.sqlite = new DatabaseSync(path);
-    this.sqlite.exec("PRAGMA foreign_keys = ON");
 
-    for (const statement of stateStoreSchema) {
-      this.sqlite.exec(statement);
-    }
+    // Off while the tables are built and on afterwards: SQLite rebuilds a table to alter it, and a
+    // migration that recreates one with its rows would trip its own foreign keys halfway through.
+    this.sqlite.exec("PRAGMA foreign_keys = OFF");
+    new Migrate(this.sqlite).apply();
+    this.sqlite.exec("PRAGMA foreign_keys = ON");
 
     const database = drizzle({ client: this.sqlite });
 

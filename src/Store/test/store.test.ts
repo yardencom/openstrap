@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Store } from "../index.js";
-import { stateStoreSchema } from "../Schema.js";
+import { migrations } from "../Migrations.js";
 
 const now = "2026-07-27T10:00:00.000Z";
 
@@ -91,10 +91,11 @@ describe("State store", () => {
     ).toThrow();
   });
 
-  it("holds exactly the tables the state store is meant to hold", () => {
-    const tableNames = stateStoreSchema
-      .flatMap((statement: string) => [...statement.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)])
-      .map((match: RegExpMatchArray) => match[1]!)
+  it("holds exactly the tables the store is meant to hold", () => {
+    const tableNames = migrations
+      .flatMap((step) => step.statements)
+      .flatMap((statement) => [...statement.matchAll(/CREATE TABLE `?(\w+)`?/g)])
+      .map((match) => match[1]!)
       .sort();
 
     expect(tableNames).toEqual([

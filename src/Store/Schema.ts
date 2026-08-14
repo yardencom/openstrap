@@ -3,10 +3,10 @@ import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 /**
  * What is true of this machine only.
  *
- * The tables are declared twice and deliberately: once as types, which is what queries are written
- * against, and once as the statements that bring an empty file up to them. Drizzle emits no DDL at
- * run time and its migrator reads files from disk, which a single executable has none of (ADR 0001).
- * They sit in one file so a column added to one and not the other is visible in the same screen.
+ * The one description of these tables. Queries are written against it, and the statements that bring
+ * a database up to it are generated from it by `npm run schema:migrations` — never written by hand,
+ * because a hand-written idempotent create silently does nothing when what changed is a column, and
+ * the database on somebody's disk quietly stays as it was.
  */
 export const target = sqliteTable("target", {
   name: text("name").primaryKey(),
@@ -97,92 +97,3 @@ export const carriedRun = sqliteTable("carried_run", {
   serverRun: text("server_run").notNull(),
   carriedAt: text("carried_at").notNull(),
 });
-
-/** The same tables as statements, because an empty file has to become these before anything reads. */
-export const stateStoreSchema = [
-  `CREATE TABLE IF NOT EXISTS target (
-     name        TEXT PRIMARY KEY,
-     scope       TEXT NOT NULL,
-     type        TEXT NOT NULL,
-     provider    TEXT,
-     transport   TEXT NOT NULL,
-     created_at  TEXT NOT NULL,
-     updated_at  TEXT NOT NULL
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS machine_image (
-     target       TEXT PRIMARY KEY REFERENCES target(name) ON DELETE CASCADE,
-     reference    TEXT NOT NULL,
-     url          TEXT NOT NULL,
-     sha256       TEXT NOT NULL,
-     platform     TEXT NOT NULL,
-     architecture TEXT NOT NULL,
-     format       TEXT NOT NULL,
-     boot         TEXT NOT NULL,
-     created_at   TEXT NOT NULL
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS desired_state (
-     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-     target      TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     revision    INTEGER NOT NULL,
-     declaration TEXT NOT NULL,
-     created_at  TEXT NOT NULL,
-     UNIQUE (target, revision)
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS run (
-     id          TEXT PRIMARY KEY,
-     target      TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     command     TEXT NOT NULL,
-     status      TEXT NOT NULL,
-     started_at  TEXT NOT NULL,
-     finished_at TEXT
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS run_step (
-     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-     run_id      TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE,
-     ordinal     INTEGER NOT NULL,
-     name        TEXT NOT NULL,
-     status      TEXT NOT NULL,
-     started_at  TEXT NOT NULL,
-     finished_at TEXT,
-     detail      TEXT,
-     UNIQUE (run_id, ordinal)
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS run_image (
-     run_id       TEXT PRIMARY KEY REFERENCES run(id) ON DELETE CASCADE,
-     reference    TEXT NOT NULL,
-     url          TEXT NOT NULL,
-     sha256       TEXT NOT NULL
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS fact_snapshot (
-     id             TEXT PRIMARY KEY,
-     target         TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     run_id         TEXT,
-     schema_version TEXT NOT NULL,
-     captured_at    TEXT NOT NULL,
-     data           TEXT NOT NULL
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS requirement_run (
-     id           TEXT PRIMARY KEY,
-     target       TEXT NOT NULL REFERENCES target(name) ON DELETE CASCADE,
-     run_id       TEXT REFERENCES run(id) ON DELETE CASCADE,
-     status       TEXT NOT NULL,
-     evaluated_at TEXT NOT NULL,
-     results      TEXT NOT NULL
-   )`,
-
-  `CREATE TABLE IF NOT EXISTS carried_run (
-     run_id     TEXT PRIMARY KEY REFERENCES run(id) ON DELETE CASCADE,
-     server_run TEXT NOT NULL,
-     carried_at TEXT NOT NULL
-   )`,
-
-  "CREATE INDEX IF NOT EXISTS run_by_target ON run(target, started_at)",
-  "CREATE INDEX IF NOT EXISTS fact_snapshot_by_target ON fact_snapshot(target, captured_at)",
-] as const;

@@ -40,6 +40,7 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'module',imports:{'#types/*':'./types/*','#features/*':'./features/*'}},null,2))\"",
     "bundle": "esbuild src/CLI/index.ts --bundle --platform=node --target=node24 --format=cjs --minify --define:import.meta.url=undefined --outfile=bin/openstrap.cjs",
     "schema:generate": "tsx src/Modules/Blueprint/Schema/index.ts",
+    "schema:migrations": "drizzle-kit generate && node scripts/inline-migrations.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -59,6 +60,7 @@
     "@types/semver": "7.7.1",
     "@types/which": "3.0.4",
     "@yao-pkg/pkg": "6.22.0",
+    "drizzle-kit": "1.0.0-rc.4",
     "esbuild": "0.28.1",
     "tsx": "4.23.1",
     "typescript": "7.0.2",

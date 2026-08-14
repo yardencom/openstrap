@@ -19,9 +19,9 @@ describe("State store boundaries", () => {
    * Everything else asks through the schema, so a column renamed in one place is a compile error
    * rather than a query that returns undefined at run time in a case nobody exercised.
    */
-  it("writes SQL in one file and queries through the schema everywhere else", () => {
+  it("writes no SQL of its own: the statements are generated and the queries go through the schema", () => {
     const offenders = storeSourceFiles()
-      .filter((filePath: string) => !filePath.endsWith("Schema.ts"))
+      .filter((filePath: string) => !filePath.endsWith("Migrations.ts") && !filePath.endsWith("Migrate.ts"))
       .filter((filePath: string) =>
         /CREATE TABLE|INSERT INTO|SELECT .+ FROM|UPDATE .+ SET|DELETE FROM/.test(readFileSync(filePath, "utf8")),
       );
