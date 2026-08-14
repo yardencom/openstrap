@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ImageRequest, MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
+import type { MachineHandle, Provider, ResolvedImage } from "../../../Plugin/index.js";
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
 import { CreateMachine } from "../application/CreateMachine.js";
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
+import type { Images } from "../../../Modules/Images/index.js";
 import { Store } from "../../../Store/index.js";
 
 /**
@@ -60,11 +61,8 @@ describe("The image a target is pinned to", () => {
     await create(store, provider);
     await create(store, provider);
 
-    expect(provider.asked[0]!.pinned).toBeUndefined();
-    expect(provider.asked[1]!.pinned).toEqual({
-      url: "https://images.example/noble-arm64.img",
-      sha256: "a".repeat(64),
-    });
+    // The provider is handed the pinned file both times: it is not asked what a name means.
+    expect(provider.built.map((image) => image.sha256)).toEqual(["a".repeat(64), "a".repeat(64)]);
   });
 
   it("fails the run when what comes back is a different file", async () => {
@@ -95,8 +93,8 @@ describe("The image a target is pinned to", () => {
     await create(store, provider, {}, { repin: true });
 
     expect(store.machines.pinOf("ubuntu-vm")!.sha256).toBe("b".repeat(64));
-    // Asked for the name, not for the pin it is about to replace.
-    expect(provider.asked[1]!.pinned).toBeUndefined();
+    // And the provider was handed the new file, not the one it is replacing.
+    expect(provider.built.at(-1)!.sha256).toBe("b".repeat(64));
   });
 
   it("is one row, which is also what says which build to deliver to that machine", async () => {
@@ -175,6 +173,7 @@ function create(
     machine: { name: "ubuntu-vm", scope: "guest", type: "vm" },
     provider,
     store,
+    images: published(provider.sha256),
     publicKey: "ssh-ed25519 AAAA test",
     hostPort: 2222,
     repin: request.repin,
@@ -182,36 +181,42 @@ function create(
   });
 }
 
-type FakeProvider = Provider & { asked: ImageRequest[]; sha256: string };
+/** A publisher answering with `sha256`, which moves when the published file does — the whole test. */
+function published(sha256: string): Images {
+  return {
+    resolve: async (reference: string) => ({
+      reference,
+      url: "https://images.example/noble-arm64.img",
+      sha256,
+      platform: "linux",
+      architecture: "arm64",
+      format: "qcow2",
+      boot: "uefi",
+    }),
+  } as unknown as Images;
+}
+
+type FakeProvider = Provider & { built: ResolvedImage[]; sha256: string };
 
 /**
- * A provider that resolves a name to a file and remembers what it was asked.
+ * A provider that remembers which file it was handed to build from.
  *
- * It answers with `sha256` whatever it is handed, which is how the test plays both an image that
- * moved upstream and a plugin that ignores the pin: openstrap has to notice either way.
+ * The file is decided before it is called, so what it records is what openstrap decided — which is
+ * how the test plays both an image that moved upstream and a pin that was not honoured.
  */
 function fakeProvider(sha256: string): FakeProvider {
-  const asked: ImageRequest[] = [];
+  const built: ResolvedImage[] = [];
   const provider: FakeProvider = {
     id: "fake",
-    asked,
+    built,
     sha256,
     capabilities: { scopes: ["guest"], types: ["vm"], resize: false, portForward: true },
     detect: async () => ({ available: true, version: "1.0" }),
-    resolveImage: async (request: ImageRequest): Promise<ResolvedImage> => {
-      asked.push(request);
+    create: async (request): Promise<MachineHandle> => {
+      built.push(request.image);
 
-      return {
-        reference: request.name,
-        url: "https://images.example/noble-arm64.img",
-        sha256: provider.sha256,
-        platform: "linux",
-        architecture: "arm64",
-        format: "qcow2",
-        boot: "uefi",
-      };
+      return { id: "vm-1", name: "ubuntu-vm" };
     },
-    create: async (): Promise<MachineHandle> => ({ id: "vm-1", name: "ubuntu-vm" }),
     start: async () => {},
     stop: async () => {},
     restart: async () => {},

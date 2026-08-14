@@ -28,7 +28,6 @@ export { OpenStrapPluginError } from "./errors/OpenStrapPluginError.js";
 // What a plugin implements is published as `@openstrap/plugin-contract` and re-exported here for
 // openstrap's own code (ADR 0008). Nothing to call: a plugin is an object, and openstrap checks it.
 export type {
-  ImageRequest,
   OpenStrapCommand,
   OpenStrapCommandContext,
   OpenStrapCommandOutcome,

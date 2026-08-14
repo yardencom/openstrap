@@ -1,4 +1,5 @@
 import type { OpenStrapPluginOption } from "@openstrap/plugin-contract";
+import { Images } from "../../Modules/Images/index.js";
 import type { CommandRegistry } from "./CommandRegistry.js";
 import { OpenStrapConfig } from "./OpenStrapConfig.js";
 import { OpenStrapPluginContainer } from "./OpenStrapPluginContainer.js";
@@ -19,6 +20,8 @@ export type OpenStrapRuntimeRequest = {
 
 /** What one run can reach. */
 export class OpenStrapRuntime {
+  /** Where each `image:` name is published, asked of the publisher rather than kept as a list. */
+  readonly images = new Images();
   readonly commands: CommandRegistry;
   readonly providers: ProviderRegistry;
   readonly transports: TransportRegistry;

@@ -8,7 +8,6 @@ export type RegisteredProvider = {
 
 const requiredOperations = [
   "detect",
-  "resolveImage",
   "create",
   "start",
   "stop",

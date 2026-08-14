@@ -27,36 +27,24 @@ export type ProviderAvailability = {
   };
 };
 
-export type ImageRequest = {
-  name: string;
-  architecture: string;
-  /**
-   * Resolve to exactly this file, rather than to whatever the name means today.
-   *
-   * A name is not a file: `ubuntu:24.04` points at a URL that serves whatever is current, so a
-   * machine recreated a month later would be made from something else. When openstrap has created
-   * this target before it passes back what that machine was made from, and the provider is expected
-   * to produce that file and nothing else — a checksum that no longer matches is a failure, not a
-   * newer image.
-   */
-  pinned?: {
-    url: string;
-    sha256: string;
-  };
-};
-
+/**
+ * The file a machine is made from, and the checksum it was published with.
+ *
+ * openstrap resolves the name and hands the provider the answer: which bytes to boot is one
+ * decision, made once and written down as the target's pin, and a provider that resolved names of
+ * its own would be a second catalogue that can disagree with it.
+ */
 export type ResolvedImage = {
   reference: string;
   url: string;
   sha256: string;
-  signatureUrl?: string;
   /**
    * What a machine made from this image will be.
    *
-   * The provider resolved `ubuntu:24.04` into a file, so it knows: the platform is what the image
-   * installs, the architecture is what it was built for. openstrap records both when it creates the
-   * machine, because that is the moment they are known — and later, when it has to deliver itself
-   * there, the alternative is working out from the machine what it already decided.
+   * The platform is what the image installs, the architecture is what it was built for. openstrap
+   * records both when it creates the machine, because that is the moment they are known — and
+   * later, when it has to deliver itself there, the alternative is working out from the machine
+   * what it already decided.
    */
   platform: string;
   architecture: string;
@@ -115,7 +103,6 @@ export type Provider = {
   capabilities: ProviderCapabilities;
 
   detect(): Promise<ProviderAvailability>;
-  resolveImage(request: ImageRequest): Promise<ResolvedImage>;
 
   create(request: MachineRequest): Promise<MachineHandle>;
   start(machine: MachineHandle): Promise<void>;

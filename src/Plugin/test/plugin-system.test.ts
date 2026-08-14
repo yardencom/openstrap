@@ -169,9 +169,6 @@ function createNoopProvider(id: string): Provider {
       portForward: true,
     },
     detect: async () => ({ available: true }),
-    resolveImage: async () => {
-      throw new Error("not used in this test");
-    },
     create: async () => ({ id: "machine-1", name: "test" }),
     start: async () => {},
     stop: async () => {},

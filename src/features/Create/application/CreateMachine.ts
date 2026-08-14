@@ -1,6 +1,7 @@
 import { hostname } from "node:os";
 
 
+import { MissingImageError } from "../errors/MissingImageError.js";
 import { NowhereToRecordError } from "../errors/NowhereToRecordError.js";
 import { PinnedImageChangedError } from "../errors/PinnedImageChangedError.js";
 import { ProviderUnavailableError } from "../errors/ProviderUnavailableError.js";
@@ -12,6 +13,7 @@ import type {
   Provider,
   ResolvedImage,
 } from "../../../Plugin/index.js";
+import type { Images } from "../../../Modules/Images/index.js";
 import type { CreateStep } from "./CreateStep.js";
 import { ReportRun } from "./ReportRun.js";
 import type { DeclaredTarget, Host, OpenStrapServer } from "../../../Api/index.js";
@@ -28,6 +30,8 @@ export type CreateMachineRequest = {
   server?: OpenStrapServer;
   /** The public half to plant, from the connector that owns the key. Not needed with a server. */
   publicKey?: string;
+  /** Where each `image:` name is published. openstrap keeps no list of its own. */
+  images: Images;
   /** Replaces the image this target is pinned to with whatever its name resolves to now. */
   repin?: boolean;
   /** Which host port to ask for. A server may answer with a different one, and its answer wins. */
@@ -191,8 +195,8 @@ export class CreateMachine {
     request: CreateMachineRequest,
     done: (step: Omit<CreateStep, "finishedAt">) => void,
   ): Promise<Opened> {
-    const reference = request.target.image ?? "ubuntu:24.04";
-    const proposed = await request.provider.resolveImage({ name: reference, architecture: process.arch });
+    const reference = CreateMachine.imageOf(request.target);
+    const proposed = await request.images.resolve(reference, process.arch);
     const opened = await server.openRun({
       command: "create",
       host: CreateMachine.thisHost(),
@@ -322,16 +326,21 @@ export class CreateMachine {
     return access;
   }
 
+  /** What the machine is made of, as somebody said it. Nobody having said is not a default. */
+  private static imageOf(target: BlueprintTarget): string {
+    if (target.image === undefined) {
+      throw new MissingImageError(target.name);
+    }
+
+    return target.image;
+  }
+
   /** The image this target is made from — the same file every time, once there has been a first time. */
   private async image(request: CreateMachineRequest, timestamp: string): Promise<ResolvedImage> {
     const store = request.store!;
-    const reference = request.target.image ?? "ubuntu:24.04";
+    const reference = CreateMachine.imageOf(request.target);
     const pinned = request.repin ? null : store.machines.pinOf(request.target.name);
-    const image = await request.provider.resolveImage({
-      name: reference,
-      architecture: process.arch,
-      pinned: pinned ? { url: pinned.url, sha256: pinned.sha256 } : undefined,
-    });
+    const image = await request.images.resolve(reference, process.arch);
 
     if (pinned && (image.sha256 !== pinned.sha256 || reference !== pinned.reference)) {
       throw new PinnedImageChangedError(

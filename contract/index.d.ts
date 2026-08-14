@@ -11,7 +11,6 @@ export type {
   OpenStrapPluginOrder,
 } from "./OpenStrapPlugin.js";
 export type {
-  ImageRequest,
   MachineAccess,
   MachineHandle,
   MachineRequest,
