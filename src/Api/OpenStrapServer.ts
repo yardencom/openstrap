@@ -49,6 +49,30 @@ export class OpenStrapServer {
   static readonly token: SecretReference = { store: "keychain", name: "openstrap.server-token" };
 
   /**
+   * A pass of this machine's own, given the one a person already has.
+   *
+   * A person signs in to their identity provider and openstrap trades what that issued for a token
+   * this server issued — because what runs afterwards is a program on a laptop, and a program has
+   * no browser to sign in with again. This is the only thing openstrap does before it has a token,
+   * so it is the only thing that does not go through one.
+   */
+  static async issueToken(credential: string, name: string): Promise<string> {
+    const answer = await fetch(`${OpenStrapServer.address}/v1/tokens`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${credential}` },
+      body: JSON.stringify({ name }),
+    }).catch((cause: unknown) => {
+      throw new ServerUnreachableError(OpenStrapServer.address, cause);
+    });
+
+    if (!answer.ok) {
+      throw new ServerRefusedError(answer.status, await answer.text());
+    }
+
+    return (await answer.json() as { token: string }).token;
+  }
+
+  /**
    * The server this run talks to.
    *
    * Refused rather than skipped when there is no token: working alone is a decision, and it is made

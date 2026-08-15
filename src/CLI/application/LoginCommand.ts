@@ -1,3 +1,5 @@
+import { hostname } from "node:os";
+
 import { OpenStrapServer } from "../../Api/index.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 import type { LoginArgs } from "../arguments/types.js";
@@ -30,13 +32,18 @@ export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
       return { result: { address: OpenStrapServer.address, store: store.id, kept: false }, exitCode: 0 };
     }
 
-    const token = (await this.read()).trim();
+    const credential = (await this.read()).trim();
 
-    if (!token) {
-      throw new Error("Nothing was piped in, so there is no token to keep: openstrap login < token-file");
+    if (!credential) {
+      throw new Error(
+        "Nothing was piped in. openstrap trades the token your identity provider gave you for one "
+        + "of this server's: openstrap login < credential-file",
+      );
     }
 
-    await store.write(reference, token);
+    // Traded, not kept: what a person signs in with belongs to them and to their provider, and what
+    // runs on this machine afterwards should be revocable without touching either.
+    await store.write(reference, await OpenStrapServer.issueToken(credential, hostname()));
 
     return { result: { address: OpenStrapServer.address, store: store.id, kept: true }, exitCode: 0 };
   }
