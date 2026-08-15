@@ -46,7 +46,17 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
     const recorded = await this.open(runtime, args.local);
 
     try {
-      const known = recorded.server
+      // Both records, not one of them. Where a run is written down is a question about that run;
+      // which machines exist is not, and a machine made here before this laptop joined a server is
+      // still a machine somebody can go and look at.
+      const here = recorded.local.machines.list().filter(ListCommand.isAMachine).map((machine) => ({
+        name: machine.name,
+        provider: machine.provider,
+        transport: machine.transport,
+        image: ListCommand.pinOf(recorded.local, machine.name),
+        host: undefined,
+      }));
+      const there = recorded.server
         ? (await recorded.server.targets()).filter(ListCommand.isAMachine).map((summary) => ({
           name: summary.name,
           provider: summary.provider,
@@ -54,14 +64,10 @@ export class ListCommand implements CliCommand<ListArgs, ListResult> {
           image: summary.image,
           host: summary.host,
         }))
-        : recorded.local.machines.list().filter(ListCommand.isAMachine).map((machine) => ({
-          name: machine.name,
-          provider: machine.provider,
-          transport: machine.transport,
-          image: ListCommand.pinOf(recorded.local, machine.name),
-          host: undefined,
-        }));
-
+        : [];
+      // The server's answer wins where both know a name: it is the record, and this file is what
+      // was written here before there was one.
+      const known = [...there, ...here.filter((machine) => !there.some((one) => one.name === machine.name))];
       const machines = await Promise.all(known.map((machine) => ListCommand.asked(machine, runtime)));
 
       return {
