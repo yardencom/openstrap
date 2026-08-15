@@ -131,6 +131,7 @@ export class CreateMachine {
         publicKey: opened.publicKey,
         hostPort: opened.hostPort,
         guestPort: 22,
+        ...(target.display === undefined ? {} : { display: target.display }),
       });
 
       // Written the moment the provider hands an id back, before anything else can fail: a machine

@@ -76,6 +76,8 @@ export type MachineRequest = {
   publicKey: string;
   hostPort: number;
   guestPort: number;
+  /** Whether the machine needs a screen. Absent is no screen, which is what a server wants. */
+  display?: boolean;
 };
 
 /**

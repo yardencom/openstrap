@@ -9,6 +9,15 @@ export type BlueprintTarget = {
   provider?: string;
   image?: string;
   size?: string;
+  /**
+   * Whether a person will look at this machine.
+   *
+   * A machine openstrap makes is reached over a transport and has no screen, which is right for
+   * everything it is normally asked for and wrong for a desktop: the machine boots, the desktop
+   * runs, and there is nowhere for it to appear. Saying so is the blueprint's job — the hypervisor
+   * cannot guess, and adding a screen to every machine is hardware nobody asked for.
+   */
+  display?: boolean;
   requirements: TargetlessRequirement[];
   /** How the machine is brought to what the requirements declare. */
   steps?: readonly Step[];
