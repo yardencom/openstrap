@@ -10,7 +10,7 @@ export class CreateArgsParser implements CommandArgsParser {
   parse(args: readonly string[]): CreateArgs {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
-      flags: ["json", "repin"],
+      flags: [...(CommandArguments.runtimeOptions.flags ?? []), "json", "repin"],
       values: [...(CommandArguments.runtimeOptions.values ?? []), "config", "host-port", "os", "provider"],
     });
     const [kind, target] = read.positionals;

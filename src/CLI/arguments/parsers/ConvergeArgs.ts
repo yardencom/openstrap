@@ -8,7 +8,7 @@ export class ConvergeArgsParser implements CommandArgsParser {
   parse(args: readonly string[]): ConvergeArgs {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
-      flags: ["json", "check"],
+      flags: [...(CommandArguments.runtimeOptions.flags ?? []), "json", "check"],
       values: [...(CommandArguments.runtimeOptions.values ?? []), "max-passes"],
     });
     const named = read.positionals[0];

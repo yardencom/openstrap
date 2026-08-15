@@ -87,7 +87,9 @@ describe("openstrap run", () => {
     expect(parse("run", "app.yaml", "--json", "--plugin", "./p.mjs", "--runtime-config", "r.mjs")).toEqual({
       command: "run",
       configPath: "app.yaml",
+      hostPort: undefined,
       json: true,
+      local: false,
       pluginSpecifiers: ["./p.mjs"],
       runtimeConfigPath: "r.mjs",
     });
@@ -114,6 +116,7 @@ describe("openstrap create", () => {
       hostPort: 2223,
       repin: false,
       json: false,
+      local: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
@@ -143,6 +146,7 @@ describe("openstrap connect", () => {
       command: "connect",
       target: "ubuntu-vm",
       run: "uname -a",
+      local: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
@@ -164,6 +168,7 @@ describe("openstrap facts collect", () => {
       target: "host",
       json: true,
       full: false,
+      local: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });

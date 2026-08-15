@@ -8,7 +8,7 @@ export class ListText implements CommandText<ListResult> {
       return result.from === "server"
         ? "This organization has no machines yet.\n"
         : "No machines have been made on this computer yet.\n"
-        + "\nA server would know about machines made anywhere: set OPENSTRAP_SERVER_URL.\n";
+        + "\nA server would know about machines made anywhere: put its token in the secret store.\n";
     }
 
     const rows = result.machines.map(ListText.row);

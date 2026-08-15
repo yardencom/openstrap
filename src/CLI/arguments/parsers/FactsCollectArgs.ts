@@ -8,7 +8,7 @@ export class FactsCollectArgsParser implements SubcommandArgsParser {
   parse(args: readonly string[]): FactsCollectArgs {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
-      flags: ["json", "full"],
+      flags: [...(CommandArguments.runtimeOptions.flags ?? []), "json", "full"],
     });
     const named = read.positionals[0];
 

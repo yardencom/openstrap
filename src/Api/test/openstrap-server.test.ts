@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { MissingServerTokenError } from "../errors/MissingServerTokenError.js";
 import { OpenStrapServer } from "../OpenStrapServer.js";
 import { ServerRefusedError } from "../errors/ServerRefusedError.js";
 import { ServerUnreachableError } from "../errors/ServerUnreachableError.js";
@@ -71,22 +70,28 @@ function server(answers: Array<{ status: number; body?: unknown }>, url = "https
 }
 
 describe("Which server this run talks to", () => {
-  it("is none at all when no url is named, which is a laptop with a hypervisor on it", () => {
-    expect(OpenStrapServer.fromEnvironment({})).toBeUndefined();
+  /** A store that answers with what it was given, which is all this needs of a plugin. */
+  const keeping = (token: string | null) => ({
+    id: "keychain",
+    read: async () => token,
+    write: async () => {},
+    remove: async () => {},
   });
 
-  it("is refused when a url is named and nothing authenticates against it", () => {
-    expect(() => OpenStrapServer.fromEnvironment({ OPENSTRAP_SERVER_URL: "https://openstrap.example" }))
-      .toThrow(MissingServerTokenError);
+  it("is the one written into openstrap, which is not a thing each run answers differently", () => {
+    expect(OpenStrapServer.address).toMatch(/^https?:\/\//);
   });
 
-  it("is the one the environment names", () => {
-    const named = OpenStrapServer.fromEnvironment({
-      OPENSTRAP_SERVER_URL: "https://openstrap.example",
-      OPENSTRAP_TOKEN: "t0ken",
-    });
+  it("is none at all with no secret store, which is a laptop with a hypervisor on it", async () => {
+    await expect(OpenStrapServer.of(undefined)).resolves.toBeUndefined();
+  });
 
-    expect(named).toBeInstanceOf(OpenStrapServer);
+  it("is none at all when the store holds no token, rather than a server nothing can talk to", async () => {
+    await expect(OpenStrapServer.of(keeping(null))).resolves.toBeUndefined();
+  });
+
+  it("is the server, once the store has a token for it", async () => {
+    await expect(OpenStrapServer.of(keeping("t0ken"))).resolves.toBeInstanceOf(OpenStrapServer);
   });
 });
 

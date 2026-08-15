@@ -8,7 +8,7 @@ export class RunArgsParser implements CommandArgsParser {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
       values: [...CommandArguments.runtimeOptions.values ?? [], "host-port"],
-      flags: ["json"],
+      flags: [...(CommandArguments.runtimeOptions.flags ?? []), "json"],
     });
 
     if (read.positionals.length > 1) {

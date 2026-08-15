@@ -22,7 +22,7 @@ export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult>
       throw new UnknownTargetError(args.target, Object.keys(blueprint.targets));
     }
 
-    const recorded = new WhereMachinesAreRecorded();
+    const recorded = await WhereMachinesAreRecorded.of(await context.runtime(), args.local);
 
     // Anything this machine did while no server was listening goes first: a run that never
     // left is a machine the team cannot see, and a server is now there to be told.

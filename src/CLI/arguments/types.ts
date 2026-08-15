@@ -1,5 +1,13 @@
 /** The arguments each command takes, once read. */
 export type RuntimeArgs = {
+  /**
+   * Keep this run to this machine, whatever the environment says.
+   *
+   * A server is the record for everything an organization has, and one run wanting to stay out of
+   * that is a decision made at the moment of running — not a variable somebody has to remember to
+   * unset and then remember to set back.
+   */
+  local: boolean;
   runtimeConfigPath?: string;
   pluginSpecifiers: string[];
 };

@@ -1,3 +1,4 @@
+import type { RuntimeArgs } from "./types.js";
 /** Which options a command accepts, and in which form. */
 export type AcceptedOptions = {
   /** Options that are either given or not: `--json`. */
@@ -70,10 +71,12 @@ export class CommandArguments {
   static readonly runtimeOptions: AcceptedOptions = {
     values: ["runtime-config"],
     repeated: ["plugin"],
+    flags: ["local"],
   };
 
-  static runtimeArgsIn(read: CommandArguments): { runtimeConfigPath?: string; pluginSpecifiers: string[] } {
+  static runtimeArgsIn(read: CommandArguments): RuntimeArgs {
     return {
+      local: read.flag("local"),
       runtimeConfigPath: read.value("runtime-config"),
       pluginSpecifiers: read.values("plugin"),
     };

@@ -1,6 +1,6 @@
+import type { SecretReference, SecretStore } from "@openstrap/plugin-contract";
 import { ServerRefusedError } from "./errors/ServerRefusedError.js";
 import { ServerUnreachableError } from "./errors/ServerUnreachableError.js";
-import { MissingServerTokenError } from "./errors/MissingServerTokenError.js";
 import type {
   FinishRunRequest,
   OpenRunRequest,
@@ -35,26 +35,34 @@ export class OpenStrapServer {
   }
 
   /**
+   * The server openstrap talks to.
+   *
+   * Written here and nowhere else. It was an environment variable, which meant every machine that
+   * ran openstrap had to be told the same thing again, and a run that forgot worked anyway —
+   * quietly, alone, against a record nobody else could see. Where the record lives is not something
+   * each invocation gets to answer differently.
+   */
+  static readonly address = "http://127.0.0.1:8080";
+
+  /** Where the token is kept, as the secret store this run has knows it. */
+  static readonly token: SecretReference = { store: "keychain", name: "openstrap.server-token" };
+
+  /**
    * The server this run talks to, or nothing at all.
    *
-   * Nothing is an answer: without a server openstrap works on this machine alone, which is what a
-   * laptop with a hypervisor on it is for. The token is not read from a file — a file of secrets
-   * beside openstrap is the thing openstrap is not.
+   * Nothing is an answer: with no secret store there is no token, and openstrap works on this
+   * machine alone — which is what a laptop with a hypervisor on it is for. The token is never read
+   * from a file and never written to one: a file of secrets beside openstrap is the thing openstrap
+   * is not.
    */
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenStrapServer | undefined {
-    const url = environment.OPENSTRAP_SERVER_URL?.trim();
-
-    if (!url) {
+  static async of(store: SecretStore | undefined): Promise<OpenStrapServer | undefined> {
+    if (!store) {
       return undefined;
     }
 
-    const token = environment.OPENSTRAP_TOKEN?.trim();
+    const token = (await store.read({ ...OpenStrapServer.token, store: store.id }))?.trim();
 
-    if (!token) {
-      throw new MissingServerTokenError(url);
-    }
-
-    return new OpenStrapServer({ url, token, organization: environment.OPENSTRAP_ORG?.trim() || undefined });
+    return token ? new OpenStrapServer({ url: OpenStrapServer.address, token }) : undefined;
   }
 
   /** Everything openstrap needs before it touches a hypervisor. */

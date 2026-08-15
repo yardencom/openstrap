@@ -15,7 +15,7 @@ let home: string;
 let seeding: WhereMachinesAreRecorded;
 
 /** A connection of the test's own: the command opens and closes one of its own, as it does in life. */
-const opened = () => new WhereMachinesAreRecorded(new StateHome({ OPENSTRAP_STATE_HOME: home }), {});
+const opened = () => new WhereMachinesAreRecorded(undefined, new StateHome({ OPENSTRAP_STATE_HOME: home }));
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), "openstrap-list-"));
@@ -45,8 +45,8 @@ function holding(machines: Record<string, MachineStatus>, options: { failing?: b
 function listing(providers: Record<string, Provider>) {
   const runtime = { providers: { get: (id: string) => providers[id] } };
 
-  return new ListCommand(opened).execute(
-    { command: "list", json: false, pluginSpecifiers: [] },
+  return new ListCommand(async () => opened()).execute(
+    { command: "list", json: false, local: false, pluginSpecifiers: [] },
     { workspaceRoot: process.cwd(), runtime: () => Promise.resolve(runtime as never) },
   );
 }

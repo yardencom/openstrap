@@ -17,12 +17,22 @@ import { hostname } from "node:os";
  * is always open — a run made here before any server existed still has to be able to leave.
  */
 export class WhereMachinesAreRecorded {
+  /**
+   * Opened rather than constructed, because reaching the token is asking a plugin, and asking a
+   * plugin is waiting for it.
+   */
+  static async of(runtime: OpenStrapRuntime, local = false): Promise<WhereMachinesAreRecorded> {
+    return new WhereMachinesAreRecorded(
+      local ? undefined : await OpenStrapServer.of(runtime.secretStores.soleIfAny()),
+    );
+  }
+
   readonly server: OpenStrapServer | undefined;
   /** This machine's own file. Open either way: what happened here has to be readable to be told. */
   readonly local: Store;
 
-  constructor(stateHome = new StateHome(), environment = process.env) {
-    this.server = OpenStrapServer.fromEnvironment(environment);
+  constructor(server?: OpenStrapServer, stateHome = new StateHome()) {
+    this.server = server;
     this.local = new Store(stateHome.database());
   }
 

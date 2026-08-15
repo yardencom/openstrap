@@ -27,7 +27,7 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
       workspaceRoot: context.workspaceRoot,
     });
     const runtime = await context.runtime();
-    const recorded = new WhereMachinesAreRecorded();
+    const recorded = await WhereMachinesAreRecorded.of(runtime, args.local);
 
     // Anything this machine did while no server was listening goes first: a run that never
     // left is a machine the team cannot see, and a server is now there to be told.

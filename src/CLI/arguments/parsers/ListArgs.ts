@@ -7,7 +7,7 @@ export class ListArgsParser implements CommandArgsParser {
   parse(args: readonly string[]): ListArgs {
     const read = new CommandArguments(args, {
       ...CommandArguments.runtimeOptions,
-      flags: ["json"],
+      flags: [...(CommandArguments.runtimeOptions.flags ?? []), "json"],
     });
 
     if (read.positionals.length > 0) {
