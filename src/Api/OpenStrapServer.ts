@@ -114,8 +114,8 @@ export class OpenStrapServer {
   }
 
   /** A pass for something that cannot sign in at all: an agent, a CI job, anything with no browser. */
-  issueFor(name: string): Promise<{ token: string; name: string }> {
-    return this.json<{ token: string; name: string }>("POST", "/v1/tokens", { name });
+  issueFor(name: string, expiresAt?: string): Promise<{ token: string; name: string }> {
+    return this.json<{ token: string; name: string }>("POST", "/v1/tokens", { name, expiresAt });
   }
 
   /** Everything openstrap needs before it touches a hypervisor. */
