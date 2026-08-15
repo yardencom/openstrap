@@ -73,7 +73,15 @@ export type LoginArgs = {
   json: boolean;
 } & RuntimeArgs;
 
-export type ParsedArgs = LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
+export type TokensArgs = {
+  command: "tokens";
+  did: "list" | "issue" | "revoke";
+  /** The name to issue for, or the id to revoke. Nothing, where the word was neither. */
+  subject?: string;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

@@ -10,6 +10,9 @@ import { CreateCommand } from "../application/CreateCommand.js";
 import { CreateText } from "../output/text/CreateText.js";
 import { FactsArgsParser } from "../arguments/FactsArgsParser.js";
 import { ListArgsParser } from "../arguments/parsers/ListArgs.js";
+import { TokensArgsParser } from "../arguments/parsers/TokensArgs.js";
+import { TokensCommand } from "../application/TokensCommand.js";
+import { TokensText } from "../output/text/TokensText.js";
 import { LoginArgsParser } from "../arguments/parsers/LoginArgs.js";
 import { LoginCommand } from "../application/LoginCommand.js";
 import { LoginText } from "../output/text/LoginText.js";
@@ -63,6 +66,11 @@ export class OpenStrapCommands {
         "login",
         "openstrap login [--forget] [--json]",
         new LoginArgsParser(), new LoginCommand(), new LoginText(),
+      ),
+      OpenStrapCommands.command(
+        "tokens",
+        "openstrap tokens [issue <name> | revoke <id>] [--json]",
+        new TokensArgsParser(), new TokensCommand(), new TokensText(),
       ),
       OpenStrapCommands.command(
         "list",

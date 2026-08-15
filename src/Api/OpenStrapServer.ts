@@ -8,6 +8,7 @@ import type {
   OpenRunResponse,
   RecordResourceRequest,
   TargetAccessResponse,
+  KnownToken,
   TargetSummary,
 } from "./types/Api.js";
 
@@ -100,6 +101,21 @@ export class OpenStrapServer {
     }
 
     return new OpenStrapServer({ url: OpenStrapServer.address, token });
+  }
+
+  /** The passes this organization has. Not the passes — only a server that kept them could say those. */
+  tokens(): Promise<KnownToken[]> {
+    return this.json<KnownToken[]>("GET", "/v1/tokens");
+  }
+
+  /** Takes one away, so a machine that should not reach the record no longer can. */
+  revokeToken(id: string): Promise<void> {
+    return this.nothing("POST", `/v1/tokens/${encodeURIComponent(id)}/revoke`);
+  }
+
+  /** A pass for something that cannot sign in at all: an agent, a CI job, anything with no browser. */
+  issueFor(name: string): Promise<{ token: string; name: string }> {
+    return this.json<{ token: string; name: string }>("POST", "/v1/tokens", { name });
   }
 
   /** Everything openstrap needs before it touches a hypervisor. */

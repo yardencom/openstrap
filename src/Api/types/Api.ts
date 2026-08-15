@@ -103,6 +103,15 @@ export type FinishRunRequest = {
 };
 
 /** One machine an organization has, as the server knows it. Whether it runs is asked of a provider. */
+/** A pass that exists, as much of it as can be said: the pass itself is kept nowhere. */
+export type KnownToken = {
+  id: string;
+  name: string;
+  createdAt: string;
+  expiresAt?: string;
+  revokedAt?: string;
+};
+
 export type TargetSummary = {
   name: string;
   scope: string;
