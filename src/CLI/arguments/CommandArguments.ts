@@ -71,12 +71,13 @@ export class CommandArguments {
   static readonly runtimeOptions: AcceptedOptions = {
     values: ["runtime-config"],
     repeated: ["plugin"],
-    flags: ["local"],
+    flags: ["local", "server"],
   };
 
   static runtimeArgsIn(read: CommandArguments): RuntimeArgs {
     return {
       local: read.flag("local"),
+      server: read.flag("server"),
       runtimeConfigPath: read.value("runtime-config"),
       pluginSpecifiers: read.values("plugin"),
     };

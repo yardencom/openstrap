@@ -21,9 +21,9 @@ export class WhereMachinesAreRecorded {
    * Opened rather than constructed, because reaching the token is asking a plugin, and asking a
    * plugin is waiting for it.
    */
-  static async of(runtime: OpenStrapRuntime, local = false): Promise<WhereMachinesAreRecorded> {
+  static async of(runtime: OpenStrapRuntime, args: { local?: boolean; server?: boolean } = {}) {
     return new WhereMachinesAreRecorded(
-      local ? undefined : await OpenStrapServer.of(runtime.secretStores.soleIfAny()),
+      args.local ? undefined : await OpenStrapServer.of(runtime.secretStores.soleIfAny(), args.server),
     );
   }
 

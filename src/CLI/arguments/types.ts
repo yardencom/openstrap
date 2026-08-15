@@ -8,6 +8,8 @@ export type RuntimeArgs = {
    * unset and then remember to set back.
    */
   local: boolean;
+  /** Refuse rather than quietly stay here: for a run that has to reach the organization's record. */
+  server: boolean;
   runtimeConfigPath?: string;
   pluginSpecifiers: string[];
 };

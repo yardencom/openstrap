@@ -15,7 +15,7 @@ export class NoServerTokenError extends Error {
         ? `No secret store is registered, so there is nowhere a token for ${address} could be kept. `
           + "Register a secret store plugin"
         : `The secret store holds no token for ${address}. Put one there`)
-      + ", or run with --local to keep this run to this machine.",
+      + ". Run `openstrap login` to sign this machine in.",
     );
     this.name = "NoServerTokenError";
   }

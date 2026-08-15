@@ -13,7 +13,7 @@ export type ConnectResult = {
 export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
   async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome<ConnectResult>> {
     const runtime = await context.runtime();
-    const recorded = await WhereMachinesAreRecorded.of(runtime, args.local);
+    const recorded = await WhereMachinesAreRecorded.of(runtime, args);
 
     // Anything this machine did while no server was listening goes first: a run that never
     // left is a machine the team cannot see, and a server is now there to be told.
