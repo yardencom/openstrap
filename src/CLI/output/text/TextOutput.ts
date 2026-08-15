@@ -4,6 +4,7 @@ import { ConnectText } from "./ConnectText.js";
 import { ConvergeText } from "./ConvergeText.js";
 import { CreateText } from "./CreateText.js";
 import { FactsText } from "./FactsText.js";
+import { LoginText } from "./LoginText.js";
 import { ListText } from "./ListText.js";
 import { RunText } from "./RunText.js";
 
@@ -18,6 +19,7 @@ export class TextOutput implements Output {
     "connect": new ConnectText(),
     "converge": new ConvergeText(),
     "list": new ListText(),
+    "login": new LoginText(),
     "facts.collect": new FactsText(),
   };
 

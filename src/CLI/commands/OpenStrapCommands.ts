@@ -10,6 +10,9 @@ import { CreateCommand } from "../application/CreateCommand.js";
 import { CreateText } from "../output/text/CreateText.js";
 import { FactsArgsParser } from "../arguments/FactsArgsParser.js";
 import { ListArgsParser } from "../arguments/parsers/ListArgs.js";
+import { LoginArgsParser } from "../arguments/parsers/LoginArgs.js";
+import { LoginCommand } from "../application/LoginCommand.js";
+import { LoginText } from "../output/text/LoginText.js";
 import { ListCommand } from "../application/ListCommand.js";
 import { ListText } from "../output/text/ListText.js";
 import { FactsCollectCommand } from "../application/FactsCollectCommand.js";
@@ -55,6 +58,11 @@ export class OpenStrapCommands {
         "converge",
         "openstrap converge <host|target> [--check] [--max-passes n] [--json] [--plugin specifier]",
         new ConvergeArgsParser(), new ConvergeCommand(), new ConvergeText(),
+      ),
+      OpenStrapCommands.command(
+        "login",
+        "openstrap login < token-file   [--forget] [--json]",
+        new LoginArgsParser(), new LoginCommand(), new LoginText(),
       ),
       OpenStrapCommands.command(
         "list",

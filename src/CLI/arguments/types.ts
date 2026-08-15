@@ -66,7 +66,14 @@ export type ListArgs = {
   json: boolean;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
+export type LoginArgs = {
+  command: "login";
+  /** Take the token away rather than keep one, which is how a run goes back to being local. */
+  forget: boolean;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

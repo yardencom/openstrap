@@ -8,12 +8,14 @@
  */
 export class NoServerTokenError extends Error {
   constructor(readonly address: string, reason: "no store" | "no token") {
+    // Two causes, two things to do about them. One sentence for both told somebody with a secret
+    // store already registered to go and register one.
     super(
       (reason === "no store"
-        ? "No secret store is registered, so there is no token for "
-        : "The secret store holds no token for ")
-      + `${address}. Register a secret store plugin and put one there, or run with --local to keep `
-      + "this run to this machine.",
+        ? `No secret store is registered, so there is nowhere a token for ${address} could be kept. `
+          + "Register a secret store plugin"
+        : `The secret store holds no token for ${address}. Put one there`)
+      + ", or run with --local to keep this run to this machine.",
     );
     this.name = "NoServerTokenError";
   }
