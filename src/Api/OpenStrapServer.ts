@@ -48,6 +48,15 @@ export class OpenStrapServer {
   /** Where the token is kept, as the secret store this run has knows it. */
   static readonly token: SecretReference = { store: "keychain", name: "openstrap.server-token" };
 
+  /** Who signs people in at this server, or nobody, where only machine tokens are believed. */
+  static async whoSignsIn(): Promise<{ issuer: string; audience: string } | undefined> {
+    const answer = await fetch(`${OpenStrapServer.address}/v1/auth`).catch((cause: unknown) => {
+      throw new ServerUnreachableError(OpenStrapServer.address, cause);
+    });
+
+    return answer.ok ? await answer.json() as { issuer: string; audience: string } : undefined;
+  }
+
   /**
    * A pass of this machine's own, given the one a person already has.
    *

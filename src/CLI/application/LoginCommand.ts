@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 
-import { OpenStrapServer } from "../../Api/index.js";
+import { type Code, DeviceLogin, OpenStrapServer } from "../../Api/index.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 import type { LoginArgs } from "../arguments/types.js";
 
@@ -19,7 +19,13 @@ export type LoginResult = {
  * history: the store is a plugin's, and openstrap is the one that knows what it will ask for.
  */
 export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
-  constructor(private readonly read = LoginCommand.piped) {}
+  constructor(
+    private readonly signIn = new DeviceLogin(),
+    /** Said while the command waits, so a person has something to act on before it finishes. */
+    private readonly show = (code: Code) => process.stderr.write(
+      `Open ${code.url} and enter ${code.userCode}. Waiting.\n`,
+    ),
+  ) {}
 
   async execute(args: LoginArgs, context: CommandContext): Promise<CommandOutcome<LoginResult>> {
     const runtime = await context.runtime();
@@ -32,30 +38,23 @@ export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
       return { result: { address: OpenStrapServer.address, store: store.id, kept: false }, exitCode: 0 };
     }
 
-    const credential = (await this.read()).trim();
+    const who = await OpenStrapServer.whoSignsIn();
 
-    if (!credential) {
+    if (!who) {
       throw new Error(
-        "Nothing was piped in. openstrap trades the token your identity provider gave you for one "
-        + "of this server's: openstrap login < credential-file",
+        `Nobody signs people in at ${OpenStrapServer.address}: it believes machine tokens only, and `
+        + "one of those is made on the server itself.",
       );
     }
 
+    const { code, waiting } = await this.signIn.begin(who.issuer, who.audience);
+
+    this.show(code);
+
     // Traded, not kept: what a person signs in with belongs to them and to their provider, and what
     // runs on this machine afterwards should be revocable without touching either.
-    await store.write(reference, await OpenStrapServer.issueToken(credential, hostname()));
+    await store.write(reference, await OpenStrapServer.issueToken(await waiting, hostname()));
 
     return { result: { address: OpenStrapServer.address, store: store.id, kept: true }, exitCode: 0 };
-  }
-
-  /** What was piped in. A token typed as an argument is a token in the shell's history. */
-  private static async piped(): Promise<string> {
-    const chunks: Buffer[] = [];
-
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk as Buffer);
-    }
-
-    return Buffer.concat(chunks).toString("utf8");
   }
 }

@@ -2,10 +2,11 @@ import type { CommandArgsParser, LoginArgs } from "../types.js";
 import { CommandArguments } from "../CommandArguments.js";
 
 /**
- * `openstrap login` — what a person signed in with, read from what was piped in.
+ * `openstrap login` — a person, signed in.
  *
- * Never from an argument: what is typed on a command line is in the shell's history afterwards, and
- * a credential in a history file is one somebody else can have.
+ * Takes nothing: a password would be a password to keep somewhere, and a token pasted in is a token
+ * in a shell's history. openstrap shows a code, the person types it where they already are signed
+ * in, and openstrap waits.
  */
 export class LoginArgsParser implements CommandArgsParser {
   readonly command = "login";
@@ -17,7 +18,7 @@ export class LoginArgsParser implements CommandArgsParser {
     });
 
     if (read.positionals.length > 0) {
-      throw new Error("Usage: openstrap login < credential-file   (or: openstrap login --forget)");
+      throw new Error("Usage: openstrap login   (or: openstrap login --forget)");
     }
 
     return {

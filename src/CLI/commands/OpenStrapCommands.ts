@@ -61,7 +61,7 @@ export class OpenStrapCommands {
       ),
       OpenStrapCommands.command(
         "login",
-        "openstrap login < credential-file   [--forget] [--json]",
+        "openstrap login [--forget] [--json]",
         new LoginArgsParser(), new LoginCommand(), new LoginText(),
       ),
       OpenStrapCommands.command(
