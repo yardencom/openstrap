@@ -37,13 +37,13 @@ export type ListResult = {
 /** `openstrap list` — every machine that is known, and what each is doing right now. */
 export class ListCommand implements CliCommand<ListArgs, ListResult> {
   constructor(
-    private readonly open = (runtime: OpenStrapRuntime, args: ListArgs) =>
-      WhereMachinesAreRecorded.of(runtime, args),
+    private readonly open = (runtime: OpenStrapRuntime, local: boolean) =>
+      WhereMachinesAreRecorded.of(runtime, local),
   ) {}
 
   async execute(args: ListArgs, context: CommandContext): Promise<CommandOutcome<ListResult>> {
     const runtime = await context.runtime();
-    const recorded = await this.open(runtime, args);
+    const recorded = await this.open(runtime, args.local);
 
     try {
       const known = recorded.server

@@ -82,32 +82,21 @@ export class OpenStrapServer {
   }
 
   /**
-   * The server this run talks to, or nothing where this machine has not signed in to one.
+   * The server this run talks to.
    *
-   * Not signed in is a state, not a mistake: a laptop with a hypervisor on it is what openstrap is
-   * for, and `openstrap login` is how somebody joins a server rather than something they have to
-   * remember not to have forgotten. `--server` is for a run that must not quietly stay here.
-   *
-   * The token is never read from a file and never written to one — a file of secrets beside
-   * openstrap is the thing openstrap is not.
+   * Refused rather than skipped when there is no token: working alone is a decision, and it is made
+   * with `--local` where anyone reading what was typed can see it. The token is never read from a
+   * file and never written to one — a file of secrets beside openstrap is the thing openstrap is not.
    */
-  static async of(store: SecretStore | undefined, required = false): Promise<OpenStrapServer | undefined> {
+  static async of(store: SecretStore | undefined): Promise<OpenStrapServer> {
     if (!store) {
-      if (required) {
-        throw new NoServerTokenError(OpenStrapServer.address, "no store");
-      }
-
-      return undefined;
+      throw new NoServerTokenError(OpenStrapServer.address, "no store");
     }
 
     const token = (await store.read({ ...OpenStrapServer.token, store: store.id }))?.trim();
 
     if (!token) {
-      if (required) {
-        throw new NoServerTokenError(OpenStrapServer.address, "no token");
-      }
-
-      return undefined;
+      throw new NoServerTokenError(OpenStrapServer.address, "no token");
     }
 
     return new OpenStrapServer({ url: OpenStrapServer.address, token });

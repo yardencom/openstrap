@@ -82,14 +82,12 @@ describe("Which server this run talks to", () => {
     expect(OpenStrapServer.address).toMatch(/^https?:\/\//);
   });
 
-  it("is none at all where this machine has not signed in, which is a laptop with a hypervisor on it", async () => {
-    await expect(OpenStrapServer.of(undefined)).resolves.toBeUndefined();
-    await expect(OpenStrapServer.of(keeping(null))).resolves.toBeUndefined();
+  it("is refused with no secret store, rather than a run that quietly went off on its own", async () => {
+    await expect(OpenStrapServer.of(undefined)).rejects.toThrow(/--local/);
   });
 
-  it("is refused rather than skipped for a run that says it has to reach the record", async () => {
-    await expect(OpenStrapServer.of(undefined, true)).rejects.toThrow(/openstrap login|Register/);
-    await expect(OpenStrapServer.of(keeping(null), true)).rejects.toThrow(/openstrap login|Put one/);
+  it("is refused when the store holds no token, because that is not the same as meaning to", async () => {
+    await expect(OpenStrapServer.of(keeping(null))).rejects.toThrow(/--local/);
   });
 
   it("is the server, once the store has a token for it", async () => {

@@ -23,7 +23,7 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     const declared = args.full ? undefined : this.declaredFor(args.target, context);
     const snapshot = args.target === "host"
       ? await this.here(declared, context)
-      : await this.there(args.target, declared, context, args);
+      : await this.there(args.target, declared, context, args.local);
 
     return {
       result: snapshot,
@@ -49,10 +49,10 @@ export class FactsCollectCommand implements CliCommand<FactsCollectArgs, FactsCo
     target: string,
     declared: BlueprintTarget | undefined,
     context: CommandContext,
-    args: FactsCollectArgs,
+    local: boolean,
   ): Promise<FactSnapshot> {
     const runtime = await context.runtime();
-    const recorded = await WhereMachinesAreRecorded.of(runtime, args);
+    const recorded = await WhereMachinesAreRecorded.of(runtime, local);
 
     // Anything this machine did while no server was listening goes first: a run that never
     // left is a machine the team cannot see, and a server is now there to be told.

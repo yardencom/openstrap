@@ -90,7 +90,6 @@ describe("openstrap run", () => {
       hostPort: undefined,
       json: true,
       local: false,
-      server: false,
       pluginSpecifiers: ["./p.mjs"],
       runtimeConfigPath: "r.mjs",
     });
@@ -118,7 +117,6 @@ describe("openstrap create", () => {
       repin: false,
       json: false,
       local: false,
-      server: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
@@ -149,7 +147,6 @@ describe("openstrap connect", () => {
       target: "ubuntu-vm",
       run: "uname -a",
       local: false,
-      server: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });
@@ -172,7 +169,6 @@ describe("openstrap facts collect", () => {
       json: true,
       full: false,
       local: false,
-      server: false,
       pluginSpecifiers: [],
       runtimeConfigPath: undefined,
     });

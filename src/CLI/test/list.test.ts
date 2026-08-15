@@ -46,7 +46,7 @@ function listing(providers: Record<string, Provider>) {
   const runtime = { providers: { get: (id: string) => providers[id] } };
 
   return new ListCommand(async () => opened()).execute(
-    { command: "list", json: false, local: false, server: false, pluginSpecifiers: [] },
+    { command: "list", json: false, local: false, pluginSpecifiers: [] },
     { workspaceRoot: process.cwd(), runtime: () => Promise.resolve(runtime as never) },
   );
 }
