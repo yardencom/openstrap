@@ -29,7 +29,7 @@ export class TokensCommand implements CliCommand<TokensArgs, TokensResult> {
       const server = recorded.server ?? await OpenStrapServer.of(runtime.secretStores.soleIfAny());
 
       if (args.did === "issue") {
-        return { result: { did: "issue", issued: await server.issueFor(args.subject!) }, exitCode: 0 };
+        return { result: { did: "issue", issued: await server.issueFor(args.subject!, args.expiresAt) }, exitCode: 0 };
       }
 
       if (args.did === "revoke") {
