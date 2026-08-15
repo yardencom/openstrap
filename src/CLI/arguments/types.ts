@@ -78,8 +78,6 @@ export type TokensArgs = {
   did: "list" | "issue" | "revoke";
   /** The name to issue for, or the id to revoke. Nothing, where the word was neither. */
   subject?: string;
-  /** When the pass stops working. Absent is forever, which is a thing to decide rather than fall into. */
-  expiresAt?: string;
   json: boolean;
 } & RuntimeArgs;
 
