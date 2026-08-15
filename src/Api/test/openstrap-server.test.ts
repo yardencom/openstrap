@@ -82,12 +82,12 @@ describe("Which server this run talks to", () => {
     expect(OpenStrapServer.address).toMatch(/^https?:\/\//);
   });
 
-  it("is none at all with no secret store, which is a laptop with a hypervisor on it", async () => {
-    await expect(OpenStrapServer.of(undefined)).resolves.toBeUndefined();
+  it("is refused with no secret store, rather than a run that quietly went off on its own", async () => {
+    await expect(OpenStrapServer.of(undefined)).rejects.toThrow(/--local/);
   });
 
-  it("is none at all when the store holds no token, rather than a server nothing can talk to", async () => {
-    await expect(OpenStrapServer.of(keeping(null))).resolves.toBeUndefined();
+  it("is refused when the store holds no token, because that is not the same as meaning to", async () => {
+    await expect(OpenStrapServer.of(keeping(null))).rejects.toThrow(/--local/);
   });
 
   it("is the server, once the store has a token for it", async () => {

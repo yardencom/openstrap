@@ -24,7 +24,7 @@ afterAll(() => {
 
 describe("openstrap CLI", () => {
   it("runs the local sample and prints human output", async () => {
-    const output = await captureCli(["run", "examples/openstrap/local-run.yaml"]);
+    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--local"]);
 
     expect(output.exitCode).toBe(0);
     expect(output.stdout).toContain("OpenStrap run: passed");
@@ -59,7 +59,7 @@ describe("openstrap CLI", () => {
         "",
       ].join("\n"));
 
-      const output = await captureCli(["run"], directory);
+      const output = await captureCli(["run", "--local"], directory);
 
       expect(output.stdout).toContain("the-file [local]: passed");
       expect(output.exitCode).toBe(0);
@@ -71,7 +71,7 @@ describe("openstrap CLI", () => {
   });
 
   it("runs the local sample and prints JSON output", async () => {
-    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--json"]);
+    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--json", "--local"]);
     const json = JSON.parse(output.stdout);
 
     expect(output.exitCode).toBe(0);
@@ -110,7 +110,7 @@ targets:
 `,
       );
 
-      const output = await captureCli(["run", join(directory, "missing.yaml")], directory);
+      const output = await captureCli(["run", join(directory, "missing.yaml"), "--local"], directory);
 
       expect(output.exitCode).toBe(2);
       expect(output.stderr).toContain("Config file was not found");

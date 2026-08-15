@@ -1,4 +1,5 @@
 import type { SecretReference, SecretStore } from "@openstrap/plugin-contract";
+import { NoServerTokenError } from "./errors/NoServerTokenError.js";
 import { ServerRefusedError } from "./errors/ServerRefusedError.js";
 import { ServerUnreachableError } from "./errors/ServerUnreachableError.js";
 import type {
@@ -48,21 +49,24 @@ export class OpenStrapServer {
   static readonly token: SecretReference = { store: "keychain", name: "openstrap.server-token" };
 
   /**
-   * The server this run talks to, or nothing at all.
+   * The server this run talks to.
    *
-   * Nothing is an answer: with no secret store there is no token, and openstrap works on this
-   * machine alone — which is what a laptop with a hypervisor on it is for. The token is never read
-   * from a file and never written to one: a file of secrets beside openstrap is the thing openstrap
-   * is not.
+   * Refused rather than skipped when there is no token: working alone is a decision, and it is made
+   * with `--local` where anyone reading what was typed can see it. The token is never read from a
+   * file and never written to one — a file of secrets beside openstrap is the thing openstrap is not.
    */
-  static async of(store: SecretStore | undefined): Promise<OpenStrapServer | undefined> {
+  static async of(store: SecretStore | undefined): Promise<OpenStrapServer> {
     if (!store) {
-      return undefined;
+      throw new NoServerTokenError(OpenStrapServer.address, "no store");
     }
 
     const token = (await store.read({ ...OpenStrapServer.token, store: store.id }))?.trim();
 
-    return token ? new OpenStrapServer({ url: OpenStrapServer.address, token }) : undefined;
+    if (!token) {
+      throw new NoServerTokenError(OpenStrapServer.address, "no token");
+    }
+
+    return new OpenStrapServer({ url: OpenStrapServer.address, token });
   }
 
   /** Everything openstrap needs before it touches a hypervisor. */
