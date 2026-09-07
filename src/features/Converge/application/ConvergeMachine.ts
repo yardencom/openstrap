@@ -1,4 +1,5 @@
 import { Connect } from "#features/Connect/Connect.js";
+import { Delivered } from "../../../Modules/RemoteOpenStrap/deliver/Delivered.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import { StepSecrets } from "./StepSecrets.js";
 import { Requirements } from "../../../Modules/Requirements/index.js";
@@ -17,6 +18,8 @@ export type ConvergeMachineRequest = {
   server?: OpenStrapServer;
   check?: boolean;
   maxPasses?: number;
+  /** Where the blueprint is, because what it says to deliver is named relative to itself. */
+  blueprintRoot?: string;
   now?: Date;
 };
 
@@ -44,6 +47,11 @@ export class ConvergeMachine {
         ...connection.kind,
         displayName: declared.displayName,
       };
+      // Before the steps, because a step that uses what was delivered cannot deliver it: openstrap
+      // holds the transport here and the machine has no way to reach back for anything.
+      await Delivered.from(declared.deliver, request.blueprintRoot ?? process.cwd())
+        .onto(connection.transport);
+
       const converged = await new RemoteOpenStrap(connection.transport, connection.machine).converge({
         target: machine,
         requirements: declared.requirements,

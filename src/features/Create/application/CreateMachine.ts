@@ -334,7 +334,9 @@ export class CreateMachine {
    * than a blank where a digest should be, which reads as a digest of nothing.
    */
   private static said(image: ResolvedImage): string {
-    return image.sha256 === undefined ? image.reference : `${image.reference} ${image.sha256.slice(0, 12)}`;
+    // Absent is `undefined` from a registry that published none and `null` from a server that
+    // recorded none, and both mean the same thing: nobody said what this file weighs.
+    return image.sha256 ? `${image.reference} ${image.sha256.slice(0, 12)}` : image.reference;
   }
 
   /** What the machine is made of, as somebody said it. Nobody having said is not a default. */
@@ -353,7 +355,11 @@ export class CreateMachine {
     const pinned = request.repin ? null : store.machines.pinOf(request.target.name);
     const image = await request.images.resolve(reference, process.arch);
 
-    if (pinned && (image.sha256 !== pinned.sha256 || reference !== pinned.reference)) {
+    // A publisher who published no checksum leaves nothing to compare, and comparing nothing with
+    // what was recorded before refused every run: the name is what holds the pin then.
+    const moved = Boolean(image.sha256) && Boolean(pinned?.sha256) && image.sha256 !== pinned!.sha256;
+
+    if (pinned && (moved || reference !== pinned.reference)) {
       throw new PinnedImageChangedError(
         request.target.name,
         { reference: pinned.reference, sha256: pinned.sha256 },

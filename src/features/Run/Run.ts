@@ -17,6 +17,8 @@ import { Facts } from "../../Modules/Facts/Facts.js";
 
 export type RunRequest = {
   blueprint: Blueprint;
+  /** Where it was read from, because what it says to deliver is named relative to itself. */
+  blueprintRoot?: string;
   runtime: OpenStrapRuntime;
   /** This machine's own record, which is where a machine lives when a run has no server. */
   store?: Store;
@@ -70,6 +72,7 @@ export class Run {
     }
 
     return this.converge.execute({
+      blueprintRoot: request.blueprintRoot,
       target,
       runtime: request.runtime,
       store: request.store,

@@ -19,6 +19,8 @@ export type ConvergeRequest = {
   /** Work out the plan and change nothing. */
   check?: boolean;
   maxPasses?: number;
+  /** Where the blueprint is, because what it says to deliver is named relative to itself. */
+  blueprintRoot?: string;
   now?: Date;
 };
 

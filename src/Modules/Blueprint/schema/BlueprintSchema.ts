@@ -72,6 +72,9 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       image: this.schema.optional(this.name),
       size: this.schema.optional(this.name),
       display: this.schema.optional(this.schema.boolean()),
+      deliver: this.schema.optional(
+        this.schema.record(this.schema.string({ minLength: 1 }), this.schema.string({ minLength: 1 })),
+      ),
       // What has to be true, and — where openstrap is expected to make it true — how, written
       // inside the requirement it answers. One thought in one place: nothing names a requirement
       // twice, and nothing points at one that is not there.

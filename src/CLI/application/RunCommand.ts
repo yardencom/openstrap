@@ -1,3 +1,5 @@
+import { dirname, resolve } from "node:path";
+
 import { Blueprints } from "../../Modules/Blueprint/index.js";
 import { Checks } from "../../Modules/Requirements/index.js";
 import { Run, type RunResult as RunOutcome } from "#features/Run/Run.js";
@@ -36,6 +38,8 @@ export class RunCommand implements CliCommand<RunArgs, RunResult> {
     try {
       const run = await new Run().execute({
         blueprint,
+      // Where the file is, not where somebody ran from: its paths are about the repository it sits in.
+      blueprintRoot: args.configPath === undefined ? context.workspaceRoot : dirname(resolve(args.configPath)),
         runtime,
         store: recorded.store,
         server: recorded.server,
