@@ -20,6 +20,10 @@ import { LoginArgsParser } from "../arguments/parsers/LoginArgs.js";
 import { LoginCommand } from "../application/LoginCommand.js";
 import { LoginText } from "../output/text/LoginText.js";
 import { ListCommand } from "../application/ListCommand.js";
+import { RemoveArgsParser } from "../arguments/parsers/RemoveArgs.js";
+import { RemoveCommand } from "../application/RemoveCommand.js";
+import { RemoveText } from "../output/text/RemoveText.js";
+import { Palette } from "../output/text/Palette.js";
 import { ListText } from "../output/text/ListText.js";
 import { FactsCollectCommand } from "../application/FactsCollectCommand.js";
 import { FactsText } from "../output/text/FactsText.js";
@@ -83,7 +87,12 @@ export class OpenStrapCommands {
       OpenStrapCommands.command(
         "list",
         "openstrap list [--json] [--plugin specifier]",
-        new ListArgsParser(), new ListCommand(), new ListText(),
+        new ListArgsParser(), new ListCommand(), new ListText(Palette.forStream(process.stdout)),
+      ),
+      OpenStrapCommands.command(
+        "remove",
+        "openstrap remove <target> [--force] [--json]",
+        new RemoveArgsParser(), new RemoveCommand(), new RemoveText(),
       ),
       OpenStrapCommands.command(
         "connect",

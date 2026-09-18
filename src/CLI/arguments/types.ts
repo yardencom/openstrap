@@ -61,6 +61,14 @@ export type ConnectArgs = {
   run?: string;
 } & RuntimeArgs;
 
+export type RemoveArgs = {
+  command: "remove";
+  target: string;
+  /** Delete a machine that is running, or drop a record whose machine cannot be reached. */
+  force: boolean;
+  json: boolean;
+} & RuntimeArgs;
+
 export type ListArgs = {
   command: "list";
   json: boolean;
@@ -91,7 +99,7 @@ export type SecretArgs = {
   json: boolean;
 } & RuntimeArgs;
 
-export type ParsedArgs = SecretArgs | TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
+export type ParsedArgs = RemoveArgs | SecretArgs | TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {
