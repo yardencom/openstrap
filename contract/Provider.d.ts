@@ -78,6 +78,19 @@ export type MachineRequest = {
   guestPort: number;
   /** Whether the machine needs a screen. Absent is no screen, which is what a server wants. */
   display?: boolean;
+  /**
+   * Ports of the machine that must answer from outside it as well, on the same number.
+   *
+   * A machine behind the provider's own network is reachable only where the provider
+   * lets it be. This is how a service the blueprint calls public becomes public.
+   */
+  publish?: readonly number[];
+};
+
+/** What publishing did: the ports newly opened, and whether the machine had to go down and up for it. */
+export type PublishedPorts = {
+  added: readonly number[];
+  restarted: boolean;
 };
 
 /**
@@ -123,4 +136,12 @@ export type Provider = {
   inspect(machine: MachineHandle): Promise<MachineState>;
   access(machine: MachineHandle): Promise<MachineAccess>;
   find(name: string): Promise<MachineHandle | null>;
+  /**
+   * Makes ports of an existing machine answer from outside it, on the same number.
+   *
+   * Optional, because some providers publish at creation only. Ports already
+   * published are left alone; a provider whose machine cannot change while it
+   * runs says so in the outcome.
+   */
+  publish?(machine: MachineHandle, ports: readonly number[]): Promise<PublishedPorts>;
 };

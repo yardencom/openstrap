@@ -11,6 +11,7 @@ import type {
   MachineHandle,
   MachineResources,
   Provider,
+  PublishedPorts,
   ResolvedImage,
 } from "../../../Plugin/index.js";
 import type { Images } from "../../../Modules/Images/index.js";
@@ -107,6 +108,7 @@ export class CreateMachine {
       if (existing) {
         done({ name: "create machine", status: "skipped", detail: "a machine with this name already exists" });
         done(await CreateMachine.ensureRunning(request.provider, existing));
+        done(await CreateMachine.published(request.provider, existing, CreateMachine.publicPorts(target)));
 
         const access = await this.reached(request, existing, timestamp);
         await this.recordResource(request, opened.runId, existing);
@@ -132,6 +134,7 @@ export class CreateMachine {
         hostPort: opened.hostPort,
         guestPort: 22,
         ...(target.display === undefined ? {} : { display: target.display }),
+        ...(CreateMachine.publicPorts(target).length === 0 ? {} : { publish: CreateMachine.publicPorts(target) }),
       });
 
       // Written the moment the provider hands an id back, before anything else can fail: a machine
@@ -388,6 +391,41 @@ export class CreateMachine {
     await provider.start(machine);
 
     return { name: "start machine", status: "succeeded", detail: `was ${state.status}` };
+  }
+
+  /** The ports of services the blueprint calls public: they answer from outside the machine or they are not public. */
+  private static publicPorts(target: BlueprintTarget): number[] {
+    return Object.values(target.services ?? {})
+      .filter((service) => service.public === true && service.port !== undefined)
+      .map((service) => service.port!)
+      .filter((port, index, ports) => ports.indexOf(port) === index)
+      .sort((one, other) => one - other);
+  }
+
+  private static async published(
+    provider: Provider,
+    machine: MachineHandle,
+    ports: readonly number[],
+  ): Promise<Omit<CreateStep, "finishedAt">> {
+    if (ports.length === 0) {
+      return { name: "publish ports", status: "skipped", detail: "no public service" };
+    }
+
+    if (provider.publish === undefined) {
+      return { name: "publish ports", status: "skipped", detail: `${provider.id} publishes ports at creation only` };
+    }
+
+    const outcome: PublishedPorts = await provider.publish(machine, ports);
+
+    if (outcome.added.length === 0) {
+      return { name: "publish ports", status: "skipped", detail: `${ports.join(", ")} already published` };
+    }
+
+    return {
+      name: "publish ports",
+      status: "succeeded",
+      detail: `${outcome.added.join(", ")}${outcome.restarted ? "; the machine was restarted for it" : ""}`,
+    };
   }
 
   private static record(request: CreateMachineRequest): Omit<TargetRecord, "transport"> {
