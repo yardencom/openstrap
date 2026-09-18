@@ -7,6 +7,7 @@ import {
 import { RequirementConfigSchema } from "../../Requirements/schema/RequirementConfigSchema.js";
 import { StepSchema } from "./StepSchema.js";
 import type { BlueprintConfig, BlueprintTargetConfig, WrittenStep } from "./BlueprintConfig.js";
+import type { DeclaredService, Registry } from "#types/Services.js";
 
 const metadata = {
   kind: "openstrap.blueprint",
@@ -72,9 +73,8 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       image: this.schema.optional(this.name),
       size: this.schema.optional(this.name),
       display: this.schema.optional(this.schema.boolean()),
-      deliver: this.schema.optional(
-        this.schema.record(this.schema.string({ minLength: 1 }), this.schema.string({ minLength: 1 })),
-      ),
+      registries: this.schema.optional(this.schema.record(this.registryHost, this.registry)),
+      services: this.schema.optional(this.schema.record(this.serviceName, this.service)),
       // What has to be true, and — where openstrap is expected to make it true — how, written
       // inside the requirement it answers. One thought in one place: nothing names a requirement
       // twice, and nothing points at one that is not there.
@@ -98,6 +98,54 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       pattern: "^[a-z][a-z0-9._:-]*$",
       patternMessage: "must start with a lowercase letter and use lowercase letters, numbers, '.', '_', ':' or '-'",
     });
+  }
+
+  private get serviceName(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[a-z][a-z0-9-]*$",
+      patternMessage: "must start with a lowercase letter and use lowercase letters, numbers or '-': other services reach it by this name",
+    });
+  }
+
+  private get registryHost(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[a-z0-9.-]+(:[0-9]+)?$",
+      patternMessage: "must be the host name of a registry, like ghcr.io",
+    });
+  }
+
+  private get variableName(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[A-Za-z_][A-Za-z0-9_]*$",
+      patternMessage: "must be an environment variable name",
+    });
+  }
+
+  private get registry(): ConfigSchemaNode<Registry> {
+    return this.schema.strictObject({
+      username: this.name,
+      password: this.name,
+    });
+  }
+
+  private get service(): ConfigSchemaNode<DeclaredService> {
+    return this.schema.checked(this.schema.strictObject({
+      image: this.name,
+      port: this.schema.optional(this.schema.number({ int: true, positive: true })),
+      public: this.schema.optional(this.schema.boolean()),
+      environment: this.schema.optional(this.schema.record(this.variableName, this.schema.string())),
+      secrets: this.schema.optional(this.schema.record(this.variableName, this.name)),
+      storage: this.schema.optional(this.schema.string({
+        minLength: 1,
+        pattern: "^/",
+        patternMessage: "must be an absolute path inside the container",
+      })),
+    }), (service) => service.public && service.port === undefined
+      ? [{ path: ["public"], message: "a public service says which port it answers on" }]
+      : []);
   }
 
   /** One name, one step, across the whole target. */

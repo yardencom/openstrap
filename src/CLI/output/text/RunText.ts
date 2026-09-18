@@ -20,6 +20,13 @@ export class RunText implements CommandText<RunResult> {
       );
     }
 
+    for (const deployed of result.deploys) {
+      lines.push("");
+      lines.push(`Services on ${deployed.target}:`);
+      for (const step of deployed.steps) {
+        lines.push(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
+      }
+    }
     lines.push("");
     lines.push(...this.requirements(result.requirementRun));
     lines.push("");

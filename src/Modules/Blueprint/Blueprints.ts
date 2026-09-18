@@ -5,6 +5,7 @@ import {
 import type { Blueprint, BlueprintTarget } from "#types/Blueprint.js";
 import { BlueprintReadError } from "./errors/BlueprintReadError.js";
 import { BlueprintSchema } from "./schema/BlueprintSchema.js";
+import { WrittenServices } from "./WrittenServices.js";
 import { WrittenSteps } from "./WrittenSteps.js";
 
 /** The blueprint a developer wrote, as the targets a run works with. */
@@ -37,7 +38,7 @@ export class Blueprints {
       targets[name] = {
         name,
         ...target,
-        requirements: written.requirements(),
+        requirements: [...written.requirements(), ...new WrittenServices(target).requirements()],
         ...(steps.length === 0 ? { steps: undefined } : { steps }),
       };
     }

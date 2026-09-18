@@ -8,7 +8,7 @@ const doors = ["/Steps.js", "/Steps/index.js"];
 
 const openstrapModules = [
   "Blueprint", "Plugin", "Requirements", "ConfigCore", "RemoteOpenStrap",
-  "StateStore", "Facts", "Create", "Connect", "Converge", "Secrets", "utils", "CLI",
+  "StateStore", "Facts", "Create", "Connect", "Converge", "Deploy", "Kubernetes", "Secrets", "utils", "CLI",
 ];
 
 /**

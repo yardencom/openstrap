@@ -12,13 +12,12 @@ import type { OpenStrapServer } from "../../Api/index.js";
 import type { Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
 import { Converge } from "../Converge/Converge.js";
+import { Deploy, ServicesNeedAMachineError, type DeployStep } from "../Deploy/Deploy.js";
 import { Create } from "../Create/Create.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
 
 export type RunRequest = {
   blueprint: Blueprint;
-  /** Where it was read from, because what it says to deliver is named relative to itself. */
-  blueprintRoot?: string;
   runtime: OpenStrapRuntime;
   /** This machine's own record, which is where a machine lives when a run has no server. */
   store?: Store;
@@ -32,6 +31,8 @@ export type RunRequest = {
 export type RunResult = {
   snapshots: readonly FactSnapshot[];
   requirementRun: RequirementRun;
+  /** What was done to run each target's services, for the targets that declare any. */
+  deploys: Array<{ target: string; steps: DeployStep[] }>;
 };
 
 /** `run` — take a blueprint from what it declares to what is true, target by target. */
@@ -39,17 +40,25 @@ export class Run {
   constructor(
     private readonly create = new Create(),
     private readonly converge = new Converge(),
+    private readonly deploy = new Deploy(),
   ) {}
 
   async execute(request: RunRequest): Promise<RunResult> {
     const snapshots: FactSnapshot[] = [];
     const runs: RequirementRun[] = [];
+    const deploys: RunResult["deploys"] = [];
 
     for (const target of Object.values(request.blueprint.targets)) {
+      if (target.services !== undefined && target.provider === undefined) {
+        throw new ServicesNeedAMachineError(target.name);
+      }
+
       const read = target.provider === undefined
         ? await this.host(target, request)
         : await this.machine(target, request);
-      const reading = await this.reached(target, read, request);
+      const reading = target.services === undefined
+        ? await this.reached(target, read, request)
+        : await this.deployed(target, deploys, request);
 
       if (reading.snapshot !== undefined) {
         snapshots.push(reading.snapshot);
@@ -58,7 +67,26 @@ export class Run {
       runs.push(reading.requirementRun);
     }
 
-    return { snapshots, requirementRun: MergeRequirementRuns.of(runs) };
+    return { snapshots, requirementRun: MergeRequirementRuns.of(runs), deploys };
+  }
+
+  /** The services a target declares, running on its machine, and the machine read back to prove it. */
+  private async deployed(
+    target: BlueprintTarget,
+    deploys: RunResult["deploys"],
+    request: RunRequest,
+  ): Promise<{ snapshot?: FactSnapshot; requirementRun: RequirementRun }> {
+    const deployed = await this.deploy.execute({
+      target,
+      runtime: request.runtime,
+      store: request.store,
+      server: request.server,
+      now: request.now,
+    });
+
+    deploys.push({ target: target.name, steps: deployed.steps });
+
+    return { snapshot: deployed.snapshot, requirementRun: deployed.requirementRun };
   }
 
   /** The machine brought to what was declared, where it was not and something knows how. */
@@ -72,7 +100,6 @@ export class Run {
     }
 
     return this.converge.execute({
-      blueprintRoot: request.blueprintRoot,
       target,
       runtime: request.runtime,
       store: request.store,
