@@ -17,10 +17,22 @@ describe("Where the cluster keeps things", () => {
 });
 
 describe("Whether a service is ready", () => {
-  it("is as many pods answering as were asked for", () => {
-    expect(ApiClient.isReady({ spec: { replicas: 1 }, status: { readyReplicas: 1 } })).toBe(true);
+  const settled = {
+    metadata: { generation: 2 },
+    spec: { replicas: 1 },
+    status: { observedGeneration: 2, updatedReplicas: 1, readyReplicas: 1, availableReplicas: 1 },
+  };
+
+  it("is as many pods of this version answering as were asked for", () => {
+    expect(ApiClient.isReady(settled)).toBe(true);
     expect(ApiClient.isReady({ spec: { replicas: 1 }, status: {} })).toBe(false);
     expect(ApiClient.isReady(null)).toBe(false);
+  });
+
+  it("is not the old pods answering while the new version is still on its way", () => {
+    expect(ApiClient.isReady({ ...settled, status: { ...settled.status, observedGeneration: 1 } })).toBe(false);
+    expect(ApiClient.isReady({ ...settled, status: { ...settled.status, updatedReplicas: 0 } })).toBe(false);
+    expect(ApiClient.isReady({ ...settled, status: { ...settled.status, availableReplicas: 0 } })).toBe(false);
   });
 
   it("is explained by what the pod is waiting on, which is what a person would look for", () => {
