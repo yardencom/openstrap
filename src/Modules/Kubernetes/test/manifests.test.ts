@@ -100,13 +100,15 @@ describe("What the cluster is told", () => {
       pinned: { image: "ghcr.io/someone/shop:1.0.0" },
       digested: { image: "ghcr.io/someone/shop@sha256:" + "a".repeat(64) },
     }, {}, {}, now).objects();
-    const annotationsOf = (name: string) =>
-      of<{ spec: { template: { metadata: { annotations?: Record<string, string> } } } }>("Deployment", name, rolled).spec.template.metadata.annotations;
+    type Rolled = { spec: { template: { metadata: { annotations?: Record<string, string> }; spec: { containers: Array<{ imagePullPolicy: string }> } } } };
+    const annotationsOf = (name: string) => of<Rolled>("Deployment", name, rolled).spec.template.metadata.annotations;
+    const pullOf = (name: string) => of<Rolled>("Deployment", name, rolled).spec.template.spec.containers[0]!.imagePullPolicy;
 
     expect(annotationsOf("newest")).toEqual({ "openstrap.dev/deployed-at": "2026-09-18T12:00:00.000Z" });
     expect(annotationsOf("untagged")).toEqual({ "openstrap.dev/deployed-at": "2026-09-18T12:00:00.000Z" });
     expect(annotationsOf("pinned")).toBeUndefined();
     expect(annotationsOf("digested")).toBeUndefined();
+    expect([pullOf("newest"), pullOf("untagged"), pullOf("pinned"), pullOf("digested")]).toEqual(["Always", "Always", "IfNotPresent", "IfNotPresent"]);
     expect(Manifests.moving("localhost:5000/shop")).toBe(true);
     expect(Manifests.moving("localhost:5000/shop:2")).toBe(false);
   });
