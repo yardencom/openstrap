@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 
-import { type Code, DeviceLogin, OpenStrapServer } from "../../Api/index.js";
+import { type Code, DeviceLogin, OpenStrapServer, ServerRefusedError } from "../../Api/index.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 import type { LoginArgs } from "../arguments/types.js";
 
@@ -9,7 +9,11 @@ export type LoginResult = {
   store: string;
   /** Whether a token is now kept, which is the difference between a run going to the server or not. */
   kept: boolean;
+  /** The server had no owner, and this computer became it. */
+  claimed?: boolean;
 };
+
+type SignIn = Pick<typeof OpenStrapServer, "whoSignsIn" | "issueToken" | "claim">;
 
 /**
  * `openstrap login` — the pass this machine shows the server, put where openstrap looks for it.
@@ -25,6 +29,7 @@ export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
     private readonly show = (code: Code) => process.stderr.write(
       `Open ${code.url} and enter ${code.userCode}. Waiting.\n`,
     ),
+    private readonly server: SignIn = OpenStrapServer,
   ) {}
 
   async execute(args: LoginArgs, context: CommandContext): Promise<CommandOutcome<LoginResult>> {
@@ -38,13 +43,12 @@ export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
       return { result: { address: OpenStrapServer.address, store: store.id, kept: false }, exitCode: 0 };
     }
 
-    const who = await OpenStrapServer.whoSignsIn();
+    const who = await this.server.whoSignsIn();
 
     if (!who) {
-      throw new Error(
-        `Nobody signs people in at ${OpenStrapServer.address}: it believes machine tokens only, and `
-        + "one of those is made on the server itself.",
-      );
+      await store.write(reference, await this.claimed());
+
+      return { result: { address: OpenStrapServer.address, store: store.id, kept: true, claimed: true }, exitCode: 0 };
     }
 
     const { code, waiting } = await this.signIn.begin(who.issuer, who.audience);
@@ -53,8 +57,25 @@ export class LoginCommand implements CliCommand<LoginArgs, LoginResult> {
 
     // Traded, not kept: what a person signs in with belongs to them and to their provider, and what
     // runs on this machine afterwards should be revocable without touching either.
-    await store.write(reference, await OpenStrapServer.issueToken(await waiting, hostname()));
+    await store.write(reference, await this.server.issueToken(await waiting, hostname()));
 
     return { result: { address: OpenStrapServer.address, store: store.id, kept: true }, exitCode: 0 };
+  }
+
+  /** Nobody signs people in there, so the only door is the first one: an empty server belongs to whoever claims it. */
+  private async claimed(): Promise<string> {
+    try {
+      return await this.server.claim(hostname(), hostname());
+    } catch (error) {
+      if (error instanceof ServerRefusedError && error.status === 409) {
+        throw new Error(
+          `${OpenStrapServer.address} already has an owner, and nobody signs people in there. `
+          + "Ask the owner for a pass: `openstrap tokens issue <name>` on a computer that holds one, "
+          + "then `openstrap secret set openstrap.server-token` here.",
+        );
+      }
+
+      throw error;
+    }
   }
 }

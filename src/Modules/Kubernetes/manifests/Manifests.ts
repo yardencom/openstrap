@@ -12,6 +12,7 @@ export class Manifests {
     private readonly services: Readonly<Record<string, DeclaredService>>,
     private readonly registries: Readonly<Record<string, Registry>> = {},
     private readonly values: Readonly<Record<string, string>> = {},
+    private readonly now: Date = new Date(),
   ) {}
 
   objects(): KubernetesObject[] {
@@ -23,6 +24,22 @@ export class Manifests {
 
   static pullSecretName(host: string): string {
     return `registry-${host.replace(/[^a-z0-9-]/g, "-")}`;
+  }
+
+  /**
+   * Whether the image name means "the newest": no tag, or `latest`, and no digest. Such a name is
+   * pulled afresh on every start, so every run rolls the service so that it starts. A version is
+   * left alone: the same version is the same service.
+   */
+  static moving(image: string): boolean {
+    if (image.includes("@sha256:")) {
+      return false;
+    }
+
+    const lastSegment = image.slice(image.lastIndexOf("/") + 1);
+    const tag = lastSegment.includes(":") ? lastSegment.slice(lastSegment.indexOf(":") + 1) : undefined;
+
+    return tag === undefined || tag === "latest";
   }
 
   /** The registry an image is pulled from, by the rule docker uses: a first segment with a dot or a colon. */
@@ -82,7 +99,10 @@ export class Manifests {
         strategy: { type: "Recreate" },
         selector: { matchLabels: { app: name } },
         template: {
-          metadata: { labels: { app: name, ...Manifests.labels } },
+          metadata: {
+            labels: { app: name, ...Manifests.labels },
+            ...(Manifests.moving(service.image) ? { annotations: { "openstrap.dev/deployed-at": this.now.toISOString() } } : {}),
+          },
           spec: {
             ...(pull.length === 0 ? {} : { imagePullSecrets: pull }),
             containers: [{

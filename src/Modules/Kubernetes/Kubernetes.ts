@@ -22,8 +22,9 @@ export class Kubernetes {
     services: Readonly<Record<string, DeclaredService>>,
     registries: Readonly<Record<string, Registry>> = {},
     values: Readonly<Record<string, string>> = {},
+    now: Date = new Date(),
   ): KubernetesObject[] {
-    return new Manifests(services, registries, values).objects();
+    return new Manifests(services, registries, values, now).objects();
   }
 
   /** The API of a cluster that listens only on its own machine, carried through the channel to it. */

@@ -92,6 +92,25 @@ describe("What the cluster is told", () => {
     expect(() => new Manifests(services, registries, { "shop.database-password": "pw" }).objects()).toThrow(MissingSecretError);
   });
 
+  it("rolls a service whose image means the newest on every run, and leaves a version alone", () => {
+    const now = new Date("2026-09-18T12:00:00.000Z");
+    const rolled = new Manifests({
+      newest: { image: "ghcr.io/someone/shop:latest" },
+      untagged: { image: "ghcr.io/someone/shop" },
+      pinned: { image: "ghcr.io/someone/shop:1.0.0" },
+      digested: { image: "ghcr.io/someone/shop@sha256:" + "a".repeat(64) },
+    }, {}, {}, now).objects();
+    const annotationsOf = (name: string) =>
+      of<{ spec: { template: { metadata: { annotations?: Record<string, string> } } } }>("Deployment", name, rolled).spec.template.metadata.annotations;
+
+    expect(annotationsOf("newest")).toEqual({ "openstrap.dev/deployed-at": "2026-09-18T12:00:00.000Z" });
+    expect(annotationsOf("untagged")).toEqual({ "openstrap.dev/deployed-at": "2026-09-18T12:00:00.000Z" });
+    expect(annotationsOf("pinned")).toBeUndefined();
+    expect(annotationsOf("digested")).toBeUndefined();
+    expect(Manifests.moving("localhost:5000/shop")).toBe(true);
+    expect(Manifests.moving("localhost:5000/shop:2")).toBe(false);
+  });
+
   it("knows which registry an image comes from the way docker does", () => {
     expect(Manifests.hostOf("ghcr.io/someone/shop:1.0.0")).toBe("ghcr.io");
     expect(Manifests.hostOf("localhost:5000/shop")).toBe("localhost:5000");

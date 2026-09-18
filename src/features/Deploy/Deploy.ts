@@ -77,7 +77,7 @@ export class Deploy {
       try {
         const names = Object.keys(declared.services ?? {});
 
-        for (const object of Kubernetes.manifests(declared.services ?? {}, declared.registries ?? {}, values)) {
+        for (const object of Kubernetes.manifests(declared.services ?? {}, declared.registries ?? {}, values, request.now)) {
           await reached.api.apply(object);
         }
 
