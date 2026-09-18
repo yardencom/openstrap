@@ -8,6 +8,8 @@ import { TokensText } from "./TokensText.js";
 import { LoginText } from "./LoginText.js";
 import { SecretText } from "./SecretText.js";
 import { ListText } from "./ListText.js";
+import { Palette } from "./Palette.js";
+import { RemoveText } from "./RemoveText.js";
 import { RunText } from "./RunText.js";
 
 /**
@@ -20,7 +22,8 @@ export class TextOutput implements Output {
     "create": new CreateText(),
     "connect": new ConnectText(),
     "converge": new ConvergeText(),
-    "list": new ListText(),
+    "list": new ListText(Palette.forStream(process.stdout)),
+    "remove": new RemoveText(),
     "login": new LoginText(),
     "secret": new SecretText(),
     "tokens": new TokensText(),

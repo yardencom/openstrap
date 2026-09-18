@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ListCommand } from "../application/ListCommand.js";
 import { ListText } from "../output/text/ListText.js";
+import { Palette } from "../output/text/Palette.js";
 import { StateHome } from "../../Store/index.js";
 import { WhereMachinesAreRecorded } from "../application/WhereMachinesAreRecorded.js";
 import type { MachineStatus, Provider } from "../../Plugin/index.js";
@@ -151,9 +152,12 @@ describe("Every machine on one line", () => {
       ],
     });
 
-    expect(printed.split("\n").slice(0, 2)).toEqual([
-      "vm           running  utm  ubuntu:24.04",
-      "longer-name  stopped  utm  ubuntu:24.04",
+    expect(printed.split("\n")).toEqual([
+      "NAME         STATUS   PROVIDER  IMAGE",
+      "vm           running  utm       ubuntu:24.04",
+      "",
+      "longer-name  stopped  utm       ubuntu:24.04",
+      "",
     ]);
   });
 
@@ -163,6 +167,35 @@ describe("Every machine on one line", () => {
       machines: [{ name: "vm", status: "running", provider: "utm" }],
     });
 
-    expect(printed).toBe("vm  running  utm  —\n");
+    expect(printed).toBe("NAME  STATUS   PROVIDER  IMAGE\nvm    running  utm       —\n");
+  });
+
+  it("puts what a person can act on first and what is gone last, a blank line between", () => {
+    const printed = new ListText().print({
+      from: "here",
+      machines: [
+        { name: "b-gone", status: "missing", provider: "utm", detail: "utm has no machine by that name" },
+        { name: "a-gone", status: "missing", provider: "utm", detail: "utm has no machine by that name" },
+        { name: "asleep", status: "stopped", provider: "utm" },
+        { name: "lost", status: "unreachable", detail: "nothing recorded which provider holds it" },
+        { name: "awake", status: "running", provider: "utm" },
+      ],
+    });
+    const lines = printed.split("\n");
+    expect(lines.filter((line) => line !== "").map((line) => line.split(/\s+/)[0])).toEqual([
+      "NAME", "awake", "asleep", "lost", "a-gone", "b-gone",
+    ]);
+    expect(lines.filter((line) => line === "")).toHaveLength(4);
+  });
+
+  it("colours a status only where a person is looking, and never widens a column doing it", () => {
+    const machines = [{ name: "vm", status: "running" as const, provider: "utm" }];
+    const plain = new ListText(Palette.plain()).print({ from: "here", machines });
+    const coloured = new ListText(Palette.forStream({ isTTY: true }, { TERM: "xterm-256color" })).print({ from: "here", machines });
+
+    expect(coloured).toContain("\u001b[32mrunning\u001b[0m");
+    expect(coloured.replace(/\u001b\[\d+m/g, "")).toBe(plain);
+    expect(new ListText(Palette.forStream({ isTTY: true }, { NO_COLOR: "1" })).print({ from: "here", machines })).toBe(plain);
+    expect(new ListText(Palette.forStream({ isTTY: false }, {})).print({ from: "here", machines })).toBe(plain);
   });
 });

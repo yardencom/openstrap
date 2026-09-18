@@ -42,6 +42,14 @@ export class Machines {
     return row === undefined ? null : Machines.recordOf(row);
   }
 
+  /** The record and everything hanging off it: its declarations, runs, snapshots and pin go with it. */
+  remove(name: string): boolean {
+    const existed = this.read(name) !== null;
+    this.database.delete(target).where(eq(target.name, name)).run();
+
+    return existed;
+  }
+
   list(): TargetRecord[] {
     return this.database.select().from(target).orderBy(target.name).all().map(Machines.recordOf);
   }
