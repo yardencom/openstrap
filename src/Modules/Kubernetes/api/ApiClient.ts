@@ -7,7 +7,11 @@ import { UnknownKindError } from "../errors/UnknownKindError.js";
 
 type Answer = { status: number; body: string };
 
-type Deployment = { spec?: { replicas?: number }; status?: { readyReplicas?: number } };
+type Deployment = {
+  metadata?: { generation?: number };
+  spec?: { replicas?: number };
+  status?: { observedGeneration?: number; updatedReplicas?: number; readyReplicas?: number; availableReplicas?: number };
+};
 
 type PodList = {
   items?: Array<{
@@ -90,8 +94,23 @@ export class ApiClient {
     return `${group}/namespaces/${object.metadata.namespace ?? namespace}/${plural}/${object.metadata.name}`;
   }
 
+  /**
+   * What `kubectl rollout status` asks: the controller has seen this version of the deployment, and
+   * as many pods of this version as were asked for are ready and available. Readiness alone would
+   * be the old pods, answering while the new ones are still being pulled.
+   */
   static isReady(deployment: Deployment | null): boolean {
-    return deployment !== null && (deployment.status?.readyReplicas ?? 0) >= (deployment.spec?.replicas ?? 1);
+    if (deployment === null) {
+      return false;
+    }
+
+    const wanted = deployment.spec?.replicas ?? 1;
+    const status = deployment.status ?? {};
+
+    return (status.observedGeneration ?? 0) >= (deployment.metadata?.generation ?? 0)
+      && (status.updatedReplicas ?? 0) >= wanted
+      && (status.readyReplicas ?? 0) >= wanted
+      && (status.availableReplicas ?? 0) >= wanted;
   }
 
   static reasonIn(pods: PodList | null): string {
