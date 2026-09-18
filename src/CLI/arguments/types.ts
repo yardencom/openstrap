@@ -83,7 +83,15 @@ export type TokensArgs = {
   json: boolean;
 } & RuntimeArgs;
 
-export type ParsedArgs = TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
+export type SecretArgs = {
+  command: "secret";
+  did: "set" | "forget";
+  /** What the blueprint calls it. The value is never an argument: it is read from stdin, so it lands in no shell history. */
+  name: string;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = SecretArgs | TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

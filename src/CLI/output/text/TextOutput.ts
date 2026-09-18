@@ -6,6 +6,7 @@ import { CreateText } from "./CreateText.js";
 import { FactsText } from "./FactsText.js";
 import { TokensText } from "./TokensText.js";
 import { LoginText } from "./LoginText.js";
+import { SecretText } from "./SecretText.js";
 import { ListText } from "./ListText.js";
 import { RunText } from "./RunText.js";
 
@@ -21,6 +22,7 @@ export class TextOutput implements Output {
     "converge": new ConvergeText(),
     "list": new ListText(),
     "login": new LoginText(),
+    "secret": new SecretText(),
     "tokens": new TokensText(),
     "facts.collect": new FactsText(),
   };

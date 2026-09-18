@@ -13,6 +13,9 @@ import { ListArgsParser } from "../arguments/parsers/ListArgs.js";
 import { TokensArgsParser } from "../arguments/parsers/TokensArgs.js";
 import { TokensCommand } from "../application/TokensCommand.js";
 import { TokensText } from "../output/text/TokensText.js";
+import { SecretArgsParser } from "../arguments/parsers/SecretArgs.js";
+import { SecretCommand } from "../application/SecretCommand.js";
+import { SecretText } from "../output/text/SecretText.js";
 import { LoginArgsParser } from "../arguments/parsers/LoginArgs.js";
 import { LoginCommand } from "../application/LoginCommand.js";
 import { LoginText } from "../output/text/LoginText.js";
@@ -66,6 +69,11 @@ export class OpenStrapCommands {
         "login",
         "openstrap login [--forget] [--json]",
         new LoginArgsParser(), new LoginCommand(), new LoginText(),
+      ),
+      OpenStrapCommands.command(
+        "secret",
+        "openstrap secret <set|forget> <name> [--json]   (set reads the value from stdin)",
+        new SecretArgsParser(), new SecretCommand(), new SecretText(),
       ),
       OpenStrapCommands.command(
         "tokens",

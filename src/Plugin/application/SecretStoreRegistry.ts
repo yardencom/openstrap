@@ -51,7 +51,9 @@ export class SecretStoreRegistry {
 
     if (!store) {
       throw new OpenStrapPluginError(
-        "No secret store is registered. openstrap keeps none of its own: a plugin has to provide one.",
+        "No secret store is registered. openstrap keeps none of its own: a plugin has to provide one, "
+        + "and plugins are listed in openstrap.config.mjs in the current directory. "
+        + "Run this from the project folder that has one, or pass --runtime-config <path>.",
       );
     }
 
