@@ -1,7 +1,7 @@
 import { connect } from "node:net";
 
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineAccess, OpenStrapRuntime } from "../../../Plugin/index.js";
+import type { MachineAccess, OpenStrapRuntime, TransportConnection } from "../../../Plugin/index.js";
 import { Requirements, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
@@ -35,38 +35,57 @@ export class VerifyMachine {
     await VerifyMachine.waitForPort(endpoint.host, endpoint.port, request.timeoutMs ?? 300_000);
 
     const connector = request.runtime.transports.require(request.access.transport);
+    const deadline = Date.now() + (request.timeoutMs ?? 300_000);
+
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.read(connector, request);
+      } catch (error) {
+        if (!VerifyMachine.connectionWasLost(error) || Date.now() + VerifyMachine.pauseMs > deadline) {
+          throw error;
+        }
+
+        await this.pause(VerifyMachine.pauseMs);
+      }
+    }
+  }
+
+  /**
+   * A machine that has just booted is still settling: cloud-init may restart sshd under the first
+   * connection. That is not a failed machine, so a connection lost is tried again until the deadline.
+   */
+  private static readonly pauseMs = 3_000;
+
+  constructor(private readonly pause: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {}
+
+  private static connectionWasLost(error: unknown): boolean {
+    const message = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+
+    return /connection (was )?(lost|closed|reset)|ECONNRESET|ECONNREFUSED|EPIPE|before handshake|SSHConnectionLostError/i.test(message);
+  }
+
+  private async read(
+    connector: { connect(request: { target: string; endpoint: MachineAccess["endpoint"]; privateKey?: string }): Promise<TransportConnection> },
+    request: VerifyRequest,
+  ): Promise<VerifyResult> {
     const connection = await connector.connect({
       target: request.target.name,
-      endpoint,
+      endpoint: request.access.endpoint,
       ...(request.privateKey === undefined ? {} : { privateKey: request.privateKey }),
     });
 
     try {
-      // Read by openstrap on the machine itself, delivered over this connection. The connection is
-      // how it gets there and how it answers; it is not where any fact comes from.
       const machine = request.platform;
 
       if (machine === undefined) {
         throw new UnknownMachinePlatformError(request.target.name);
       }
 
-      const snapshot = await new RemoteOpenStrap(
-        connection,
-        machine,
-      ).collect({
+      const snapshot = await new RemoteOpenStrap(connection, machine).collect({
         target: request.machine,
         requirements: request.target.requirements,
-        channel: {
-          // The channel this reading came back over, as whoever opened it reports — not what the
-          // blueprint called it, and not a word put in by a loader that had never reached anything.
-          type: request.access.transport,
-          // What the connection reports it authenticated with, not what the blueprint called the
-          // channel: a security requirement checked against openstrap's own configuration checks
-          // nothing.
-          authMethods: connection.authMethods,
-        },
+        channel: { type: request.access.transport, authMethods: connection.authMethods },
       });
-
 
       return {
         snapshot,
@@ -83,7 +102,6 @@ export class VerifyMachine {
     }
   }
 
-  /** Waits for a machine to start answering. */
   private static waitForPort(host: string, port: number, timeoutMs: number): Promise<void> {
     const deadline = Date.now() + timeoutMs;
 
