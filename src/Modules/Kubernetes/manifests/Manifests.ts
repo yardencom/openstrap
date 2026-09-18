@@ -27,9 +27,11 @@ export class Manifests {
   }
 
   /**
-   * Whether the image name means "the newest": no tag, or `latest`, and no digest. Such a name is
-   * pulled afresh on every start, so every run rolls the service so that it starts. A version is
-   * left alone: the same version is the same service.
+   * Whether the image name means "the newest": no tag, or `latest`, and no digest. Such an image is
+   * pulled afresh on every start, said outright rather than left to the cluster's default, which is
+   * fixed when the deployment is first made and does not follow a later change of image. Every run
+   * rolls such a service so that the newest starts. A version is left alone: the same version is
+   * the same service.
    */
   static moving(image: string): boolean {
     if (image.includes("@sha256:")) {
@@ -108,6 +110,7 @@ export class Manifests {
             containers: [{
               name,
               image: service.image,
+              imagePullPolicy: Manifests.moving(service.image) ? "Always" : "IfNotPresent",
               env: Manifests.environment(name, service),
               ...port,
               ...storage.mounts,
