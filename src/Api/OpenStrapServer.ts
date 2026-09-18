@@ -66,6 +66,23 @@ export class OpenStrapServer {
    * no browser to sign in with again. This is the only thing openstrap does before it has a token,
    * so it is the only thing that does not go through one.
    */
+  /** An empty server is claimed by its first caller: this makes the organization and answers with its first pass. */
+  static async claim(organization: string, name: string): Promise<string> {
+    const answer = await fetch(`${OpenStrapServer.address}/v1/setup`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ organization, name }),
+    }).catch((cause: unknown) => {
+      throw new ServerUnreachableError(OpenStrapServer.address, cause);
+    });
+
+    if (!answer.ok) {
+      throw new ServerRefusedError(answer.status, await OpenStrapServer.reason(answer));
+    }
+
+    return (await answer.json() as { token: string }).token;
+  }
+
   static async issueToken(credential: string, name: string): Promise<string> {
     const answer = await fetch(`${OpenStrapServer.address}/v1/tokens`, {
       method: "POST",
