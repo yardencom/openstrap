@@ -29,8 +29,27 @@ export type TransportConnectionRequest = {
  * An open channel plus the operations available through it, and the means to
  * close it again.
  */
+export type TunnelEndpoint = {
+  host: string;
+  port: number;
+};
+
+/** A port here that leads to a port over there, for as long as it is open. */
+export type Tunnel = TunnelEndpoint & {
+  close(): Promise<void>;
+};
+
 export type TransportConnection = Transport & {
   close(): Promise<void>;
+  /**
+   * A way to speak to something the far machine keeps to itself.
+   *
+   * A service bound to the far machine's 127.0.0.1 is reachable from there and
+   * nowhere else. A tunnel carries a connection made here inside the channel and
+   * hands it to that service, the way `ssh -L` does. Optional, because not every
+   * channel can carry one.
+   */
+  tunnel?(to: TunnelEndpoint): Promise<Tunnel>;
   /**
    * How this channel actually authenticated.
    *
