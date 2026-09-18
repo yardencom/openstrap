@@ -1,0 +1,53 @@
+import { Blueprints, UnknownTargetError } from "../../Modules/Blueprint/index.js";
+import { Converge, type ConvergeResult } from "#features/Converge/Converge.js";
+import { Checks } from "../../Modules/Requirements/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
+import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
+import type { ConvergeArgs } from "../arguments/types.js";
+
+export type { ConvergeResult };
+
+/** `openstrap converge` — make a machine what its blueprint says it is. */
+export class ConvergeCommand implements CliCommand<ConvergeArgs, ConvergeResult> {
+  constructor(
+    private readonly blueprints = new Blueprints(),
+    private readonly converge = new Converge(),
+  ) {}
+
+  async execute(args: ConvergeArgs, context: CommandContext): Promise<CommandOutcome<ConvergeResult>> {
+    const blueprint = this.blueprints.load({ workspaceRoot: context.workspaceRoot });
+    const target = blueprint.targets[args.target];
+
+    if (target === undefined) {
+      throw new UnknownTargetError(args.target, Object.keys(blueprint.targets));
+    }
+
+    const recorded = await WhereMachinesAreRecorded.of(await context.runtime(), args.local);
+
+    // Anything this machine did while no server was listening goes first: a run that never
+    // left is a machine the team cannot see, and a server is now there to be told.
+    await recorded.carry(await context.runtime(), context.now);
+
+    try {
+      const result = await this.converge.execute({
+        target,
+        runtime: await context.runtime(),
+        store: recorded.store,
+        server: recorded.server,
+        check: args.check,
+        maxPasses: args.maxPasses,
+        now: context.now,
+      });
+
+      return {
+        result,
+        // What the machine is now, not whether openstrap managed to run anything. A convergence that
+        // did everything it knew and left the machine short is a failure, and a `--check` that found
+        // work to do is one too: it reports a machine that is not what was declared.
+        exitCode: Checks.succeeded(result.requirementRun.status) ? 0 : 1,
+      };
+    } finally {
+      recorded.close();
+    }
+  }
+}

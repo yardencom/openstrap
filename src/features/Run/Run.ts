@@ -2,20 +2,27 @@ import type { Blueprint, BlueprintTarget } from "../../Modules/Blueprint/index.j
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { OpenStrapRuntime } from "../../Plugin/index.js";
 import {
-  mergeRequirementRuns,
+  MergeRequirementRuns,
   Requirements,
+  Checks,
   type RequirementRun,
   type TargetlessRequirement,
 } from "../../Modules/Requirements/index.js";
-import type { SqliteStateStore } from "../../StateStore/index.js";
+import type { OpenStrapServer } from "../../Api/index.js";
+import type { Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
+import { Converge } from "../Converge/Converge.js";
+import { Deploy, ServicesNeedAMachineError, type DeployStep } from "../Deploy/Deploy.js";
 import { Create } from "../Create/Create.js";
 import { Facts } from "../../Modules/Facts/Facts.js";
 
 export type RunRequest = {
   blueprint: Blueprint;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
+  /** This machine's own record, which is where a machine lives when a run has no server. */
+  store?: Store;
+  /** The record a team shares. Where there is one it decides, and the store is not written. */
+  server?: OpenStrapServer;
   workspaceRoot?: string;
   hostPort: number;
   now?: Date;
@@ -24,37 +31,34 @@ export type RunRequest = {
 export type RunResult = {
   snapshots: readonly FactSnapshot[];
   requirementRun: RequirementRun;
+  /** What was done to run each target's services, for the targets that declare any. */
+  deploys: Array<{ target: string; steps: DeployStep[] }>;
 };
 
-/**
- * `run` — take a blueprint from what it declares to what is true, target by target.
- *
- * A target that names a provider is a machine openstrap makes: it is created, started, delivered
- * openstrap, read there, and judged — the whole of `create`, which is why this asks that feature
- * rather than repeating it. A target with no provider is the machine openstrap is already on, and is
- * read here.
- *
- * That distinction is the point of this feature existing. A run used to read the host for every
- * target a blueprint declared, whatever the target was, and name the reading after it: a snapshot
- * labelled `guest`/`vm` holding a MacBook's facts, with `ssh-running` passing against the wrong
- * machine. Which machine a fact is about cannot be a label put on afterwards.
- *
- * What is written down is written by whoever knows: `create` records the target, the image, the
- * reserved port, the run and its steps, and the snapshot it took, and reads the machine's key from
- * the secret store to get there. A host reading has none of that — no provider, no channel, no
- * identity — so what it leaves behind is the snapshot itself.
- */
+/** `run` — take a blueprint from what it declares to what is true, target by target. */
 export class Run {
-  constructor(private readonly create = new Create()) {}
+  constructor(
+    private readonly create = new Create(),
+    private readonly converge = new Converge(),
+    private readonly deploy = new Deploy(),
+  ) {}
 
   async execute(request: RunRequest): Promise<RunResult> {
     const snapshots: FactSnapshot[] = [];
     const runs: RequirementRun[] = [];
+    const deploys: RunResult["deploys"] = [];
 
     for (const target of Object.values(request.blueprint.targets)) {
-      const reading = target.provider === undefined
+      if (target.services !== undefined && target.provider === undefined) {
+        throw new ServicesNeedAMachineError(target.name);
+      }
+
+      const read = target.provider === undefined
         ? await this.host(target, request)
         : await this.machine(target, request);
+      const reading = target.services === undefined
+        ? await this.reached(target, read, request)
+        : await this.deployed(target, deploys, request);
 
       if (reading.snapshot !== undefined) {
         snapshots.push(reading.snapshot);
@@ -63,15 +67,48 @@ export class Run {
       runs.push(reading.requirementRun);
     }
 
-    return { snapshots, requirementRun: mergeRequirementRuns(runs) };
+    return { snapshots, requirementRun: MergeRequirementRuns.of(runs), deploys };
   }
 
-  /**
-   * A machine openstrap makes, brought up and read where it is.
-   *
-   * `create` is asked for the whole of it rather than for its parts: a machine that exists is
-   * adopted rather than made twice, and what comes back is what the machine turned out to be.
-   */
+  /** The services a target declares, running on its machine, and the machine read back to prove it. */
+  private async deployed(
+    target: BlueprintTarget,
+    deploys: RunResult["deploys"],
+    request: RunRequest,
+  ): Promise<{ snapshot?: FactSnapshot; requirementRun: RequirementRun }> {
+    const deployed = await this.deploy.execute({
+      target,
+      runtime: request.runtime,
+      store: request.store,
+      server: request.server,
+      now: request.now,
+    });
+
+    deploys.push({ target: target.name, steps: deployed.steps });
+
+    return { snapshot: deployed.snapshot, requirementRun: deployed.requirementRun };
+  }
+
+  /** The machine brought to what was declared, where it was not and something knows how. */
+  private async reached(
+    target: BlueprintTarget,
+    read: { snapshot?: FactSnapshot; requirementRun: RequirementRun },
+    request: RunRequest,
+  ): Promise<{ snapshot?: FactSnapshot; requirementRun: RequirementRun }> {
+    if (Checks.succeeded(read.requirementRun.status) || !target.steps || target.steps.length === 0) {
+      return read;
+    }
+
+    return this.converge.execute({
+      target,
+      runtime: request.runtime,
+      store: request.store,
+      server: request.server,
+      now: request.now,
+    });
+  }
+
+  /** A machine openstrap makes, brought up and read where it is. */
   private async machine(
     target: BlueprintTarget,
     request: RunRequest,
@@ -80,6 +117,7 @@ export class Run {
       target,
       runtime: request.runtime,
       store: request.store,
+      server: request.server,
       hostPort: request.hostPort,
       now: request.now,
     });
@@ -92,13 +130,7 @@ export class Run {
       : { snapshot: created.snapshot, requirementRun: created.requirementRun };
   }
 
-  /**
-   * The machine openstrap is on, read here and remembered.
-   *
-   * The target is recorded before the reading is: a snapshot belongs to a machine, and the store
-   * says so with a foreign key. `create` writes that row for machines it makes, and a host target is
-   * never created — so a run declaring one is the only thing that can write it down.
-   */
+  /** The machine openstrap is on, read here and remembered. */
   private async host(
     target: BlueprintTarget,
     request: RunRequest,
@@ -114,9 +146,11 @@ export class Run {
     const snapshot = await this.read(machine, target.requirements, request);
     const at = String(snapshot.reading.takenAt);
 
-    request.store.saveTarget({ ...machine, transport: target.transport }, at);
-    request.store.saveDesiredState(target.name, target, at);
-    request.store.saveFactSnapshot({
+    // Only where this machine keeps its own record. A run against the host makes nothing and reaches
+    // nothing, so there is no run to open on a server and nothing there to tell about it.
+    request.store?.machines.save({ ...machine, transport: target.transport }, at);
+    request.store?.machines.declare(target.name, target, at);
+    request.store?.runs.recordSnapshot({
       id: String(snapshot.id),
       target: target.name,
       schemaVersion: snapshot.schemaVersion,

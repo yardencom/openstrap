@@ -5,15 +5,10 @@ import {
 import type { Blueprint, BlueprintTarget } from "#types/Blueprint.js";
 import { BlueprintReadError } from "./errors/BlueprintReadError.js";
 import { BlueprintSchema } from "./schema/BlueprintSchema.js";
+import { WrittenServices } from "./WrittenServices.js";
+import { WrittenSteps } from "./WrittenSteps.js";
 
-/**
- * The blueprint a developer wrote, as the targets a run works with.
- *
- * Nothing is derived on the way in. A target is what was written plus the name it was written
- * under — the key of the record becomes a field, because from here on a target travels alone and
- * has to know what it is called. Requirements are already inside the target they are about, so
- * nothing is regrouped and nothing can point at a target that is not there.
- */
+/** The blueprint a developer wrote, as the targets a run works with. */
 export class Blueprints {
   private readonly schemaDefinition;
 
@@ -33,7 +28,19 @@ export class Blueprints {
     const targets: Record<string, BlueprintTarget> = {};
 
     for (const [name, target] of Object.entries(config.targets)) {
-      targets[name] = { name, ...target, requirements: target.requirements ?? [] };
+      // The one thing derived on the way in, and only because two shapes are involved: a step is
+      // written with its action as a key and no name, and carried as a named, tagged record that can
+      // be printed, stored and sent to another machine. Taking the steps out of the requirements is
+      // part of the same move — what reaches the checker has to be a statement about a machine.
+      const written = new WrittenSteps(target);
+      const steps = written.steps();
+
+      targets[name] = {
+        name,
+        ...target,
+        requirements: [...written.requirements(), ...new WrittenServices(target).requirements()],
+        ...(steps.length === 0 ? { steps: undefined } : { steps }),
+      };
     }
 
     return { targets };

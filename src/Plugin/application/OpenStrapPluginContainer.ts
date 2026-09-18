@@ -22,7 +22,7 @@ export class OpenStrapPluginContainer {
 
   static async create(request: OpenStrapPluginContainerCreateRequest = {}): Promise<OpenStrapPluginContainer> {
     const container = new OpenStrapPluginContainer();
-    const plugins = orderPlugins(flattenPluginOptions(request.plugins ?? []));
+    const plugins = OpenStrapPluginContainer.orderPlugins(OpenStrapPluginContainer.flattenPluginOptions(request.plugins ?? []));
 
     for (const plugin of plugins) {
       await container.apply(plugin);
@@ -67,30 +67,30 @@ export class OpenStrapPluginContainer {
       },
     };
   }
-}
 
-function flattenPluginOptions(options: readonly OpenStrapPluginOption[]): OpenStrapPlugin[] {
-  return options.flatMap((option): OpenStrapPlugin[] => {
-    if (!option) {
-      return [];
-    }
+  private static flattenPluginOptions(options: readonly OpenStrapPluginOption[]): OpenStrapPlugin[] {
+    return options.flatMap((option): OpenStrapPlugin[] => {
+      if (!option) {
+        return [];
+      }
 
-    if (isPluginOptionArray(option)) {
-      return flattenPluginOptions(option);
-    }
+      if (OpenStrapPluginContainer.isPluginOptionArray(option)) {
+        return OpenStrapPluginContainer.flattenPluginOptions(option);
+      }
 
-    return [option];
-  });
-}
+      return [option];
+    });
+  }
 
-function isPluginOptionArray(option: OpenStrapPluginOption): option is readonly OpenStrapPluginOption[] {
-  return Array.isArray(option);
-}
+  private static isPluginOptionArray(option: OpenStrapPluginOption): option is readonly OpenStrapPluginOption[] {
+    return Array.isArray(option);
+  }
 
-function orderPlugins(plugins: readonly OpenStrapPlugin[]): OpenStrapPlugin[] {
-  const pre = plugins.filter((plugin) => plugin.enforce === "pre");
-  const normal = plugins.filter((plugin) => !plugin.enforce);
-  const post = plugins.filter((plugin) => plugin.enforce === "post");
+  private static orderPlugins(plugins: readonly OpenStrapPlugin[]): OpenStrapPlugin[] {
+    const pre = plugins.filter((plugin) => plugin.enforce === "pre");
+    const normal = plugins.filter((plugin) => !plugin.enforce);
+    const post = plugins.filter((plugin) => plugin.enforce === "post");
 
-  return [...pre, ...normal, ...post];
+    return [...pre, ...normal, ...post];
+  }
 }

@@ -1,3 +1,4 @@
+import type { RuntimeArgs } from "./types.js";
 /** Which options a command accepts, and in which form. */
 export type AcceptedOptions = {
   /** Options that are either given or not: `--json`. */
@@ -8,18 +9,7 @@ export type AcceptedOptions = {
   repeated?: readonly string[];
 };
 
-/**
- * The arguments of one command, read once and answered by name.
- *
- * Every option may be written either way — `--config path` or `--config=path` — and
- * that was the reason to have this at all: the splitting was written out by hand in
- * every parser that took an option, four times, each with its own error message, and
- * the runtime options had a second idiom of their own that returned an index for the
- * caller to assign back to its loop counter.
- *
- * An option this command did not declare is an error rather than a positional, because
- * a mistyped `--jsno` silently becoming a target name is worse than being told.
- */
+/** The arguments of one command, read once and answered by name. */
 export class CommandArguments {
   readonly positionals: string[] = [];
   private readonly given = new Set<string>();
@@ -77,40 +67,31 @@ export class CommandArguments {
   private accepts(name: string, kind: keyof AcceptedOptions): boolean {
     return (this.accepted[kind] ?? []).includes(name);
   }
-}
-
-/**
- * The options every command shares, and what they mean once read.
- *
- * Which plugins a run may reach and where its runtime config lives are not properties
- * of any one command, so no command declares them for itself.
- */
-export const runtimeOptions: AcceptedOptions = {
-  values: ["runtime-config"],
-  repeated: ["plugin"],
-};
-
-export function runtimeArgsIn(read: CommandArguments): { runtimeConfigPath?: string; pluginSpecifiers: string[] } {
-  return {
-    runtimeConfigPath: read.value("runtime-config"),
-    pluginSpecifiers: read.values("plugin"),
+  /** Not properties of any one command, so no command declares them for itself. */
+  static readonly runtimeOptions: AcceptedOptions = {
+    values: ["runtime-config"],
+    repeated: ["plugin"],
+    flags: ["local"],
   };
-}
 
-/**
- * A host port as a command line gives one.
- *
- * Shared, because two commands take it: `create` names the port one machine gets, and `run` names
- * where to start looking for free ones.
- */
-export function hostPortIn(value: string | undefined): number | undefined {
-  if (value === undefined) {
-    return undefined;
+  static runtimeArgsIn(read: CommandArguments): RuntimeArgs {
+    return {
+      local: read.flag("local"),
+      runtimeConfigPath: read.value("runtime-config"),
+      pluginSpecifiers: read.values("plugin"),
+    };
   }
 
-  if (!/^\d+$/.test(value)) {
-    throw new Error("Option --host-port needs a port number");
-  }
+  /** Shared: `create` names the port one machine gets, `run` where to start looking for free ones. */
+  static hostPortIn(value: string | undefined): number | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
 
-  return Number(value);
+    if (!/^\d+$/.test(value)) {
+      throw new Error("Option --host-port needs a port number");
+    }
+
+    return Number(value);
+  }
 }

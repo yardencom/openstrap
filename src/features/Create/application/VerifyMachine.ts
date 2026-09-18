@@ -1,24 +1,23 @@
 import { connect } from "node:net";
 
 import type { BlueprintTarget } from "../../../Modules/Blueprint/index.js";
-import type { MachineAccess, OpenStrapRuntime, SecretReference } from "../../../Plugin/index.js";
+import type { MachineAccess, OpenStrapRuntime } from "../../../Plugin/index.js";
 import { Requirements, type RequirementRun } from "../../../Modules/Requirements/index.js";
 import { RemoteOpenStrap } from "../../../Modules/RemoteOpenStrap/RemoteOpenStrap.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
 import type { Target } from "#types/Target.js";
 import { UnknownMachinePlatformError } from "../../../Modules/RemoteOpenStrap/errors/UnknownMachinePlatformError.js";
-import { KeychainSecretStore } from "../../../Secrets/index.js";
-import type { SqliteStateStore } from "../../../StateStore/index.js";
+import type { MachinePlatform } from "#types/Machine.js";
 
 export type VerifyRequest = {
   target: BlueprintTarget;
-  /** Which machine this is, as its provider says. */
   machine: Target;
   access: MachineAccess;
-  identity?: SecretReference;
+  /** The key itself, where a server issued it. Absent means the connector has its own. */
+  privateKey?: string;
+  /** What a build of openstrap for this machine has to be built for, as the image it was made from says. */
+  platform?: MachinePlatform;
   runtime: OpenStrapRuntime;
-  store: SqliteStateStore;
-  runId: string;
   timeoutMs?: number;
 };
 
@@ -28,36 +27,26 @@ export type VerifyResult = {
   snapshot: FactSnapshot;
 };
 
-/**
- * Confirms what the machine actually is, once it is up.
- *
- * The checks run against facts collected from the guest, so the milestone's
- * security promises are demonstrated rather than assumed.
- */
+/** Confirms what the machine actually is, once it is up. */
 export class VerifyMachine {
-  constructor(
-    private readonly secrets = new KeychainSecretStore(),
-  ) {}
-
   async execute(request: VerifyRequest): Promise<VerifyResult> {
     const endpoint = request.access.endpoint;
 
-    await waitForPort(endpoint.host, endpoint.port, request.timeoutMs ?? 300_000);
+    await VerifyMachine.waitForPort(endpoint.host, endpoint.port, request.timeoutMs ?? 300_000);
 
     const connector = request.runtime.transports.require(request.access.transport);
     const connection = await connector.connect({
       target: request.target.name,
       endpoint,
-      identity: request.identity,
-      reveal: (reference) => this.secrets.read(reference),
+      ...(request.privateKey === undefined ? {} : { privateKey: request.privateKey }),
     });
 
     try {
       // Read by openstrap on the machine itself, delivered over this connection. The connection is
       // how it gets there and how it answers; it is not where any fact comes from.
-      const machine = request.store.readMachineImage(request.target.name);
+      const machine = request.platform;
 
-      if (machine === null) {
+      if (machine === undefined) {
         throw new UnknownMachinePlatformError(request.target.name);
       }
 
@@ -79,15 +68,6 @@ export class VerifyMachine {
       });
 
 
-      request.store.saveFactSnapshot({
-        id: String(snapshot.id),
-        target: request.target.name,
-        runId: request.runId,
-        schemaVersion: snapshot.schemaVersion,
-        capturedAt: String(snapshot.reading.takenAt),
-        data: { ...snapshot.facts },
-      });
-
       return {
         snapshot,
         requirementRun: new Requirements(request.target.requirements).checkedAgainst({
@@ -102,40 +82,34 @@ export class VerifyMachine {
       await connection.close();
     }
   }
-}
 
-/**
- * Waits for a machine to start answering.
- *
- * Booting is a temporary state, so a refused connection is retried. Anything
- * the connection itself rejects afterwards is not retried: a wrong key stays
- * wrong however long you wait for it.
- */
-function waitForPort(host: string, port: number, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  /** Waits for a machine to start answering. */
+  private static waitForPort(host: string, port: number, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
 
-  return new Promise((resolve, reject) => {
-    const attempt = (): void => {
-      if (Date.now() > deadline) {
-        reject(new Error(`${host}:${port} did not start answering within ${Math.round(timeoutMs / 1000)}s`));
-        return;
-      }
+    return new Promise((resolve, reject) => {
+      const attempt = (): void => {
+        if (Date.now() > deadline) {
+          reject(new Error(`${host}:${port} did not start answering within ${Math.round(timeoutMs / 1000)}s`));
+          return;
+        }
 
-      const socket = connect({ host, port });
-      const retry = (): void => {
-        socket.destroy();
-        setTimeout(attempt, 3000);
+        const socket = connect({ host, port });
+        const retry = (): void => {
+          socket.destroy();
+          setTimeout(attempt, 3000);
+        };
+
+        socket.setTimeout(5000);
+        socket.once("data", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.once("error", retry);
+        socket.once("timeout", retry);
       };
 
-      socket.setTimeout(5000);
-      socket.once("data", () => {
-        socket.destroy();
-        resolve();
-      });
-      socket.once("error", retry);
-      socket.once("timeout", retry);
-    };
-
-    attempt();
-  });
+      attempt();
+    });
+  }
 }

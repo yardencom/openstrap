@@ -1,10 +1,11 @@
+import type { Asked } from "#types/FactDeclaration.js";
 import si from "systeminformation";
 
 import type { FactSections } from "#types/Facts.js";
 
 /** What this machine stores things on. */
 export class StorageFacts {
-  async storage(declared: Record<string, never> | undefined): Promise<FactSections["storage"]> {
+  async storage(declared: Asked | undefined): Promise<FactSections["storage"]> {
     if (declared === undefined) {
       return undefined;
     }
@@ -12,15 +13,7 @@ export class StorageFacts {
     return this.filesystems(await si.fsSize());
   }
 
-/**
-   * Space, per filesystem and in total.
-   *
-   * The totals are the root filesystem's, because that is what "how much space
-   * does this machine have" means to anyone asking before they install
-   * something. Every mounted filesystem is listed beside them, keyed by its
-   * mount point, so a caller that cares about a particular directory can find
-   * the filesystem holding it.
-   */
+/** Space, per filesystem and in total. */
   private filesystems(filesystems: si.Systeminformation.FsSizeData[]): FactSections["storage"] {
     const root = filesystems.find((filesystem) => filesystem.mount === "/") ?? filesystems[0];
 

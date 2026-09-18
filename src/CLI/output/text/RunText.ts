@@ -5,21 +5,7 @@ import type {
 import type { RunResult } from "../../application/RunCommand.js";
 import type { CommandText } from "../types.js";
 
-/**
- * What a run found, and what it looked at to find it.
- *
- * Passing checks used to be left out entirely, on the argument that a hundred lines saying "fine"
- * would bury the one line that is not. The cost was worse than the noise: reading
- * `machine-fits-a-cluster: failed / memory…` there was no way to tell whether the processor had been
- * looked at, and for a tool whose whole claim is facts as proof, silence about what was proven is
- * the wrong economy. `passed` and `skipped` were also indistinguishable — both were nothing — though
- * one means "checked, it holds" and the other "there was nothing to check".
- *
- * So every requirement says how it went and how many of its checks did, and the checks themselves are
- * listed when any of them did not pass. A requirement that passed entirely is one line; a requirement
- * that failed shows all of its checks, passing ones included, because what else was looked at is
- * exactly what a reader wants next.
- */
+/** What a run found, and what it looked at to find it. */
 export class RunText implements CommandText<RunResult> {
   print(result: RunResult): string {
     const lines: string[] = [];
@@ -34,10 +20,25 @@ export class RunText implements CommandText<RunResult> {
       );
     }
 
+    for (const deployed of result.deploys) {
+      lines.push("");
+      lines.push(`Services on ${deployed.target}:`);
+      for (const step of deployed.steps) {
+        lines.push(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
+      }
+    }
     lines.push("");
-    lines.push("Requirements:");
+    lines.push(...this.requirements(result.requirementRun));
+    lines.push("");
 
-    for (const requirement of result.requirementRun.results) {
+    return `${lines.join("\n")}\n`;
+  }
+
+  /** How a machine measured up. */
+  requirements(run: RunResult["requirementRun"]): string[] {
+    const lines = ["Requirements:"];
+
+    for (const requirement of run.results) {
       const checks = this.leaves(requirement.checks);
       const passed = checks.filter((leaf) => leaf.check.status === "passed").length;
 
@@ -58,17 +59,10 @@ export class RunText implements CommandText<RunResult> {
       }
     }
 
-    lines.push("");
-
-    return `${lines.join("\n")}\n`;
+    return lines;
   }
 
-  /**
-   * Every leaf of a check tree, named by the path that reaches it.
-   *
-   * A requirement about `cpu.cores.minimum` fails at a leaf, and a reader needs to know
-   * which leaf — the tree itself carries no names.
-   */
+  /** Every leaf of a check tree, named by the path that reaches it: the tree carries no names. */
   private leaves(node: RequirementCheckNode, path: readonly string[] = []): Array<{
     path: string;
     check: RequirementLeafCheck;

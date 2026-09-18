@@ -5,12 +5,9 @@ import type { Output } from "./types.js";
 
 export type { CommandText, Output } from "./types.js";
 
-/**
- * The output the caller asked for.
- *
- * `connect` has no `--json` to ask for, so it is only ever read as text: what it hands back is the
- * machine's own output, and openstrap reformatting that would be talking over the answer.
- */
-export function output(args: ParsedArgs): Output {
-  return "json" in args && args.json ? new JsonOutput() : new TextOutput();
+/** `connect` has no `--json`: what it hands back is the machine's own output, not openstrap's. */
+export class Outputs {
+  static for(args: ParsedArgs): Output {
+    return "json" in args && args.json ? new JsonOutput() : new TextOutput();
+  }
 }

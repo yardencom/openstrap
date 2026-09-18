@@ -1,10 +1,4 @@
-/**
- * What openstrap can observe about a machine, and how it says so.
- *
- * Every named thing carries a status rather than being present or missing from
- * the snapshot: a caller asked about `sshd`, so "we looked and it is not there"
- * and "nobody looked" are different answers and have to read differently.
- */
+/** What openstrap can observe about a machine, and how it says so. */
 export type ObservedStatus = "present" | "absent" | "unknown" | "unsupported" | "error";
 
 export type Observed = {
@@ -15,22 +9,8 @@ export type Observed = {
 
 export type Display = Record<string, string>;
 
-/**
- * One machine, section by section.
- *
- * The sections a requirement compares against a single value — memory, cpu,
- * architecture — are plain. The sections a requirement asks about by name are
- * maps keyed by that name, never lists: "is `sshd` running" is a question only
- * a map can answer.
- */
-/**
- * Everything a machine can be asked about.
- *
- * Every section is optional, because a section nobody asked about is not collected and a snapshot
- * says what was read rather than what could have been. A reader that needs one says so in what it
- * declares, and a requirement written about a section it did not declare finds it missing — which is
- * the truth, and better than a fact nobody asked for.
- */
+/** One machine, section by section. */
+/** Everything a machine can be asked about. */
 export type FactSections = {
   os?: {
     family: string;
@@ -75,14 +55,7 @@ export type FactSections = {
     reason?: string;
   };
   network?: Network;
-  /**
-   * The users the caller named, plus the account the reading ran as.
-   *
-   * Keyed by name like every other section asked about by name, because that is
-   * how the question is put: "is there a user `openstrap`". The reading account is
-   * always in here under its own name, so a snapshot always says who read it —
-   * two snapshots taken as different accounts are not comparable.
-   */
+  /** The users the caller named, plus the account the reading ran as. */
   users: Record<string, UserFact>;
   groups: Record<string, GroupFact>;
   packages?: {
@@ -106,31 +79,8 @@ export type FactSections = {
   artifacts: Record<string, ArtifactFact>;
 };
 
-/**
- * Every section a machine is read into, and whether its entries are named.
- *
- * The one list. It was three: what "collect everything" means, which sections take names when a
- * requirement asks about them, and which keys a blueprint is allowed to write. Three hand-written
- * copies of the same twenty words, in three files, kept in step by whoever remembered — and they had
- * already drifted: `commands` and `artifacts` were readable facts that a blueprint could not ask
- * about, while `providers` and `caches` were allowed in a blueprint and are not facts at all.
- *
- * `entries` says how a section is asked for: `single` answers with one value, so asking is all there
- * is to say, and `named` needs the names of the things to look for, because no machine can list
- * every process or every path that might matter.
- *
- * `ordered` says whether it can be asked for at all. `transports` cannot: nothing on a machine can
- * answer which channel someone reached it through, so it is reported by whoever opened the channel
- * and no reading can be told to go and find it. A requirement may still be written about it.
- */
-/**
- * What kind of thing a fact holds, and therefore what may be asked of it.
- *
- * A shape is a leaf, an object of shapes, or a map of them keyed by name. That is the whole grammar,
- * and it is enough to describe every section a machine is read into — which is the point: the schema a
- * blueprint is checked against is built from this, so what may be required is what is reported, and
- * neither can be edited without the other following.
- */
+/** Every section a machine is read into, and whether its entries are named. */
+/** What kind of thing a fact holds, and therefore what may be asked of it. */
 export type FactFieldKind = "status" | "string" | "number" | "boolean" | "strings" | "numbers";
 
 export type FactShape =
@@ -139,50 +89,33 @@ export type FactShape =
   | { readonly fields: Readonly<Record<string, FactShape>>; readonly open?: boolean }
   | { readonly named: FactShape };
 
-/** Everything a reading reports about a thing it found, plus whatever else that thing has. */
-function observed(fields: Readonly<Record<string, FactShape>> = {}): FactShape {
-  return { fields: { status: "status", reason: "string", message: "string", ...fields } };
-}
-
-/**
- * A field the reading is told rather than asked.
- *
- * Some of what a reading reports it was given: which path to look at, which service to look for,
- * which user id to expect. Those come back in the facts, so they can be written in a requirement —
- * but only as the value, never as a condition, because a condition about them compares the answer
- * with the question. `path: { const: /etc/ssh/sshd_config }` asks openstrap whether it looked where
- * it was sent, which it always did; written as `path: /etc/ssh/sshd_config` it is the sending.
- *
- * It also keeps a condition out of a place a collector reads a value from: an object where a path
- * was expected is not a stricter question, it is a broken one.
- */
-function told(kind: FactFieldKind): FactShape {
-  return { told: kind };
-}
-
-/** A map keyed by the name of the thing: a service, a path, a port. */
-function named(shape: FactShape): FactShape {
-  return { named: shape };
-}
-
 /** How much of a machine a person is shown of it: `{ pretty: "Ubuntu 24.04.4 LTS" }`. */
 const display: FactShape = { fields: {}, open: true };
 
-/**
- * Every section a machine is read into: what it holds, and whether it can be asked for.
- *
- * The one description. It was three lists of section names kept in step by whoever remembered, and
- * then — after those were joined — one list of names here and the fields of every section written out
- * a second time by hand in the requirement schema. That second copy is what drifted: `pid` and `pids`
- * are on every service reading and no blueprint could require them.
- *
- * `ordered` says whether a reading can be told to go and find it. `transports` cannot: nothing on a
- * machine can answer which channel someone reached it through, so it is reported by whoever opened
- * the channel. A requirement may still be written about it.
- *
- * Whether a section takes names is not written down here either — a shape that is a map takes them,
- * and one that is not does not.
- */
+/** Every section a machine is read into: what it holds, and whether it can be asked for. */
+/** The words the model is written in, and how a section's shape is looked up. */
+export class Shape {
+  /** Everything a reading reports about a thing it found, plus whatever else that thing has. */
+  static observed(fields: Readonly<Record<string, FactShape>> = {}): FactShape {
+    return { fields: { status: "status", reason: "string", message: "string", ...fields } };
+  }
+
+  /** A field the reading is told rather than asked. */
+  static told(kind: FactFieldKind): FactShape {
+    return { told: kind };
+  }
+
+  /** A map keyed by the name of the thing: a service, a path, a port. */
+  static named(shape: FactShape): FactShape {
+    return { named: shape };
+  }
+
+  /** What a section holds, for anything that needs to know what may be said about it. */
+  static of(section: FactSection): FactShape {
+    return factSections[section].shape;
+  }
+}
+
 export const factSections = {
   os: {
     ordered: true,
@@ -219,13 +152,13 @@ export const factSections = {
     shape: {
       fields: {
         totalBytes: "number", availableBytes: "number", display,
-        disks: named(observed()),
-        filesystems: named(observed({
+        disks: Shape.named(Shape.observed()),
+        filesystems: Shape.named(Shape.observed({
           mount: "string", device: "string", type: "string",
           totalBytes: "number", availableBytes: "number", usedBytes: "number",
           readOnly: "boolean",
         })),
-        mounts: named(observed({
+        mounts: Shape.named(Shape.observed({
           path: "string", totalBytes: "number", availableBytes: "number",
         })),
       },
@@ -235,18 +168,26 @@ export const factSections = {
     ordered: true,
     shape: {
       fields: {
-        interfaces: named(observed({
+        interfaces: Shape.named(Shape.observed({
           name: "string", type: "string", mac: "string", state: "string", mtu: "number",
         })),
         dns: { fields: { resolvers: "strings", search: "strings", domain: "string" } },
         // Reported in full by every reading, and until this description existed there was no way to
         // require one: the hand-written schema knew `network.firewall` and nothing else.
-        ports: named(observed({
+        ports: Shape.named(Shape.observed({
           protocol: "string", port: "number", state: "string",
           bind: "string", process: "string", service: "string",
+          // Whether knocking on it gets an answer, which is a different question from whether a
+          // program on this machine has claimed it. A container publishes a port by a firewall rule
+          // and claims nothing, so `state: listening` is false there while the port answers; a port
+          // held by a program behind a closed firewall is the other way round.
+          //
+          // Read only for a port some requirement named. Knocking on every port a machine might have
+          // is a port scan, and openstrap does not do that to the machine it was asked about.
+          reachable: "boolean",
         })),
-        firewall: observed(),
-        reachability: named(observed()),
+        firewall: Shape.observed(),
+        reachability: Shape.named(Shape.observed()),
       },
     },
   },
@@ -264,9 +205,9 @@ export const factSections = {
     shape: {
       fields: {
         mode: "string",
-        sudo: observed({ passwordless: "boolean" }),
-        become: observed({ passwordless: "boolean" }),
-        admin: observed({ passwordless: "boolean" }),
+        sudo: Shape.observed({ passwordless: "boolean" }),
+        become: Shape.observed({ passwordless: "boolean" }),
+        admin: Shape.observed({ passwordless: "boolean" }),
       },
     },
   },
@@ -274,83 +215,83 @@ export const factSections = {
     ordered: true,
     shape: {
       fields: {
-        managers: named(observed()),
-        installed: named(observed({ name: told("string"), manager: told("string"), version: "string" })),
+        managers: Shape.named(Shape.observed()),
+        installed: Shape.named(Shape.observed({ name: Shape.told("string"), manager: Shape.told("string"), version: "string" })),
       },
     },
   },
   users: {
     ordered: true,
-    shape: named(observed({
-      name: told("string"), uid: told("number"), gid: "number", home: "string",
+    shape: Shape.named(Shape.observed({
+      name: Shape.told("string"), uid: Shape.told("number"), gid: "number", home: "string",
       shell: "string", groups: "strings", gecos: "string",
     })),
   },
   groups: {
     ordered: true,
-    shape: named(observed({ name: told("string"), gid: told("number"), members: "strings" })),
+    shape: Shape.named(Shape.observed({ name: Shape.told("string"), gid: Shape.told("number"), members: "strings" })),
   },
   processes: {
     ordered: true,
-    shape: named(observed({
-      pid: "number", pids: "numbers", ppid: "number", name: told("string"), user: "string",
-      command: told("string"), args: "string", state: "string",
+    shape: Shape.named(Shape.observed({
+      pid: "number", pids: "numbers", ppid: "number", name: Shape.told("string"), user: "string",
+      command: Shape.told("string"), args: "string", state: "string",
       startedAt: "string", uptimeSeconds: "number",
     })),
   },
   services: {
     ordered: true,
-    shape: named(observed({
-      manager: told("string"), name: told("string"), state: "string", version: "string",
+    shape: Shape.named(Shape.observed({
+      manager: Shape.told("string"), name: Shape.told("string"), state: "string", version: "string",
       enabled: "boolean", running: "boolean", pid: "number", pids: "numbers",
     })),
   },
   transports: {
     ordered: false,
-    shape: named(observed({
+    shape: Shape.named(Shape.observed({
       type: "string", endpoint: "string", authMethods: "strings",
       ready: "boolean", version: "string",
     })),
   },
   runtimes: {
     ordered: true,
-    shape: named(observed({
+    shape: Shape.named(Shape.observed({
       type: "string", version: "string", ready: "boolean",
       endpoint: "string", capabilities: "strings",
     })),
   },
   paths: {
     ordered: true,
-    shape: named(observed({
-      path: told("string"), type: "string", exists: "boolean", owner: "string", group: "string",
+    shape: Shape.named(Shape.observed({
+      path: Shape.told("string"), type: "string", exists: "boolean", owner: "string", group: "string",
       mode: "string", readable: "boolean", writable: "boolean", executable: "boolean",
       sizeBytes: "number",
     })),
   },
   tools: {
     ordered: true,
-    shape: named(observed({
-      name: told("string"), path: "string", version: "string",
+    shape: Shape.named(Shape.observed({
+      name: Shape.told("string"), path: "string", version: "string",
       executable: "boolean", capabilities: "strings",
     })),
   },
   env: {
     ordered: true,
-    shape: named(observed({
-      name: told("string"), value: "string", redacted: "boolean", sensitive: "boolean",
+    shape: Shape.named(Shape.observed({
+      name: Shape.told("string"), value: "string", redacted: "boolean", sensitive: "boolean",
     })),
   },
   commands: {
     ordered: true,
-    shape: named(observed({
-      name: told("string"), args: told("strings"), stdout: "string", stderr: "string",
+    shape: Shape.named(Shape.observed({
+      name: Shape.told("string"), args: Shape.told("strings"), stdout: "string", stderr: "string",
       exitCode: "number",
     })),
   },
   artifacts: {
     ordered: true,
-    shape: named(observed({
-      path: told("string"), kind: told("string"), type: "string",
+    shape: Shape.named(Shape.observed({
+      path: Shape.told("string"), kind: Shape.told("string"), type: "string",
       sizeBytes: "number", sha256: "string", content: "string",
     })),
   },
@@ -358,33 +299,17 @@ export const factSections = {
 
 export type FactSection = keyof typeof factSections;
 
-/** What a section holds, for anything that needs to know what may be said about it. */
-export function shapeOf(section: FactSection): FactShape {
-  return factSections[section].shape;
-}
-
 /** Sections a reading can be told to go and find. */
 export const orderedFactSections: readonly FactSection[] = Object.entries(factSections)
   .filter(([, section]) => section.ordered)
   .map(([name]) => name as FactSection);
 
-/**
- * Sections whose entries a caller has to name for a reading to find them.
- *
- * Read off the shape rather than declared beside it: a section that is a map of named things needs
- * names, and one that is not does not. Two ways of saying it would be two things to keep in step.
- */
+/** Sections whose entries a caller has to name for a reading to find them. */
 export const namedFactSections: readonly FactSection[] = Object.entries(factSections)
   .filter(([, section]) => typeof section.shape === "object" && "named" in section.shape)
   .map(([name]) => name as FactSection);
 
-/**
- * Nothing missing from the list above.
- *
- * `satisfies` catches a name that is not a section; this catches a section that is not in the list,
- * which is the direction that actually went wrong. Adding a section to the model and forgetting it
- * here stops the build rather than quietly producing a blueprint key nobody accepts.
- */
+/** Nothing missing from the list above. */
 type EverySectionListed = [Exclude<keyof FactSections, FactSection>] extends [never] ? true : never;
 export const everySectionListed: EverySectionListed = true;
 
@@ -478,6 +403,8 @@ export type PackageFact = Observed & {
 };
 
 export type PortFact = Observed & {
+  /** Whether a connection to it was accepted. Absent for a port nobody asked about. */
+  reachable?: boolean;
   protocol: string;
   port: number;
   state?: string;
@@ -518,13 +445,7 @@ export type EnvVarFact = Observed & {
   sensitive?: boolean;
 };
 
-/**
- * What a command the caller declared actually printed.
- *
- * This is a fact section like any other rather than a separate kind of
- * "evidence": the caller asked what `sshd -T` says on this machine, and the
- * answer is as much a fact about the machine as its memory size.
- */
+/** What a command the caller declared actually printed. */
 export type CommandFact = Observed & {
   name: string;
   args?: string[];

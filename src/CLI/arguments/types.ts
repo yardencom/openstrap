@@ -1,11 +1,13 @@
-
-/**
- * The arguments each command takes, once read.
- *
- * `command` discriminates the union, so a caller that switches on it is told by the
- * compiler when a command is added and not handled.
- */
+/** The arguments each command takes, once read. */
 export type RuntimeArgs = {
+  /**
+   * Keep this run to this machine, whatever the environment says.
+   *
+   * A server is the record for everything an organization has, and one run wanting to stay out of
+   * that is a decision made at the moment of running — not a variable somebody has to remember to
+   * unset and then remember to set back.
+   */
+  local: boolean;
   runtimeConfigPath?: string;
   pluginSpecifiers: string[];
 };
@@ -31,10 +33,25 @@ export type CreateArgs = {
   command: "create";
   kind: "vm";
   target: string;
+  /** Which operating system to make it of, where no blueprint declares this machine. */
+  os?: string;
+  /** Which hypervisor makes it, where more than one plugin could. */
+  provider?: string;
   configPath?: string;
   hostPort?: number;
   /** Moves the image pin to whatever the target's image name resolves to now. */
   repin: boolean;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ConvergeArgs = {
+  command: "converge";
+  /** `host` is the machine openstrap is running on; anything else is a target it created. */
+  target: string;
+  /** Work out what would be done, print it, and change nothing. */
+  check: boolean;
+  /** How many times to act before giving up. The feature's own bound unless this says otherwise. */
+  maxPasses?: number;
   json: boolean;
 } & RuntimeArgs;
 
@@ -44,7 +61,37 @@ export type ConnectArgs = {
   run?: string;
 } & RuntimeArgs;
 
-export type ParsedArgs = RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs;
+export type ListArgs = {
+  command: "list";
+  json: boolean;
+} & RuntimeArgs;
+
+export type LoginArgs = {
+  command: "login";
+  /** Take the token away rather than keep one, which is how a run goes back to being local. */
+  forget: boolean;
+  json: boolean;
+} & RuntimeArgs;
+
+export type TokensArgs = {
+  command: "tokens";
+  did: "list" | "issue" | "revoke";
+  /** The name to issue for, or the id to revoke. Nothing, where the word was neither. */
+  subject?: string;
+  /** When the pass stops working. Absent is forever, which is a thing to decide, not to fall into. */
+  expiresAt?: string;
+  json: boolean;
+} & RuntimeArgs;
+
+export type SecretArgs = {
+  command: "secret";
+  did: "set" | "forget";
+  /** What the blueprint calls it. The value is never an argument: it is read from stdin, so it lands in no shell history. */
+  name: string;
+  json: boolean;
+} & RuntimeArgs;
+
+export type ParsedArgs = SecretArgs | TokensArgs | LoginArgs | RunArgs | FactsCollectArgs | CreateArgs | ConnectArgs | ConvergeArgs | ListArgs;
 
 /** A parser for one command word: `run`, `create`, `connect`, `facts`. */
 export interface CommandArgsParser {

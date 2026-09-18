@@ -10,7 +10,7 @@ export class TransportRegistry {
   private readonly connectors = new Map<string, RegisteredTransport>();
 
   register(connector: TransportConnector, pluginName: string): void {
-    validateTransportConnector(connector, pluginName);
+    TransportRegistry.validateTransportConnector(connector, pluginName);
 
     const existing = this.connectors.get(connector.id);
     if (existing) {
@@ -44,14 +44,14 @@ export class TransportRegistry {
   list(): readonly RegisteredTransport[] {
     return [...this.connectors.values()];
   }
-}
 
-function validateTransportConnector(connector: TransportConnector, pluginName: string): void {
-  if (!connector.id || typeof connector.id !== "string") {
-    throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a transport without string id`);
-  }
+  private static validateTransportConnector(connector: TransportConnector, pluginName: string): void {
+    if (!connector.id || typeof connector.id !== "string") {
+      throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a transport without string id`);
+    }
 
-  if (typeof connector.connect !== "function") {
-    throw new OpenStrapPluginError(`Transport "${connector.id}" must expose connect(request)`);
+    if (typeof connector.connect !== "function") {
+      throw new OpenStrapPluginError(`Transport "${connector.id}" must expose connect(request)`);
+    }
   }
 }

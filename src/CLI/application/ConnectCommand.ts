@@ -1,15 +1,9 @@
 import { Connect, type Connection } from "#features/Connect/Connect.js";
-import { SqliteStateStore, StateHome } from "../../StateStore/index.js";
+import { WhereMachinesAreRecorded } from "./WhereMachinesAreRecorded.js";
 import type { ConnectArgs } from "../arguments/types.js";
 import type { CliCommand, CommandContext, CommandOutcome } from "./CliCommand.js";
 
-/**
- * `openstrap connect` — reach a machine openstrap created, and optionally run something.
- *
- * The only command whose output is not openstrap's own: with `--run` it hands back what
- * the machine printed, unchanged and undecorated, and exits with the code the machine
- * exited with. Anything added around that would be openstrap talking over the answer.
- */
+/** `openstrap connect` — reach a machine openstrap created, and optionally run something. */
 /** What reaching a machine produced: what it said, and how it ended. */
 export type ConnectResult = {
   output: string;
@@ -17,17 +11,20 @@ export type ConnectResult = {
 };
 
 export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
-  constructor(private readonly stateHome = new StateHome()) {}
-
   async execute(args: ConnectArgs, context: CommandContext): Promise<CommandOutcome<ConnectResult>> {
     const runtime = await context.runtime();
-    const store = new SqliteStateStore(this.stateHome.database());
+    const recorded = await WhereMachinesAreRecorded.of(runtime, args.local);
+
+    // Anything this machine did while no server was listening goes first: a run that never
+    // left is a machine the team cannot see, and a server is now there to be told.
+    await recorded.carry(await context.runtime(), context.now);
 
     try {
       const connection = await new Connect().execute({
         target: args.target,
         runtime,
-        store,
+        store: recorded.store,
+        server: recorded.server,
       });
 
       try {
@@ -38,7 +35,7 @@ export class ConnectCommand implements CliCommand<ConnectArgs, ConnectResult> {
         await connection.close();
       }
     } finally {
-      store.close();
+      recorded.close();
     }
   }
 

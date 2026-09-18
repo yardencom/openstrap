@@ -5,18 +5,13 @@ import type { ToolDeclaration } from "#types/FactDeclaration.js";
 import type { RuntimeFact, ToolFact } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
-/**
- * The tools almost every blueprint asks about.
- *
- * A caller that cares about something else says so; a caller that does not
- * should not have to spell out the obvious.
- */
+/** The tools almost every blueprint asks about. */
 /** Tools whose presence makes a runtime available to a blueprint. */
 const runtimeTools: readonly string[] = ["node", "python3"];
 
 /**
- * Tool names that systeminformation knows a version query for under another
- * spelling. Without the alias `python3` would read as present with no version.
+ * Tool names that systeminformation knows a version query for under another spelling. Without the alias
+ * `python3` would read as present with no version.
  */
 const versionAliases: Record<string, string> = {
   python3: "python",
@@ -26,14 +21,7 @@ const versionAliases: Record<string, string> = {
 export class ToolFacts {
   constructor(private readonly platform: Platform) {}
 
-  /**
-   * Where each tool asked about is, and what version it reports.
-   *
-   * The path comes from resolving the name on PATH, which is what "installed"
-   * means to anything about to run it. The version comes from an API when there
-   * is one for that tool; when there is not, the tool is still reported present
-   * with no version rather than being run to see what it says about itself.
-   */
+  /** Where each tool asked about is, and what version it reports. */
   private lookup?: Promise<Record<string, ToolFact>>;
 
   async tools(declared: Record<string, ToolDeclaration> | undefined): Promise<Record<string, ToolFact>> {
@@ -44,13 +32,7 @@ export class ToolFacts {
     return this.looked(declared);
   }
 
-  /**
-   * Which runtimes a blueprint can rely on.
-   *
-   * Asked for on its own, because a blueprint that wants "node 18 or later" is asking whether it can
-   * run something, not where the binary lives. The tools are looked up once either way, so the two
-   * sections cannot disagree about the same machine and neither pays for the other.
-   */
+  /** Which runtimes a blueprint can rely on. */
   async runtimes(declared: Record<string, ToolDeclaration> | undefined): Promise<Record<string, RuntimeFact>> {
     if (declared === undefined) {
       return {};
@@ -106,14 +88,7 @@ export class ToolFacts {
     return Object.fromEntries(facts);
   }
 
-  /**
-   * Which runtimes a blueprint can rely on.
-   *
-   * A runtime is a tool seen from the other side: a blueprint asking for "node
-   * 18 or later" is asking whether it can run something, not where the binary
-   * lives. Derived here rather than read again, so the two sections cannot
-   * disagree about the same machine.
-   */
+  /** Which runtimes a blueprint can rely on. */
   private derived(tools: Record<string, ToolFact>): Record<string, RuntimeFact> {
     return Object.fromEntries(
       Object.entries(tools)

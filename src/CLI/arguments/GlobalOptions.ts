@@ -1,14 +1,4 @@
-/**
- * The part of a command line that is openstrap's rather than a command's.
- *
- * Three things, and they have to be read before anything else can be: which plugins to load, and
- * whether the answer is for a person or for a program. The plugins decide which words exist at all,
- * so they cannot be discovered by a parser that would first have to know the word.
- *
- * Read by scanning rather than by a grammar, because at this point there is no grammar: every other
- * option on the line belongs to a command that has not been found yet. Anything not recognised here
- * is left alone and handed on untouched.
- */
+/** The part of a command line that is openstrap's rather than a command's. */
 export class GlobalOptions {
   private readonly args: readonly string[];
 

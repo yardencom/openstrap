@@ -1,10 +1,13 @@
 import {
   type ConfigDefinition,
+  type ConfigIssue,
   type ConfigSchema,
   type ConfigSchemaNode,
 } from "../../../ConfigCore/index.js";
 import { RequirementConfigSchema } from "../../Requirements/schema/RequirementConfigSchema.js";
-import type { BlueprintConfig, BlueprintTargetConfig } from "./BlueprintConfig.js";
+import { StepSchema } from "./StepSchema.js";
+import type { BlueprintConfig, BlueprintTargetConfig, WrittenStep } from "./BlueprintConfig.js";
+import type { DeclaredService, Registry } from "#types/Services.js";
 
 const metadata = {
   kind: "openstrap.blueprint",
@@ -16,6 +19,8 @@ const metadata = {
 
 export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
   private readonly requirements: RequirementConfigSchema;
+  private readonly steps: StepSchema;
+  private conditions?: ConfigSchemaNode<Record<string, unknown>>;
 
   readonly kind = metadata.kind;
   readonly schemaId = metadata.schemaId;
@@ -25,6 +30,7 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
 
   constructor(private readonly schema: ConfigSchema) {
     this.requirements = new RequirementConfigSchema(schema);
+    this.steps = new StepSchema(schema);
   }
 
   get rootSchema(): ConfigSchemaNode<BlueprintConfig> {
@@ -56,14 +62,34 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
   }
 
   private get target(): ConfigSchemaNode<BlueprintTargetConfig> {
+    return this.schema.checked(this.written, (target) => [...BlueprintSchema.namedOnce(target), ...BlueprintSchema.forWhatIsDeclared(target)]);
+  }
+
+  private get written(): ConfigSchemaNode<BlueprintTargetConfig> {
     return this.schema.strictObject({
       displayName: this.schema.optional(this.name),
       transport: this.schema.optional(this.transportId),
       provider: this.schema.optional(this.identifier),
       image: this.schema.optional(this.name),
       size: this.schema.optional(this.name),
-      requirements: this.schema.optional(this.requirements.ofOneTarget()),
+      display: this.schema.optional(this.schema.boolean()),
+      registries: this.schema.optional(this.schema.record(this.registryHost, this.registry)),
+      services: this.schema.optional(this.schema.record(this.serviceName, this.service)),
+      // What has to be true, and — where openstrap is expected to make it true — how, written
+      // inside the requirement it answers. One thought in one place: nothing names a requirement
+      // twice, and nothing points at one that is not there.
+      requirements: this.schema.optional(this.requirements.ofOneTarget(this.stepsOf("implied"))),
+      // The exception: a step that makes more than one requirement true, and so belongs in neither.
+      // It names them, which is the cost of being written out here.
+      steps: this.schema.optional(this.stepsOf("named")),
     });
+  }
+
+  /** Steps, told whether one written here names the requirements it is for. */
+  private stepsOf(answers: "named" | "implied"): ConfigSchemaNode<WrittenStep[]> {
+    this.conditions ??= this.requirements.factConditions();
+
+    return this.steps.ofOnePlace(this.conditions, answers);
   }
 
   private get identifier(): ConfigSchemaNode<string> {
@@ -72,5 +98,100 @@ export class BlueprintSchema implements ConfigDefinition<BlueprintConfig> {
       pattern: "^[a-z][a-z0-9._:-]*$",
       patternMessage: "must start with a lowercase letter and use lowercase letters, numbers, '.', '_', ':' or '-'",
     });
+  }
+
+  private get serviceName(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[a-z][a-z0-9-]*$",
+      patternMessage: "must start with a lowercase letter and use lowercase letters, numbers or '-': other services reach it by this name",
+    });
+  }
+
+  private get registryHost(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[a-z0-9.-]+(:[0-9]+)?$",
+      patternMessage: "must be the host name of a registry, like ghcr.io",
+    });
+  }
+
+  private get variableName(): ConfigSchemaNode<string> {
+    return this.schema.string({
+      minLength: 1,
+      pattern: "^[A-Za-z_][A-Za-z0-9_]*$",
+      patternMessage: "must be an environment variable name",
+    });
+  }
+
+  private get registry(): ConfigSchemaNode<Registry> {
+    return this.schema.strictObject({
+      username: this.name,
+      password: this.name,
+    });
+  }
+
+  private get service(): ConfigSchemaNode<DeclaredService> {
+    return this.schema.checked(this.schema.strictObject({
+      image: this.name,
+      port: this.schema.optional(this.schema.number({ int: true, positive: true })),
+      public: this.schema.optional(this.schema.boolean()),
+      environment: this.schema.optional(this.schema.record(this.variableName, this.schema.string())),
+      secrets: this.schema.optional(this.schema.record(this.variableName, this.name)),
+      storage: this.schema.optional(this.schema.string({
+        minLength: 1,
+        pattern: "^/",
+        patternMessage: "must be an absolute path inside the container",
+      })),
+    }), (service) => service.public && service.port === undefined
+      ? [{ path: ["public"], message: "a public service says which port it answers on" }]
+      : []);
+  }
+
+  /** One name, one step, across the whole target. */
+  private static namedOnce(target: BlueprintTargetConfig): ConfigIssue[] {
+    const written = new Map<string, string>();
+    const issues: ConfigIssue[] = [];
+    const places: Array<{ steps: readonly WrittenStep[]; where: string[]; underneath: string }> = [
+      ...(target.requirements ?? []).map((requirement, index) => ({
+        steps: requirement.steps ?? [],
+        where: ["requirements", String(index), "steps"],
+        underneath: `"${requirement.id}"`,
+      })),
+      { steps: target.steps ?? [], where: ["steps"], underneath: "the target" },
+    ];
+
+    for (const place of places) {
+      place.steps.forEach((step, index) => {
+        const first = written.get(step.id);
+
+        if (first === undefined) {
+          written.set(step.id, place.underneath);
+          return;
+        }
+
+        issues.push({
+          path: [...place.where, String(index), "id"],
+          message: `already the name of a step under ${first}; one name is one step`,
+        });
+      });
+    }
+
+    return issues;
+  }
+
+  /** A step beside the requirements is for requirements that are there. */
+  private static forWhatIsDeclared(target: BlueprintTargetConfig): ConfigIssue[] {
+    const declared = new Set((target.requirements ?? []).map((requirement) => requirement.id));
+
+    return (target.steps ?? []).flatMap((step, index) =>
+      (step.for ?? [])
+        .map((name, at) => ({ name, at }))
+        .filter(({ name }) => !declared.has(name))
+        .map(({ name, at }) => ({
+          path: ["steps", String(index), "for", String(at)],
+          message: `no requirement of this target is called "${name}"`,
+        })),
+    );
   }
 }

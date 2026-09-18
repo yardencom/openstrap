@@ -82,12 +82,8 @@ export class ConfigSchema {
   }
 
   /**
-   * A node with a rule of its own, for what shape alone cannot say.
-   *
-   * Whether a field is a string is a question about that field; whether two entries of a list
-   * describe the same thing is a question about the list. The second kind has to be written as code,
-   * and this is where it is attached, so that it is answered where every other question about the
-   * file is answered — with the rest of the issues, in one refusal, before anything is run.
+   * A node with a rule of its own, for what shape alone cannot say — whether two entries of a list describe
+   * the same thing is a question about the list.
    */
   checked<TValue>(node: ConfigSchemaNode<TValue>, rule: ConfigRule<TValue>): ConfigSchemaNode<TValue> {
     return this.backend.checked(node, rule);

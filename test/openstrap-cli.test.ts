@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { main } from "../src/CLI/Main.js";
+import { Cli } from "../src/CLI/Main.js";
 
 /**
  * Where this run keeps what it writes.
@@ -24,7 +24,7 @@ afterAll(() => {
 
 describe("openstrap CLI", () => {
   it("runs the local sample and prints human output", async () => {
-    const output = await captureCli(["run", "examples/openstrap/local-run.yaml"]);
+    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--local"]);
 
     expect(output.exitCode).toBe(0);
     expect(output.stdout).toContain("OpenStrap run: passed");
@@ -32,8 +32,46 @@ describe("openstrap CLI", () => {
     expect(output.stderr).toBe("");
   });
 
+  /**
+   * A run is the whole cycle, not three quarters of it.
+   *
+   * The blueprint declares a file, the machine has not got one, and the step that writes it is in the
+   * requirement it answers. A run that reported `failed` here would be telling the truth and leaving
+   * the machine as it found it — which is what it did before the fourth stage existed.
+   */
+  it("brings a machine to what the blueprint declares rather than only reporting the shortfall", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "openstrap-run-converge-"));
+    const wanted = join(directory, "wanted.txt");
+
+    try {
+      writeFileSync(join(directory, "openstrap.yaml"), [
+        "targets:",
+        "  local:",
+        "    requirements:",
+        "      - id: the-file",
+        "        paths:",
+        "          wanted:",
+        `            path: ${wanted}`,
+        "            exists: true",
+        "        steps:",
+        "          - id: write-the-file",
+        `            write: { path: ${wanted}, content: "openstrap was here" }`,
+        "",
+      ].join("\n"));
+
+      const output = await captureCli(["run", "--local"], directory);
+
+      expect(output.stdout).toContain("the-file [local]: passed");
+      expect(output.exitCode).toBe(0);
+      // The verdict is a reading taken after the step ran, so the file is there to be found.
+      expect(existsSync(wanted)).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("runs the local sample and prints JSON output", async () => {
-    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--json"]);
+    const output = await captureCli(["run", "examples/openstrap/local-run.yaml", "--json", "--local"]);
     const json = JSON.parse(output.stdout);
 
     expect(output.exitCode).toBe(0);
@@ -72,7 +110,7 @@ targets:
 `,
       );
 
-      const output = await captureCli(["run", join(directory, "missing.yaml")], directory);
+      const output = await captureCli(["run", join(directory, "missing.yaml"), "--local"], directory);
 
       expect(output.exitCode).toBe(2);
       expect(output.stderr).toContain("Config file was not found");
@@ -194,7 +232,7 @@ targets:
 
     expect(output.exitCode).toBe(2);
     expect(output.stderr).toContain("Missing command");
-    expect(output.stderr).toContain("openstrap create vm <target>");
+    expect(output.stderr).toContain("openstrap create vm <name>");
   });
 
   it("says what it does answer to when the word belongs to a plugin the project does not have", async () => {
@@ -202,7 +240,7 @@ targets:
 
     expect(output.exitCode).toBe(2);
     expect(output.stderr).toContain('Unknown command "workloads"');
-    expect(output.stderr).toContain("Known commands: run, create, connect, facts");
+    expect(output.stderr).toContain("Known commands: run, create, converge, login, secret, tokens, list, connect, facts");
   });
 
 });
@@ -210,7 +248,7 @@ targets:
 async function captureCli(argv: readonly string[], cwd = process.cwd()) {
   let stdout = "";
   let stderr = "";
-  const exitCode = await main(["node", "openstrap", ...argv], {
+  const exitCode = await Cli.main(["node", "openstrap", ...argv], {
     cwd,
     stdout: {
       write: (chunk: string) => {

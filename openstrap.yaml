@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=./schemas/openstrap-blueprint.schema.json
+#
+# A Fedora workstation: what it has to be, read from the machine itself rather than from
+# the image that was chosen, and the steps that bring it there.
+targets:
+  fedora:
+    displayName: Fedora 42 with a desktop
+    transport: ssh
+    provider: utm
+    image: cloud-image/fedora-42
+    # Somebody sits in front of this one.
+    display: true
+    requirements:
+      # The machine is the one that was asked for. Asserted against the machine, not the
+      # image name: a pin that moved or a provider that ignored it would show up here.
+      - id: fedora-42-arm64
+        os:
+          name:
+            const: fedora
+          version:
+            const: "42"
+        arch:
+          const: arm64
+
+      # The machine has what it was asked to have. `size: medium` is what openstrap decided;
+      # this is what the machine reports it got, which is not the same statement.
+      - id: resources-as-asked
+        cpu:
+          cores:
+            minimum: 2
+        memory:
+          totalBytes:
+            minimum: 1900000000
+
+      # It can reach the network it needs, and is listening where it says it listens.
+      - id: network-usable
+        network:
+          ports:
+            tcp/22:
+              state: listening
+
+      # Reached over ssh, and by a key.
+      - id: key-only-login
+        transports:
+          ssh:
+            status: present
+            ready: true
+            authMethods:
+              const:
+                - publickey
+
+      - id: ssh-running
+        services:
+          sshd:
+            status: present
+            running: true
+
+      # Work needs root without a prompt for it.
+      - id: passwordless-sudo
+        privileges:
+          sudo:
+            status: present
+            passwordless: true
+
+      - id: account-ready
+        paths:
+          home:
+            status: present
+            type: directory
+            writable: true
+
+      # The desktop is running — the login screen is up, which is a different claim from
+      # a package being installed.
+      - id: desktop-running
+        services:
+          gdm:
+            status: present
+            running: true
+        steps:
+          - id: install-gnome
+            run: sudo dnf install -y @workstation-product-environment
+          - id: boot-into-it
+            run: sudo systemctl set-default graphical.target
+          - id: start-it
+            run: sudo systemctl isolate graphical.target

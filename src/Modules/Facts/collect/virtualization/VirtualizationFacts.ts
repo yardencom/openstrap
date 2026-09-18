@@ -1,3 +1,4 @@
+import type { Asked } from "#types/FactDeclaration.js";
 import { existsSync } from "node:fs";
 
 import type { FactSections } from "#types/Facts.js";
@@ -7,7 +8,7 @@ import type { Platform } from "../platform/Platform.js";
 export class VirtualizationFacts {
   constructor(private readonly platform: Platform) {}
 
-  virtualization(declared: Record<string, never> | undefined): FactSections["virtualization"] {
+  virtualization(declared: Asked | undefined): FactSections["virtualization"] {
     if (declared === undefined) {
       return undefined;
     }
@@ -15,12 +16,7 @@ export class VirtualizationFacts {
     return this.reported();
   }
 
-/**
-   * Whether this machine can run a virtual machine.
-   *
-   * Not whether it is one. A blueprint asks the first question, because that is
-   * what decides if a target can be created here at all.
-   */
+/** Whether this machine can run a virtual machine. */
   private reported(): FactSections["virtualization"] {
     if (this.platform.is("macos")) {
       return { supported: true, enabled: true, type: "hvf" };

@@ -4,24 +4,11 @@ import type { ProcessDeclaration } from "#types/FactDeclaration.js";
 import type { ProcessFact } from "#types/Facts.js";
 import type { Platform } from "../platform/Platform.js";
 
-/**
- * What is running on this machine.
- *
- * The table and the processes a caller named live in one section because both are facts about the
- * same machine. Every declared name is answered, present or absent: a name that produced no entry
- * would be indistinguishable from a name nobody asked about, so absence is a value and never a gap.
- */
+/** What is running on this machine. */
 export class ProcessFacts {
   constructor(private readonly platform: Platform) {}
 
-  /**
-   * The process table, plus an answer for every process the caller named.
-   *
-   * Both live in one section because both are facts about the same machine. The
-   * table is keyed by `pid-<pid>`, which is the identity a process actually has;
-   * a declared process is keyed by the name the caller gave it, because that is
-   * what the caller will look for.
-   */
+  /** The process table, plus an answer for every process the caller named. */
   async processes(declared: Record<string, ProcessDeclaration> | undefined): Promise<Record<string, ProcessFact>> {
     if (declared === undefined) {
       return {};
@@ -53,14 +40,7 @@ export class ProcessFacts {
     return table;
   }
 
-  /**
-   * The processes a declaration matches.
-   *
-   * Every match is reported, because "is node running" and "how many node
-   * processes are there" are the same question asked twice, and the first pid is
-   * kept as well so a caller that expects one process does not have to unpack a
-   * list.
-   */
+  /** The processes a declaration matches. */
   private declaredProcess(
     declaration: ProcessDeclaration,
     id: string,
@@ -68,11 +48,11 @@ export class ProcessFacts {
   ): ProcessFact {
     const wantedName = declaration.name ?? (declaration.command === undefined ? id : undefined);
     const matches = running.filter((entry) => {
-      if (wantedName !== undefined && !mentions(entry.name, wantedName)) {
+      if (wantedName !== undefined && !ProcessFacts.mentions(entry.name, wantedName)) {
         return false;
       }
 
-      if (declaration.command !== undefined && !mentions(entry.name, declaration.command) && !entry.params.includes(declaration.command)) {
+      if (declaration.command !== undefined && !ProcessFacts.mentions(entry.name, declaration.command) && !entry.params.includes(declaration.command)) {
         return false;
       }
 
@@ -95,11 +75,12 @@ export class ProcessFacts {
       command: first.path ? `${first.path}/${first.name}` : first.name,
     };
   }
+
+  private static mentions(reported: string, wanted: string): boolean {
+    const name = reported.toLowerCase().endsWith(".exe") ? reported.slice(0, -4) : reported;
+
+    return name === wanted || name.split("/").pop() === wanted;
+  }
 }
 
 /** A process is named by its executable, so `sshd` and `sshd.exe` are the same one. */
-function mentions(reported: string, wanted: string): boolean {
-  const name = reported.toLowerCase().endsWith(".exe") ? reported.slice(0, -4) : reported;
-
-  return name === wanted || name.split("/").pop() === wanted;
-}

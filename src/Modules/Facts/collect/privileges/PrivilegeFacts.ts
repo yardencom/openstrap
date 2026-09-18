@@ -1,3 +1,4 @@
+import type { Asked } from "#types/FactDeclaration.js";
 import { execFileSync } from "node:child_process";
 import { userInfo } from "node:os";
 
@@ -5,7 +6,7 @@ import type { FactSections } from "#types/Facts.js";
 
 /** What the account this is running as is allowed to do. */
 export class PrivilegeFacts {
-  privileges(declared: Record<string, never> | undefined): FactSections["privileges"] {
+  privileges(declared: Asked | undefined): FactSections["privileges"] {
     if (declared === undefined) {
       return undefined;
     }
@@ -13,15 +14,7 @@ export class PrivilegeFacts {
     return this.reported();
   }
 
-/**
-   * What this account is allowed to do.
-   *
-   * Being root is read from the account itself. Passwordless `sudo` is the one
-   * thing here that is probed rather than read: no API reports it, because the
-   * only evidence that sudo runs without a password is sudo having run without
-   * one. A cached credential from an earlier prompt can therefore make this read
-   * `present` on a machine that would normally ask.
-   */
+/** What this account is allowed to do. */
   private reported(): FactSections["privileges"] {
     const root = userInfo().uid === 0;
 

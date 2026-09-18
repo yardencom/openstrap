@@ -1,10 +1,4 @@
-/**
- * A machine openstrap has no record of the kind of.
- *
- * What a target is gets written down when openstrap creates it, from the image it was made from. A
- * target without that record is one openstrap has not created — or created before it started keeping
- * the record — and guessing from the machine is what this replaced.
- */
+/** A machine openstrap has no record of the kind of. */
 export class UnknownMachinePlatformError extends Error {
   constructor(target: string) {
     super(

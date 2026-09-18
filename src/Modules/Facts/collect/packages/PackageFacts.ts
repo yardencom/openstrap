@@ -17,14 +17,7 @@ const packageManagers: readonly { name: string; executable: string }[] = [
 
 /** Which package managers a machine has, and what openstrap can say about the packages declared. */
 export class PackageFacts {
-  /**
-   * Installed packages, which no API reports portably.
-   *
-   * Every package manager answers a different question in a different format,
-   * and none of them has an interface that is not its own command line. Saying
-   * so is the honest answer: a caller that declared a package learns that
-   * openstrap did not look, rather than that the package is missing.
-   */
+  /** Installed packages, which no API reports portably. */
   async packages(declared: Record<string, PackageDeclaration> | undefined): Promise<FactSections["packages"]> {
     if (declared === undefined) {
       return undefined;
@@ -47,12 +40,7 @@ export class PackageFacts {
     );
   }
 
-  /**
-   * Which package managers this machine has, keyed by manager name.
-   *
-   * A manager is present when its driving executable resolves on PATH — that is
-   * what "this machine has apt" means to anyone about to install something.
-   */
+  /** Which package managers this machine has, keyed by manager name. */
   private async managers(): Promise<NonNullable<FactSections["packages"]>["managers"]> {
     const found = await Promise.all(packageManagers.map(async (manager) => {
       const path = await which(manager.executable, { nothrow: true });

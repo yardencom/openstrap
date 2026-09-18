@@ -1,24 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  mergeRequirementRuns,
-  MergedRunWithoutTargetsError,
-} from "../MergeRequirementRuns.js";
+import { MergeRequirementRuns } from "../MergeRequirementRuns.js";
+import { MergedRunWithoutTargetsError } from "../errors/MergedRunWithoutTargetsError.js";
 import type { CheckStatus, RequirementRun } from "#types/Requirements.js";
 
 describe("merging one evaluation per target", () => {
   it("refuses to merge nothing, because a run cannot be made out of nothing", () => {
-    expect(() => mergeRequirementRuns([])).toThrow(MergedRunWithoutTargetsError);
+    expect(() => MergeRequirementRuns.of([])).toThrow(MergedRunWithoutTargetsError);
   });
 
   it("hands back a single run untouched", () => {
     const only = run("passed", { target: "host", requirementId: "a" });
 
-    expect(mergeRequirementRuns([only])).toBe(only);
+    expect(MergeRequirementRuns.of([only])).toBe(only);
   });
 
   it("keeps every result and says which target each came from", () => {
-    const merged = mergeRequirementRuns([
+    const merged = MergeRequirementRuns.of([
       run("passed", { target: "host", requirementId: "node-runtime" }),
       run("passed", { target: "guest", requirementId: "ssh-running" }),
     ]);
@@ -41,7 +39,7 @@ describe("merging one evaluation per target", () => {
     ];
 
     for (const [statuses, expected] of worst) {
-      const merged = mergeRequirementRuns(statuses.map((status, index) =>
+      const merged = MergeRequirementRuns.of(statuses.map((status, index) =>
         run(status, { target: `t${index}`, requirementId: `r${index}` }),
       ));
 
@@ -50,7 +48,7 @@ describe("merging one evaluation per target", () => {
   });
 
   it("explains a failure by naming what the failing targets said", () => {
-    const merged = mergeRequirementRuns([
+    const merged = MergeRequirementRuns.of([
       { ...run("failed", { target: "host", requirementId: "a" }), details: { message: "host is short of memory" } },
       { ...run("error", { target: "guest", requirementId: "b" }), details: { message: "guest did not answer" } },
       { ...run("passed", { target: "third", requirementId: "c" }), details: { message: "nothing wrong here" } },
@@ -60,7 +58,7 @@ describe("merging one evaluation per target", () => {
   });
 
   it("says nothing extra when everything passed", () => {
-    const merged = mergeRequirementRuns([
+    const merged = MergeRequirementRuns.of([
       run("passed", { target: "host", requirementId: "a" }),
       run("passed", { target: "guest", requirementId: "b" }),
     ]);

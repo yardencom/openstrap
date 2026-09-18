@@ -1,5 +1,4 @@
 import type { Transport } from "./ports/Transport.js";
-import type { SecretReference } from "./Secret.js";
 
 export type TransportEndpoint = {
   host: string;
@@ -7,26 +6,50 @@ export type TransportEndpoint = {
   user: string;
 };
 
+/** The public half of what a channel will enter a machine with. */
+export type TransportIdentity = {
+  publicKey: string;
+};
+
 export type TransportConnectionRequest = {
   target: string;
   endpoint: TransportEndpoint;
-  identity?: SecretReference;
   /**
-   * Reveals a secret the core owns.
+   * The key to enter with, where the caller has one.
    *
-   * A plugin is handed a reference and this function, never a value. The core
-   * decides what may be revealed and stays the only thing that touches the
-   * store, which is what keeps the rule true once plugins run out of process.
+   * Absent means the connector's own: it made the key for this target and knows
+   * where it put it. Present means something else owns it — a server that issues
+   * a key for a machine a whole organization can reach — and openstrap is passing
+   * it through for this connection and keeping none of it.
    */
-  reveal?(reference: SecretReference): Promise<string | null>;
+  privateKey?: string;
 };
 
 /**
  * An open channel plus the operations available through it, and the means to
  * close it again.
  */
+export type TunnelEndpoint = {
+  host: string;
+  port: number;
+};
+
+/** A port here that leads to a port over there, for as long as it is open. */
+export type Tunnel = TunnelEndpoint & {
+  close(): Promise<void>;
+};
+
 export type TransportConnection = Transport & {
   close(): Promise<void>;
+  /**
+   * A way to speak to something the far machine keeps to itself.
+   *
+   * A service bound to the far machine's 127.0.0.1 is reachable from there and
+   * nowhere else. A tunnel carries a connection made here inside the channel and
+   * hands it to that service, the way `ssh -L` does. Optional, because not every
+   * channel can carry one.
+   */
+  tunnel?(to: TunnelEndpoint): Promise<Tunnel>;
   /**
    * How this channel actually authenticated.
    *
@@ -49,5 +72,14 @@ export type TransportConnection = Transport & {
 export type TransportConnector = {
   id: string;
   displayName?: string;
+  /**
+   * The public half of the key this channel will enter the named machine with,
+   * made now or reused from the last time it was asked.
+   *
+   * Asked before the machine exists, because the public half has to be planted
+   * in it as it is made. Keys are this connector's business and not openstrap's:
+   * openstrap holds none, and what it plants it got from here.
+   */
+  identityFor(target: string): Promise<TransportIdentity>;
   connect(request: TransportConnectionRequest): Promise<TransportConnection>;
 };

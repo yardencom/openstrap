@@ -10,7 +10,7 @@ export class SecretStoreRegistry {
   private readonly stores = new Map<string, RegisteredSecretStore>();
 
   register(store: SecretStore, pluginName: string): void {
-    validateSecretStore(store, pluginName);
+    SecretStoreRegistry.validateSecretStore(store, pluginName);
 
     const existing = this.stores.get(store.id);
     if (existing) {
@@ -44,16 +44,45 @@ export class SecretStoreRegistry {
   list(): readonly RegisteredSecretStore[] {
     return [...this.stores.values()];
   }
-}
 
-function validateSecretStore(store: SecretStore, pluginName: string): void {
-  if (!store.id || typeof store.id !== "string") {
-    throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a secret store without string id`);
+  /** The store to use when nothing names one, which is what a blueprint's `{ secret: … }` does. */
+  sole(): SecretStore {
+    const store = this.soleIfAny();
+
+    if (!store) {
+      throw new OpenStrapPluginError(
+        "No secret store is registered. openstrap keeps none of its own: a plugin has to provide one, "
+        + "and plugins are listed in openstrap.config.mjs in the current directory. "
+        + "Run this from the project folder that has one, or pass --runtime-config <path>.",
+      );
+    }
+
+    return store;
   }
 
-  for (const operation of ["read", "write", "remove"] as const) {
-    if (typeof store[operation] !== "function") {
-      throw new OpenStrapPluginError(`Secret store "${store.id}" must expose ${operation}()`);
+  /** The same, where having none is an answer: a run that names no secret needs no store. */
+  soleIfAny(): SecretStore | undefined {
+    const [only, ...rest] = this.list();
+
+    if (rest.length > 0) {
+      throw new OpenStrapPluginError(
+        `Several secret stores are registered (${this.list().map((item) => item.store.id).join(", ")}), `
+        + "so which one holds a secret has to be said rather than guessed.",
+      );
+    }
+
+    return only?.store;
+  }
+
+  private static validateSecretStore(store: SecretStore, pluginName: string): void {
+    if (!store.id || typeof store.id !== "string") {
+      throw new OpenStrapPluginError(`Plugin "${pluginName}" registered a secret store without string id`);
+    }
+
+    for (const operation of ["read", "write", "remove"] as const) {
+      if (typeof store[operation] !== "function") {
+        throw new OpenStrapPluginError(`Secret store "${store.id}" must expose ${operation}()`);
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 export { Requirements, type EvaluationRequest } from "./Requirements.js";
-export { mergeRequirementRuns, MergedRunWithoutTargetsError } from "./MergeRequirementRuns.js";
-export { runSucceeded } from "#types/Requirements.js";
+export { MergeRequirementRuns } from "./MergeRequirementRuns.js";
+export { MergedRunWithoutTargetsError } from "./errors/MergedRunWithoutTargetsError.js";
+export { Checks, } from "#types/Requirements.js";
 export type {
   CheckStatus,
   RequirementCheckNode,

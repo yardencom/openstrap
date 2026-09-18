@@ -1,13 +1,7 @@
 import type { CreatedTarget } from "../../application/CreateCommand.js";
 import type { CommandText } from "../types.js";
 
-/**
- * What `create` did, and how to reach what it made.
- *
- * The steps are printed whether they ran or were skipped, because "already present" is the
- * answer to running the command twice and a reader has to be able to tell that from
- * "created".
- */
+/** What `create` did, and how to reach what it made. */
 export class CreateText implements CommandText<CreatedTarget> {
   print(result: CreatedTarget): string {
     const lines: string[] = [];
@@ -24,7 +18,10 @@ export class CreateText implements CommandText<CreatedTarget> {
     lines.push("Image:");
     lines.push(`  ${result.image.reference} ${result.image.format}/${result.image.boot}`);
     lines.push(`  ${result.image.url}`);
-    lines.push(`  sha256 ${result.image.sha256}`);
+    // Only where its publisher published one. The word `undefined` under an image reads as a digest.
+    if (result.image.sha256 !== undefined) {
+      lines.push(`  sha256 ${result.image.sha256}`);
+    }
     lines.push("");
     lines.push(`Machine: ${result.target} (${result.handle.id})`);
 

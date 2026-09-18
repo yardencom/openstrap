@@ -4,14 +4,7 @@ import { arch, platform } from "node:os";
 export type PlatformName = "linux" | "macos" | "windows";
 
 
-/**
- * The machine a reading is running on.
- *
- * Asked once and handed to everything that reads a section, so no two sections
- * can disagree about what they are looking at. A declaration may name the
- * platforms it applies to — `ssh-agent` is a process on Unix and a service on
- * Windows — and this is what decides whether it applies here.
- */
+/** The machine a reading is running on. */
 export class Platform {
   private constructor(
     readonly name: PlatformName,
@@ -28,12 +21,7 @@ export class Platform {
     return new Platform(name, Platform.normalizedArchitecture(architecture));
   }
 
-  /**
-   * Whether a declaration written for particular platforms applies here.
-   *
-   * A declaration that names no platform applies everywhere: not naming one is
-   * how a caller says the question is universal.
-   */
+  /** Naming no platform applies everywhere: that is how a caller says the question is universal. */
   matches(platforms: readonly string[] | undefined): boolean {
     if (!platforms || platforms.length === 0) {
       return true;
@@ -71,12 +59,7 @@ export class Platform {
     throw new UnsupportedPlatformError(reported);
   }
 
-  /**
-   * One spelling per architecture.
-   *
-   * `aarch64` and `arm64` are the same machine, and a requirement written
-   * against either must not depend on which tool happened to answer.
-   */
+  /** `aarch64` and `arm64` are the same machine, and a requirement must not depend on which answered. */
   private static normalizedArchitecture(reported: string): string {
     const names: Record<string, string> = {
       aarch64: "arm64",

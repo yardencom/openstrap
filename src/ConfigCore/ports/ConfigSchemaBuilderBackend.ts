@@ -8,12 +8,7 @@ export type ConfigArrayOptions = {
   uniqueBy?: readonly string[];
 };
 
-/**
- * A rule about a value this file format cannot state: what it refuses, and where.
- *
- * Every issue it returns is reported like any other, with a path relative to the value it was given,
- * so a rule about a list says which entry and a rule about an object says which field.
- */
+/** A rule about a value this file format cannot state: what it refuses, and where. */
 export type ConfigRule<TValue> = (value: TValue) => readonly ConfigIssue[];
 
 export interface ConfigSchemaBuilderBackend {

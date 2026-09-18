@@ -11,7 +11,6 @@ export type {
   OpenStrapPluginOrder,
 } from "./OpenStrapPlugin.js";
 export type {
-  ImageRequest,
   MachineAccess,
   MachineHandle,
   MachineRequest,
@@ -34,6 +33,9 @@ export type {
   TransportConnectionRequest,
   TransportConnector,
   TransportEndpoint,
+  TransportIdentity,
+  Tunnel,
+  TunnelEndpoint,
 } from "./Transport.js";
 export type {
   BinaryFileWriteOptions,

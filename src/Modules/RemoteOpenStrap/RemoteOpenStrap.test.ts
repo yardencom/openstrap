@@ -115,6 +115,114 @@ describe("openstrap on the target", () => {
   });
 });
 
+/** What openstrap on the target prints when it was asked to converge: one convergence, as JSON. */
+const converged = {
+  passes: [{ number: 1, unsatisfied: 1, applied: [{ stepId: "make-it-so", status: "done" }] }],
+  plan: { unsatisfied: [], steps: [], unresolved: [] },
+  unresolved: [],
+  end: "satisfied",
+  requirementRun: { id: "req_run_over_there", status: "passed", results: [] },
+  snapshot,
+};
+
+const convergeRequest = {
+  ...request,
+  // As a person would write one. What crosses the channel is a blueprint, and the openstrap over
+  // there reads it with the same schema: a step in the shape a plan is made of is refused.
+  steps: [{ id: "make-it-so", for: ["home-exists"], exec: ["/bin/true"] }],
+};
+
+describe("openstrap bringing the target to what was declared", () => {
+  it("delivers itself, leaves the blueprint with the steps in it, and runs the loop over there", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    await new RemoteOpenStrap(target.api, linuxArm64).converge(convergeRequest);
+
+    const [command] = target.captured;
+
+    // The loop runs on the machine: one crossing of the channel, not one per step.
+    expect(command!.args).toEqual(["converge", "host", "--json"]);
+    expect(command!.cwd).toBe("/tmp/openstrap");
+    expect(JSON.parse(target.written.get("/tmp/openstrap/openstrap.yaml")!)).toEqual({
+      targets: { host: { requirements: convergeRequest.requirements, steps: convergeRequest.steps } },
+    });
+  });
+
+  it("carries a bound and a dry run to the openstrap that will obey them", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    await new RemoteOpenStrap(target.api, linuxArm64).converge({ ...convergeRequest, check: true, maxPasses: 7 });
+
+    expect(target.captured[0]!.args).toEqual(["converge", "host", "--json", "--check", "--max-passes", "7"]);
+  });
+
+  it("hands back the reading, named by the side that knows what the machine is called", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    const result = await new RemoteOpenStrap(target.api, linuxArm64).converge(convergeRequest);
+
+    expect(result.end).toBe("satisfied");
+    expect(result.passes[0]!.applied).toEqual([{ stepId: "make-it-so", status: "done" }]);
+    // openstrap over there read a machine it calls `host`. What it is called is known here.
+    expect(result.snapshot.target).toEqual({ id: "ubuntu-vm", type: "vm", displayName: undefined });
+    expect(result.snapshot.facts.arch).toBe("arm64");
+  });
+
+  it("brings back no verdict of its own, because the verdict is about a machine it cannot name", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    const result = await new RemoteOpenStrap(target.api, linuxArm64).converge(convergeRequest);
+
+    // The far side produced one and it is about `host`. Whoever asked has the reading and the
+    // requirements, and judges it here, with the same code and the right name.
+    expect("requirementRun" in result).toBe(false);
+  });
+
+  it("takes a machine it could not finish as an answer, and silence as a failure", async () => {
+    const short = fakeTarget({ answer: { exitCode: 1, stdout: JSON.stringify(converged), stderr: "" } });
+    const silent = fakeTarget({ answer: { exitCode: 1, stdout: "", stderr: "no such command" } });
+
+    // A machine left short still has a plan and passes to report, and the exit code said so.
+    await expect(new RemoteOpenStrap(short.api, linuxArm64).converge(convergeRequest)).resolves.toBeTruthy();
+    await expect(new RemoteOpenStrap(silent.api, linuxArm64).converge(convergeRequest))
+      .rejects.toThrow(/no such command/);
+  });
+
+  it("hands secrets to that openstrap in its environment, and writes them nowhere", async () => {
+    const target = fakeTarget({ answer: answering(converged) });
+
+    await new RemoteOpenStrap(target.api, linuxArm64).converge({
+      ...convergeRequest,
+      steps: [{
+        id: "put-the-key-in-the-cluster",
+        for: ["home-exists"],
+        run: "kubectl create secret generic openstrap --from-literal=KEY=$KEY",
+        environment: { KEY: { secret: "openstrap-server.master-key" } },
+      }],
+      secrets: { OPENSTRAP_SECRET_OPENSTRAP_SERVER_MASTER_KEY: "s3cr3t" },
+    });
+
+    const [command] = target.captured;
+
+    expect(command!.environment).toEqual({ OPENSTRAP_SECRET_OPENSTRAP_SERVER_MASTER_KEY: "s3cr3t" });
+    // Not on the command line, where the machine's process list would show it.
+    expect(command!.args.join(" ")).not.toContain("s3cr3t");
+    // And not on its disk. The blueprint that travels carries the name and nothing else, which is
+    // the whole point of naming a secret instead of writing it.
+    const written = target.written.get("/tmp/openstrap/openstrap.yaml")!;
+
+    expect(written).toContain("openstrap-server.master-key");
+    expect(written).not.toContain("s3cr3t");
+  });
+
+  it("refuses an answer that is not a convergence", async () => {
+    const target = fakeTarget({ answer: answering(snapshot) });
+
+    await expect(new RemoteOpenStrap(target.api, linuxArm64).converge(convergeRequest))
+      .rejects.toThrow(/not a convergence/);
+  });
+});
+
 function answering(payload: unknown): ProcessOutput {
   return { exitCode: 0, stdout: JSON.stringify(payload), stderr: "" };
 }

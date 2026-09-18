@@ -10,33 +10,12 @@ export type RunLockOptions = {
   processRunning?: (pid: number) => boolean;
 };
 
-/**
- * Stops two operations on the same subject from running at once.
- *
- * The lock is a directory, because creating one is atomic on every filesystem that matters — two
- * processes cannot both win, and one of them is told `EEXIST`. Node offers nothing better: there is no
- * lock in its standard library and no `fs.flock`, and the real `flock(2)` comes only through a native
- * addon, which openstrap cannot have — native modules do not survive being packaged into one
- * executable (ADR 0001).
- *
- * Packages for this exist — `proper-lockfile`, `lockfile`, `@ster5/global-mutex` — and every one of
- * them does the same `mkdir` or `open(…, "wx")` underneath, because there is nothing else to do it
- * with. What they differ in is policy: how many times to retry, and when to call a lock stale. The two
- * that offer a real `flock` are native addons, which rules them out.
- *
- * Their policy is not this one. They decide staleness by how fresh the lock's mtime is, kept up to
- * date by a timer, where every lock openstrap takes is held by a process on this same machine — the
- * state home is not shared — so the honest question is whether that process is alive, and the kernel
- * answers it. And none of them records who holds the lock, so none could say what is already running.
- *
- * A lock left behind by a process that died is not a lock. It is reclaimed, otherwise a single crash
- * makes the subject unusable forever.
- */
+/** Stops two operations on the same subject from running at once. */
 export class RunLock {
   private readonly processRunning: (pid: number) => boolean;
 
   constructor(private readonly directory: string, options: RunLockOptions = {}) {
-    this.processRunning = options.processRunning ?? defaultProcessRunning;
+    this.processRunning = options.processRunning ?? RunLock.defaultProcessRunning;
   }
 
   acquire(subject: string, operation: string, now: Date = new Date()): void {
@@ -106,13 +85,13 @@ export class RunLock {
   private pathFor(subject: string): string {
     return join(this.directory, `${subject.replace(/[^a-zA-Z0-9._-]/g, "_")}.lock`);
   }
-}
 
-function defaultProcessRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error instanceof Error && "code" in error && error.code === "EPERM";
+  private static defaultProcessRunning(pid: number): boolean {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      return error instanceof Error && "code" in error && error.code === "EPERM";
+    }
   }
 }

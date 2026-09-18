@@ -1,64 +1,45 @@
+import { MergedRunWithoutTargetsError } from "./errors/MergedRunWithoutTargetsError.js";
 import type { CheckStatus, RequirementRun } from "#types/Requirements.js";
 
-/**
- * Folds one evaluation per target into a single run.
- *
- * A run already describes several targets — it carries a target map and every
- * result names its own target — so nothing new is modelled here. Only the outcome
- * is decided: each target is judged on its own, and the whole is as bad as its
- * worst target.
- *
- * Merging zero runs is refused rather than answered with an empty one: a run has an
- * identity and a start, and neither can be made out of nothing.
- */
-export class MergedRunWithoutTargetsError extends Error {
-  constructor() {
-    super("A requirement run needs at least one target to merge");
-    this.name = "MergedRunWithoutTargetsError";
-  }
-}
+/** Folds one evaluation per target into a single run. */
+export class MergeRequirementRuns {
+  static of(runs: readonly RequirementRun[]): RequirementRun {
+    const [first] = runs;
 
-export function mergeRequirementRuns(runs: readonly RequirementRun[]): RequirementRun {
-  const [first] = runs;
+    if (!first) {
+      throw new MergedRunWithoutTargetsError();
+    }
 
-  if (!first) {
-    throw new MergedRunWithoutTargetsError();
-  }
+    if (runs.length === 1) {
+      return first;
+    }
 
-  if (runs.length === 1) {
-    return first;
-  }
+    const status = MergeRequirementRuns.worstOf(runs.map((run) => run.status));
 
-  const results = runs.flatMap((run) => run.results);
-  const status = aggregateStatuses(runs.map((run) => run.status));
-
-  return {
-    ...first,
-    status,
-    targets: Object.assign({}, ...runs.map((run) => run.targets)) as Record<string, string>,
-    results,
-    details: status === "passed" ? undefined : {
-      message: runs
-        .filter((run) => run.status !== "passed")
-        .map((run) => run.details?.message)
-        .filter(Boolean)
-        .join("; "),
-    },
-  };
-}
-
-function aggregateStatuses(statuses: readonly CheckStatus[]): CheckStatus {
-  if (statuses.length === 0 || statuses.every((status) => status === "skipped")) {
-    return "skipped";
+    return {
+      ...first,
+      status,
+      targets: Object.assign({}, ...runs.map((run) => run.targets)) as Record<string, string>,
+      results: runs.flatMap((run) => run.results),
+      details: status === "passed" ? undefined : {
+        message: runs
+          .filter((run) => run.status !== "passed")
+          .map((run) => run.details?.message)
+          .filter(Boolean)
+          .join("; "),
+      },
+    };
   }
 
-  if (statuses.includes("error")) {
-    return "error";
-  }
+  private static worstOf(statuses: readonly CheckStatus[]): CheckStatus {
+    if (statuses.length === 0 || statuses.every((status) => status === "skipped")) {
+      return "skipped";
+    }
 
-  if (statuses.includes("failed")) {
-    return "failed";
-  }
+    if (statuses.includes("error")) {
+      return "error";
+    }
 
-  return "passed";
+    return statuses.includes("failed") ? "failed" : "passed";
+  }
 }

@@ -1,3 +1,4 @@
+import type { Asked } from "#types/FactDeclaration.js";
 import { loadavg } from "node:os";
 
 import si from "systeminformation";
@@ -6,7 +7,7 @@ import type { FactSections } from "#types/Facts.js";
 
 /** What this machine computes with. */
 export class CpuFacts {
-  async cpu(declared: Record<string, never> | undefined): Promise<FactSections["cpu"]> {
+  async cpu(declared: Asked | undefined): Promise<FactSections["cpu"]> {
     if (declared === undefined) {
       return undefined;
     }
@@ -19,22 +20,17 @@ export class CpuFacts {
       // read as a broken machine.
       cores: cpu.physicalCores || cpu.cores,
       threads: cpu.cores,
-      model: named(`${cpu.manufacturer} ${cpu.brand}`),
-      vendor: named(cpu.vendor) ?? named(cpu.manufacturer),
+      model: CpuFacts.named(`${cpu.manufacturer} ${cpu.brand}`),
+      vendor: CpuFacts.named(cpu.vendor) ?? CpuFacts.named(cpu.manufacturer),
       load: loadavg(),
     };
   }
+
+  private static named(reported: string | undefined): string | undefined {
+    const value = (reported ?? "").trim();
+
+    return value === "" || value === "-" ? undefined : value;
+  }
 }
 
-/**
- * A name a tool actually reported, or nothing.
- *
- * Placeholders travel: `si` answers `-` for a cpu model a virtual machine does
- * not expose, and a snapshot saying the model is `-` is worse than one saying
- * nothing, because it reads like an answer.
- */
-function named(reported: string | undefined): string | undefined {
-  const value = (reported ?? "").trim();
-
-  return value === "" || value === "-" ? undefined : value;
-}
+/** A name a tool actually reported, or nothing: `si` answers `-` for a model a vm does not expose. */
