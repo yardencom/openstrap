@@ -128,7 +128,7 @@ describe("openstrap remove", () => {
     expect(seeding.local.machines.read("ubuntu-vm")).not.toBeNull();
 
     const forced = await removing({ utm: utm.provider }, ["ubuntu-vm", "--force"]);
-    expect(forced.result.detail).toMatch(/could not be asked/);
+    expect(forced.result.detail).toMatch(/did not delete it.*left where it is/);
     expect(seeding.local.machines.read("ubuntu-vm")).toBeNull();
   });
 

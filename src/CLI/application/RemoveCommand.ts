@@ -76,7 +76,7 @@ export class RemoveCommand implements CliCommand<RemoveArgs, RemoveResult> {
         throw error;
       }
 
-      return { machine: "none", detail: `${provider.id} could not be asked: ${error instanceof Error ? error.message : String(error)}` };
+      return { machine: "none", detail: `${provider.id} did not delete it: ${error instanceof Error ? error.message : String(error)}; the machine, if there is one, was left where it is` };
     }
   }
 

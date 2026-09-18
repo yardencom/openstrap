@@ -7,7 +7,7 @@ import { ServiceSecrets } from "./application/ServiceSecrets.js";
 import { ServicesNeedAMachineError } from "./errors/ServicesNeedAMachineError.js";
 import type { BlueprintTarget } from "../../Modules/Blueprint/index.js";
 import type { FactSnapshot } from "#types/FactSnapshot.js";
-import type { OpenStrapRuntime } from "../../Plugin/index.js";
+import type { OpenStrapRuntime, TransportConnection } from "../../Plugin/index.js";
 import type { OpenStrapServer } from "../../Api/index.js";
 import type { Store } from "../../Store/index.js";
 import type { Target } from "#types/Target.js";
@@ -40,6 +40,7 @@ export type DeployResult = {
 /** `deploy` — a cluster on the machine and the declared services running in it, then the machine read to prove it. */
 export class Deploy {
   private static readonly readyWithinMs = 300_000;
+  private static readonly answerWithinMs = 90_000;
 
   async execute(request: DeployRequest): Promise<DeployResult> {
     const declared = request.target;
@@ -87,6 +88,8 @@ export class Deploy {
         await reached.close();
       }
 
+      await this.answering(connection.transport, Deploy.publicPorts(declared));
+
       const machine: Target = { name: declared.name, ...connection.kind, displayName: declared.displayName };
       const snapshot = await new RemoteOpenStrap(connection.transport, connection.machine).collect({
         target: machine,
@@ -109,6 +112,38 @@ export class Deploy {
     } finally {
       await connection.close();
     }
+  }
+
+  /**
+   * A pod that is ready is not yet a port that answers: the cluster publishes the port on the machine
+   * a moment later, and right after a reboot the moment is long. The reading that follows is the
+   * proof, so it is given that moment rather than made to fail for reading too early.
+   */
+  private async answering(transport: TransportConnection, ports: readonly number[]): Promise<void> {
+    const deadline = Date.now() + Deploy.answerWithinMs;
+
+    for (const port of ports) {
+      while (Date.now() < deadline) {
+        const answers = await transport.processes.succeeds({
+          command: "bash",
+          args: ["-c", `exec 3<>/dev/tcp/127.0.0.1/${port}`],
+          cwd: "/",
+          stdio: "ignore",
+        });
+
+        if (answers) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+    }
+  }
+
+  private static publicPorts(target: BlueprintTarget): number[] {
+    return Object.values(target.services ?? {})
+      .filter((service) => service.public === true && service.port !== undefined)
+      .map((service) => service.port!);
   }
 
   /** Not ready is reported, not thrown: the reading that follows says the same thing in the requirements. */
