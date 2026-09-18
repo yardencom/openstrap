@@ -20,6 +20,7 @@ export type {
   Provider,
   ProviderAvailability,
   ProviderCapabilities,
+  PublishedPorts,
   ResolvedImage,
   TargetScope,
   TargetType,
